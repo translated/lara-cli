@@ -6,3 +6,6 @@ build/
 
 # Node modules
 node_modules/
+
+# OS files
+.DS_Store

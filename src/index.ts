@@ -2,7 +2,7 @@
 
 import { Command, Option } from 'commander';
 
-import initCommand from './cli/cmd/init.js';
+import initCommand from './cli/cmd/init/init.js';
 
 const program = new Command()
   .name('lara-cli')

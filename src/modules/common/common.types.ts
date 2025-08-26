@@ -1,16 +1,6 @@
-import z from "zod";
+import { z } from 'zod/v4';
+import { AVAILABLE_LOCALES } from './common.const.js';
 
-export const LocalesEnum = z.enum([
-  'en',
-  'zh',
-  'ja',
-  'ko',
-  'fr',
-  'de',
-  'es',
-  'it',
-  'pt',
-  'ru',
-]);
+export const LocalesEnum = z.enum(AVAILABLE_LOCALES);
 
 export type LocalesType = z.infer<typeof LocalesEnum>;

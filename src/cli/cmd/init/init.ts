@@ -1,20 +1,15 @@
 import { Command, Option } from 'commander';
 import Ora from 'ora';
-import { confirm, input } from '@inquirer/prompts';
+import { confirm } from '@inquirer/prompts';
 
-import { LocalesEnum, LocalesType } from '../../modules/common/common.types.js';
-import ConfigProvider from '../../modules/config/config.provider.js';
-import { ConfigType } from '../../modules/config/config.types.js';
-import { COMMA_AND_SPACE_REGEX } from '../../modules/common/common.const.js';
+import { LocalesEnum } from '../../../modules/common/common.types.js';
+import ConfigProvider from '../../../modules/config/config.provider.js';
+import { ConfigType } from '../../../modules/config/config.types.js';
+import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
 
-import { CommandUtils } from '../lib/utils.js';
-
-type Options = {
-  force: boolean;
-  source: LocalesType;
-  target: LocalesType[];
-  paths: string[];
-};
+import { CommandUtils } from '../../lib/utils.js';
+import { pathsInput, sourceInput, targetInput } from './init.input.js';
+import { Options } from './init.types.js';
 
 export default new Command()
   .command('init')
@@ -36,7 +31,7 @@ export default new Command()
 
         return locale.data;
       })
-      .default('en')
+      .default('en-US')
   )
   .addOption(
     new Option('-t --target <locales>', 'Target locales, separated by a comma, a space or a combination of both')
@@ -54,7 +49,7 @@ export default new Command()
           return parsed.data;
         })
       })
-      .default(['it', 'es'])
+      .default(['it-IT', 'es-ES'])
   )
   .addOption(
     new Option('-p --paths <paths>', 'Paths to watch, separated by a comma, a space or a combination of both')
@@ -106,39 +101,10 @@ async function handleInteractiveMode(options: Options): Promise<ConfigType> {
     }
   }
 
-  const inputSource = await input({
-    message: 'What is the source locale?',
-    default: options.source,
-    validate: (value) => {
-      return LocalesEnum.safeParse(value).success || 'Please insert a valid locale';
-    },
-  });
+  const inputSource = await sourceInput(options);
+  const inputTarget = await targetInput(options, inputSource);
+  const inputPaths = await pathsInput(options);
 
-  const inputTarget = await input({
-    message: 'What are the target locales? (separated by a comma, a space or a combination of both)',
-    default: options.target.join(', '),
-    validate: (value) => {
-      const locales = value.split(/[\s,]+/);
-
-      const invalidLocales = [];
-      for(const locale of locales) {
-        if(!LocalesEnum.safeParse(locale).success) {
-          invalidLocales.push(locale);
-        }
-
-        if(locale === inputSource) {
-          return `Target locale cannot be the same as the source locale: ${locale}`;
-        }
-      }
-
-      if(invalidLocales.length > 0) {
-        return `Invalid values: ${invalidLocales.join(', ')}. Please insert a valid locale`;
-      }
-
-      return true;
-    },
-  });
-    
   return {
     locales: {
       source: LocalesEnum.parse(inputSource),
@@ -146,7 +112,7 @@ async function handleInteractiveMode(options: Options): Promise<ConfigType> {
     },
     paths: {
       json: {
-        include: options.paths,
+        include: inputPaths,
         exclude: [],
       },
     },

@@ -1,0 +1,10 @@
+locales:
+  source: en-US
+  target:
+    - it-IT
+    - es-ES
+paths:
+  json:
+    include:
+      - src/i18n/[locale]/translation.json
+    exclude: []
