@@ -1,34 +1,25 @@
 import * as fs from 'fs/promises';
 import path from 'path';
-import { AVAILABLE_LOCALES } from '../common/common.const.js';
+
+import {
+  AVAILABLE_LOCALES,
+  DEFAULT_EXCLUDED_DIRECTORIES,
+  DEFAULT_MAX_DEPTH_LEVEL,
+  SUPPORTED_FILE_TYPES,
+} from '../common/common.const.js';
 
 class PathSearcher {
-  private readonly ALLOWED_EXTENSIONS = [
-    'json'
-  ];
-
-  private readonly DEFAULT_EXCLUDED_DIRECTORIES = [
-    'node_modules',
-    'dist',
-    'build',
-    'bin',
-    'out',
-    'spec',
-    'test',
-    'tests',
-    'coverage',
-    'temp',
-    'tmp'
-  ];
-
-  private readonly MAX_DEPTH_LEVEL = 6;
-
   private readonly availableLocalesSet: Set<string> = new Set(AVAILABLE_LOCALES);
+
+  private readonly excludedDirectoriesSet: Set<string> = new Set(DEFAULT_EXCLUDED_DIRECTORIES);
 
   /**
    * Searches and return for paths that are compatible with localisation purposes
    *
-   * @returns {Promise<string[]>} - A promise that resolves to an array of paths
+   * @returns {Promise<string[]>} - A promise that resolves to an array of paths. Example:
+   * [
+   *  'src/i18n/[locale].json',
+   * ]
    */
   public async searchPaths(): Promise<string[]> {
     const paths = await this.findAllEligibleFilesInRoot();
@@ -37,18 +28,29 @@ class PathSearcher {
     return Array.from(new Set(normalizedPaths));
   }
 
+  /**
+   * Finds all eligible files in the root path
+   *
+   * @returns {Promise<string[]>} - A promise that resolves to an array of paths. Example:
+   * [
+   *  'src/i18n/en-US.json',
+   *  'src/i18n/it-IT.json',
+   * ]
+   */
   private async findAllEligibleFilesInRoot(): Promise<string[]> {
     const rootPath = process.cwd();
 
     const files = await fs.readdir(rootPath);
 
     const paths: string[] = [];
+
+    // This first loop is to find all the directories in the root path. We do not want to search in the files inside the root path.
     for(const file of files) {
       const stats = await fs.stat(file);
 
       if(stats.isDirectory()) {
         // Skip hidden files and directories
-        const isExcluded = this.DEFAULT_EXCLUDED_DIRECTORIES.includes(file) || file.startsWith('.');
+        const isExcluded = this.excludedDirectoriesSet.has(file) || file.startsWith('.');
 
         if(!isExcluded) {
           paths.push(...await this.findAllEligibleFiles(path.join(rootPath, file)));
@@ -72,16 +74,18 @@ class PathSearcher {
       }
   
       if (stats.isDirectory()) {
-        const isExcluded = this.DEFAULT_EXCLUDED_DIRECTORIES.includes(file);
+        const isExcluded = this.excludedDirectoriesSet.has(file);
   
-        if (level >= this.MAX_DEPTH_LEVEL || isExcluded) {
+        if (level >= DEFAULT_MAX_DEPTH_LEVEL || isExcluded) {
           return [];
         }
   
         return await this.findAllEligibleFiles(filePath, level + 1);
-      } else if (stats.isFile()) {
+      } 
+
+      if (stats.isFile()) {
         const extension = path.extname(filePath).slice(1);
-        if (this.ALLOWED_EXTENSIONS.includes(extension)) {
+        if (SUPPORTED_FILE_TYPES.includes(extension)) {
           return [filePath];
         }
       }
@@ -110,6 +114,10 @@ class PathSearcher {
       // If the current substring is a locale, we should need to replace it with [locale].
       // There might be situations where there might be more than one locale in the path.
       // This is why we need to check if the current locale is already set, and treat it as a normal part of the path.
+      //
+      // Example:
+      // src/i18n/en-US/pages/home.json -> src/i18n/[locale]/pages/home.json
+      // src/i18n/en-US/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
       if(!currentLocale && this.availableLocalesSet.has(part)) {
         currentLocale = part;
       }
@@ -131,4 +139,4 @@ class PathSearcher {
   }
 }
 
-export default PathSearcher;
+export default new PathSearcher();

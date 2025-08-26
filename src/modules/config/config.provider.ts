@@ -19,21 +19,22 @@ class ConfigProvider {
   }
 
   public getConfig() {
-    if(!this.doesConfigExists()) {
-      throw new Error('Config file not found');
-    }
-
     if(this.config) {
       return this.config;
     }
 
+    if(!this.doesConfigExists()) {
+      throw new Error('Config file not found');
+    }
+
     const config = fs.readFileSync(this.configPath, 'utf8');
 
-    try {
-      this.config = Config.parse(yaml.parse(config));
-    } catch(error) {
-      throw new Error(`Invalid config file: ${error}`);
+    const safeConfig = Config.safeParse(yaml.parse(config));
+
+    if(!safeConfig.success) {
+      throw new Error(`Invalid config file: ${safeConfig.error.issues[0]?.message || 'Unknown error'}`);
     }
+    this.config = safeConfig.data;
 
     return this.config;
   } 

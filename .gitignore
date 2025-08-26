@@ -9,3 +9,6 @@ node_modules/
 
 # OS files
 .DS_Store
+
+# Config
+.lara.yaml
