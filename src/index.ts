@@ -3,6 +3,7 @@
 import { Command, Option } from 'commander';
 
 import initCommand from './cli/cmd/init/init.js';
+import translateCommand from './cli/cmd/translate/translate.js';
 
 const program = new Command()
   .name('lara-cli')
@@ -13,7 +14,8 @@ const program = new Command()
     new Option('-y --non-interactive', 'Run in non-interactive mode')
       .default(false)
   )
-  .addCommand(initCommand);
+  .addCommand(initCommand)
+  .addCommand(translateCommand);
 
 // Parse command line arguments
 program.parse();

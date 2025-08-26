@@ -18,7 +18,7 @@ class ConfigProvider {
     return fs.existsSync(this.configPath);
   }
 
-  public getConfig() {
+  public getConfig(): ConfigType {
     if(this.config) {
       return this.config;
     }

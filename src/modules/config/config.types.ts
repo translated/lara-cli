@@ -64,8 +64,13 @@ export const Config = z.object({
   locales: z.object({
     source: LocalesEnum,
     target: z.array(LocalesEnum),
-  }),
-  paths: z.record(z.enum(SUPPORTED_FILE_TYPES), FileConfig)
+  })
+    .refine((locales) => {
+      return locales.target.includes(locales.source);
+    }, {
+      error: 'Source locale must be included in the target locales'
+    }),
+  paths: FileConfig
 });
 
 export type ConfigType = z.infer<typeof Config>;

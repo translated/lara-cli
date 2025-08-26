@@ -81,10 +81,8 @@ function handleNonInteractiveMode(options: Options): ConfigType {
       target: options.target,
     },
     paths: {
-      json: {
-        include: options.paths,
-        exclude: [],
-      },
+      include: options.paths,
+      exclude: [],
     },
   }
 }
@@ -111,10 +109,8 @@ async function handleInteractiveMode(options: Options): Promise<ConfigType> {
       target: LocalesEnum.array().parse(inputTarget.split(/[\s,]+/)),
     },
     paths: {
-      json: {
-        include: inputPaths,
-        exclude: [],
-      },
+      include: inputPaths,
+      exclude: [],
     },
   }
 }
