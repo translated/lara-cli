@@ -8,7 +8,7 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '../common/common.const.js';
 
-class PathSearcher {
+class PathLocator {
   private readonly availableLocalesSet: Set<string> = new Set(AVAILABLE_LOCALES);
 
   private readonly excludedDirectoriesSet: Set<string> = new Set(DEFAULT_EXCLUDED_DIRECTORIES);
@@ -110,7 +110,28 @@ class PathSearcher {
     let currentLocale = '';
     let normalizedPath = '';
 
-    for(const part of parts) {
+    for(let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if(!part) {
+        continue;
+      }
+
+      // Handle the last part of the path (filename)
+      if(i === parts.length - 1) {
+        const [filename, extension] = part.split('.');
+        if(!currentLocale && this.availableLocalesSet.has(filename ?? '')) {
+          currentLocale = filename!;
+        }
+
+        if(filename === currentLocale) {
+          normalizedPath += `[locale].${extension}`;
+          continue;
+        }
+
+        normalizedPath += part;
+        continue;
+      }
+      
       // If the current substring is a locale, we should need to replace it with [locale].
       // There might be situations where there might be more than one locale in the path.
       // This is why we need to check if the current locale is already set, and treat it as a normal part of the path.
@@ -134,9 +155,8 @@ class PathSearcher {
       return null;
     }
 
-    // Remove trailing slash
-    return normalizedPath.replace(/\/$/, '');
+    return normalizedPath;
   }
 }
 
-export default new PathSearcher();
+export default new PathLocator();

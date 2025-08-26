@@ -2,7 +2,7 @@ import { checkbox, input } from '@inquirer/prompts';
 import Ora from 'ora';
 
 import { LocalesEnum } from '../../../modules/common/common.types.js';
-import PathSearcher from '../../../modules/path/path.searcher.js';
+import PathLocator from '../../../modules/path/path.locator.js';
 import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
 import { IncludePath } from '../../../modules/config/config.types.js';
 import { Options } from './init.types.js';
@@ -47,7 +47,7 @@ export async function targetInput(options: Options, source: string) {
 export async function pathsInput(options: Options) {
   const spinner = Ora({ text: 'Searching for paths...', color: 'yellow' }).start();
 
-  const paths = await PathSearcher.searchPaths();
+  const paths = await PathLocator.searchPaths();
   if(paths.length === 0) {
     spinner.warn('No paths found');
   } else {
