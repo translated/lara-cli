@@ -9,6 +9,7 @@ import { LaraApiError } from '@translated/lara';
 
 import { buildPath, ensureDirectoryExists } from '../../utils/path.utils.js';
 import { parseFlattened, unflatten } from '../../utils/json.utils.js';
+import { findDiff, orderObjectByKeys } from '../../utils/keys.utils.js';
 
 export class TranslationEngine {
 
@@ -64,7 +65,7 @@ export class TranslationEngine {
       // Target keys represents all the keys in the target file. The target file may not have all the keys contained in the source file.
       const targetKeys = Object.keys(targetFlattenedJson);
 
-      const keysToTranslate = this.findDiff(allKeys, targetKeys, changedKeys);
+      const keysToTranslate = findDiff(allKeys, targetKeys, changedKeys);
 
 
       if(keysToTranslate.length === 0) {
@@ -103,7 +104,7 @@ export class TranslationEngine {
       spinner.succeed(`Translation in ${targetLocale} completed`);
 
       // This is to ensure the target file is ordered in the same way as the source file.
-      const orderedTargetFlattenedJson = this.orderObjectByKeys(targetFlattenedJson, allKeys);
+      const orderedTargetFlattenedJson = orderObjectByKeys(targetFlattenedJson, allKeys);
       const unflattened = unflatten(orderedTargetFlattenedJson);
 
       // Ensure the directory exists before writing the file
@@ -131,31 +132,5 @@ export class TranslationEngine {
       allKeys: Object.keys(flattenedJson),
       changedKeys,
     }
-  }
-
-  private findDiff(allKeys: string[], targetKeys: string[], changedKeys: string[]) {
-    const keysToTranslate: string[] = [];
-
-    allKeys.forEach(key => {
-      // Case 1: The key is not present in the target file
-      if(!targetKeys.includes(key)) {
-        keysToTranslate.push(key);
-        return;
-      }
-
-      // Case 2: The key has been changed
-      if(changedKeys.includes(key)) {
-        keysToTranslate.push(key);
-      }
-    });
-
-    return keysToTranslate;
-  }
-
-  private orderObjectByKeys( map: Record<string, unknown>, keys: string[]): Record<string, unknown> {
-    return keys.reduce((acc, key) => {
-      acc[key] = map[key];
-      return acc;
-    }, {} as Record<string, unknown>);
   }
 }
