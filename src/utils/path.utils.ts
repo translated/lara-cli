@@ -6,7 +6,7 @@ import {
   DEFAULT_EXCLUDED_DIRECTORIES,
   DEFAULT_MAX_DEPTH_LEVEL,
   SUPPORTED_FILE_TYPES,
-} from '../common/common.const.js';
+} from '../modules/common/common.const.js';
 
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);

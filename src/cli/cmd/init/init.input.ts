@@ -1,7 +1,7 @@
 import { checkbox, input } from '@inquirer/prompts';
 import Ora from 'ora';
 
-import * as PathLocator from '../../../modules/path/path.locator.js';
+import { searchPaths } from '../../../utils/path.utils.js';
 
 import { LocalesEnum } from '../../../modules/common/common.types.js';
 import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
@@ -48,7 +48,7 @@ export async function targetInput(options: Options, source: string) {
 export async function pathsInput(options: Options) {
   const spinner = Ora({ text: 'Searching for paths...', color: 'yellow' }).start();
 
-  const paths = await PathLocator.searchPaths();
+  const paths = await searchPaths();
   if(paths.length === 0) {
     spinner.warn('No paths found');
   } else {

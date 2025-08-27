@@ -7,8 +7,8 @@ import { TranslationService } from './translation.service.js';
 import { ChecksumService } from '../checksum/checksum.service.js';
 import { LaraApiError } from '@translated/lara';
 
-import * as PathLocator from '../path/path.locator.js';
-import * as JsonParser from '../json/json.parser.js';
+import { buildPath, ensureDirectoryExists } from '../../utils/path.utils.js';
+import { parseFlattened, unflatten } from '../../utils/json.utils.js';
 
 export class TranslationEngine {
 
@@ -27,6 +27,8 @@ export class TranslationEngine {
   public async translate() {
     const inputPaths = this.config.paths.include;
 
+    Ora().info(`Translating from ${this.config.locales.source} to ${this.config.locales.target.join(', ')}...`);
+
     for (const inputPath of inputPaths) {
       await this.handleInputPath(inputPath);
     }
@@ -43,7 +45,12 @@ export class TranslationEngine {
     const sourceLocale = this.config.locales.source;
 
     for(const targetLocale of this.config.locales.target) {
-      const targetContentPath = PathLocator.buildPath(inputPath, targetLocale);
+      const spinner = Ora({
+        text: `Translating ${sourceLocale} to ${targetLocale}...`,
+        color: 'yellow',
+      });
+
+      const targetContentPath = buildPath(inputPath, targetLocale);
 
       let targetContent: string;
       try {
@@ -53,16 +60,12 @@ export class TranslationEngine {
         targetContent = '{}';
       }
 
-      const targetFlattenedJson = JsonParser.parseFlattened(targetContent!);
+      const targetFlattenedJson = parseFlattened(targetContent!);
       // Target keys represents all the keys in the target file. The target file may not have all the keys contained in the source file.
       const targetKeys = Object.keys(targetFlattenedJson);
 
       const keysToTranslate = this.findDiff(allKeys, targetKeys, changedKeys);
 
-      const spinner = Ora({
-        text: `Translating ${keysToTranslate.length} keys in ${targetLocale} locale...`,
-        color: 'yellow',
-      });
 
       if(keysToTranslate.length === 0) {
         spinner.succeed(`Translation in ${targetLocale} completed (no new keys to translate).`);
@@ -73,6 +76,13 @@ export class TranslationEngine {
         const content = sourceFlattenedJson[key];
         if(!content) {
           Ora().warn(`Key ${key} not found in source file`);
+          return;
+        }
+
+        // If the content is not a string, it means it's a number, boolean, or object.
+        // In this case, we don't need to translate it.
+        if(typeof content !== 'string') {
+          targetFlattenedJson[key] = content;
           return;
         }
    
@@ -92,21 +102,18 @@ export class TranslationEngine {
 
       spinner.succeed(`Translation in ${targetLocale} completed`);
 
-      const unflattened = JsonParser.unflatten(targetFlattenedJson);
+      // This is to ensure the target file is ordered in the same way as the source file.
+      const orderedTargetFlattenedJson = this.orderObjectByKeys(targetFlattenedJson, allKeys);
+      const unflattened = unflatten(orderedTargetFlattenedJson);
 
       // Ensure the directory exists before writing the file
-      await PathLocator.ensureDirectoryExists(targetContentPath);
-      await fs.writeFile(targetContentPath, JSON.stringify(unflattened, null, 2));
+      await ensureDirectoryExists(targetContentPath);
+      await fs.writeFile(targetContentPath, JSON.stringify(unflattened, null, 4));
     }
   }
 
   private async fetchInputPath(inputPath: string) {
-    const spinner = Ora({
-      text: 'Detecting changed keys...',
-      color: 'yellow',
-    });
-
-    const sourceContentPath = PathLocator.buildPath(inputPath, this.config.locales.source);
+    const sourceContentPath = buildPath(inputPath, this.config.locales.source);
 
     let sourceContent: string;
     try {
@@ -116,10 +123,8 @@ export class TranslationEngine {
       process.exit(1);
     }
 
-    const flattenedJson = JsonParser.parseFlattened(sourceContent!);
+    const flattenedJson = parseFlattened(sourceContent!);
     const changedKeys = await this.checksumService.getChangedKeys(sourceContentPath, flattenedJson);
-
-    spinner.succeed('Changed keys detected');
 
     return {
       sourceFlattenedJson: flattenedJson,
@@ -145,5 +150,12 @@ export class TranslationEngine {
     });
 
     return keysToTranslate;
+  }
+
+  private orderObjectByKeys( map: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+    return keys.reduce((acc, key) => {
+      acc[key] = map[key];
+      return acc;
+    }, {} as Record<string, unknown>);
   }
 }

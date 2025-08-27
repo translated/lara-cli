@@ -34,11 +34,8 @@ export class ChecksumService {
     }
   }
 
-  private async getHash(s: string) {
-    return crypto.createHash('sha256').update(s).digest('hex');
-  }
 
-  public async getChangedKeys(filePath: string, content: Record<string, string>) {
+  public async getChangedKeys(filePath: string, content: Record<string, unknown>) {
     await this.initLock();
 
     const fileChecksum = await this.getHash(filePath);
@@ -74,7 +71,7 @@ export class ChecksumService {
     return changedKeys;
   }
 
-  private async updateLock(filePath: string, content: Record<string, string>) {
+  private async updateLock(filePath: string, content: Record<string, unknown>) {
     await this.initLock();
 
     const fileChecksum = await this.getHash(filePath);
@@ -95,5 +92,12 @@ export class ChecksumService {
     }));
 
     await fs.writeFile(ChecksumService.CHECKSUM_FILE, yaml.stringify(this.lock));
+  }
+
+  // Returns the MD5 hash of a string or an object.
+  private async getHash(s: unknown) {
+    const data: string = typeof s === 'string' ? s : JSON.stringify(s);
+
+    return crypto.createHash('md5').update(data).digest('hex');
   }
 }

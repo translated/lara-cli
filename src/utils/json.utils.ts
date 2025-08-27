@@ -21,7 +21,7 @@ import { flatten as flat, unflatten as unflat } from 'flat';
    *   "dashboard.content.1": "content 2",
    * }
    */
-function parseFlattened(json: string): Record<string, string> {
+function parseFlattened(json: string): Record<string, unknown> {
   const parsed = JSON.parse(json);
   return flat(parsed);
 }
@@ -47,7 +47,7 @@ function parseFlattened(json: string): Record<string, string> {
    *   }
    * }
    */
-function unflatten(flattened: Record<string, string>): Record<string, unknown> {
+function unflatten(flattened: Record<string, unknown>): Record<string, unknown> {
   return unflat(flattened);
 }
 

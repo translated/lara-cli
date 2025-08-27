@@ -6,7 +6,7 @@ import { LocalesEnum } from '../../../modules/common/common.types.js';
 import { ConfigProvider } from '../../../modules/config/config.provider.js';
 import { ConfigType } from '../../../modules/config/config.types.js';
 
-import * as CommandUtils from '../../lib/utils.js';
+import { isRunningInInteractiveMode } from '../../../utils/cli.utils.js';
 
 import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
 import { pathsInput, sourceInput, targetInput } from './init.input.js';
@@ -64,7 +64,7 @@ export default new Command()
       .default(['./src/i18n/[locale].json'])
   )
   .action(async (options: Options, command: Command) => {
-    const config = CommandUtils.isRunningInInteractiveMode(command)
+    const config = isRunningInInteractiveMode(command)
       ? await handleInteractiveMode(options)
       : handleNonInteractiveMode(options);
 
