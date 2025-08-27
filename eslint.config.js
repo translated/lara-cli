@@ -15,7 +15,8 @@ export default defineConfig([
     rules: {
       'indent': ['error', 2],
       'eol-last': ['error', 'always'],
-      'quotes': ['error', 'single']
+      'quotes': ['error', 'single'],
+      'object-curly-spacing': ['error', 'always']
     }
   },
   ...tseslint.configs.recommended,
