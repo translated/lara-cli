@@ -9,9 +9,25 @@ import {
 } from '../common/common.const.js';
 
 class PathLocator {
-  private readonly availableLocalesSet: Set<string> = new Set(AVAILABLE_LOCALES);
 
-  private readonly excludedDirectoriesSet: Set<string> = new Set(DEFAULT_EXCLUDED_DIRECTORIES);
+  private readonly availableLocales: Set<string>;
+  private readonly defaultExcludedDirectories: Set<string>;
+
+  constructor() {
+    this.availableLocales = new Set(AVAILABLE_LOCALES);
+    this.defaultExcludedDirectories = new Set(DEFAULT_EXCLUDED_DIRECTORIES);
+  }
+
+  /**
+   * Builds a path by replacing the [locale] placeholder with the given locale
+   *
+   * @param path - The path to build. Example: 'src/i18n/[locale].json'
+   * @param locale - The locale to replace the placeholder with. Example: 'en-US'
+   * @returns The built path. Example: 'src/i18n/en-US.json'
+   */
+  public buildPath(path: string, locale: string): string {
+    return path.replace('[locale]', locale);
+  }
 
   /**
    * Searches and return for paths that are compatible with localisation purposes
@@ -44,13 +60,14 @@ class PathLocator {
 
     const paths: string[] = [];
 
-    // This first loop is to find all the directories in the root path. We do not want to search in the files inside the root path.
+    // This first loop is to find all the directories in the root path.
+    // We do not want to search in the files inside the root path.
     for(const file of files) {
       const stats = await fs.stat(file);
 
       if(stats.isDirectory()) {
-        // Skip hidden files and directories
-        const isExcluded = this.excludedDirectoriesSet.has(file) || file.startsWith('.');
+        // Skip hidden files and directories, along with default excluded directories
+        const isExcluded = this.defaultExcludedDirectories.has(file) || file.startsWith('.');
 
         if(!isExcluded) {
           paths.push(...await this.findAllEligibleFiles(path.join(rootPath, file)));
@@ -74,7 +91,7 @@ class PathLocator {
       }
   
       if (stats.isDirectory()) {
-        const isExcluded = this.excludedDirectoriesSet.has(file);
+        const isExcluded = this.defaultExcludedDirectories.has(file);
   
         if (level >= DEFAULT_MAX_DEPTH_LEVEL || isExcluded) {
           return [];
@@ -119,7 +136,7 @@ class PathLocator {
       // Handle the last part of the path (filename)
       if(i === parts.length - 1) {
         const [filename, extension] = part.split('.');
-        if(!currentLocale && this.availableLocalesSet.has(filename ?? '')) {
+        if(!currentLocale && this.availableLocales.has(filename ?? '')) {
           currentLocale = filename!;
         }
 
@@ -139,7 +156,7 @@ class PathLocator {
       // Example:
       // src/i18n/en-US/pages/home.json -> src/i18n/[locale]/pages/home.json
       // src/i18n/en-US/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
-      if(!currentLocale && this.availableLocalesSet.has(part)) {
+      if(!currentLocale && this.availableLocales.has(part)) {
         currentLocale = part;
       }
 

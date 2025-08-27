@@ -72,6 +72,8 @@ export default new Command()
     ConfigProvider.saveConfig(config);
 
     spinner.succeed('Config file created successfully');
+
+    Ora().info('Config file created successfully! Make sure to insert your API keys in the .env file and you can run `lara translate` to start translating your files. You can find more info at https://support.laratranslate.com/en/about-lara');
   })
 
 function handleNonInteractiveMode(options: Options): ConfigType {
@@ -82,7 +84,6 @@ function handleNonInteractiveMode(options: Options): ConfigType {
     },
     paths: {
       include: options.paths,
-      exclude: [],
     },
   }
 }
@@ -110,7 +111,6 @@ async function handleInteractiveMode(options: Options): Promise<ConfigType> {
     },
     paths: {
       include: inputPaths,
-      exclude: [],
     },
   }
 }

@@ -12,3 +12,9 @@ node_modules/
 
 # Config
 .lara.yaml
+
+# Lock file
+.lara.lock
+
+# Test files
+i18n-test/

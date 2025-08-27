@@ -41,23 +41,8 @@ export const IncludePath = z.string()
     error: 'Invalid characters in file path'
   });
 
-export const ExcludePath = z.string()
-  .min(1, 'Path cannot be empty')
-  .refine((path) => {
-    return !path.includes('..') && !path.startsWith('/');
-  }, {
-    error: 'Path cannot contain ".." or start with "/" (absolute path)'
-  })
-  .refine((path) => {
-    // Check if the path contains a valid pattern characters (e.g., src/*, src/**, src/**/*, etc.)
-    return !/[<>:"|]/.test(path);
-  }, {
-    error: 'Invalid characters in path or pattern'
-  });
-
 const FileConfig = z.object({
   include: z.array(IncludePath),
-  exclude: z.array(ExcludePath),
 });
 
 export const Config = z.object({
@@ -66,9 +51,9 @@ export const Config = z.object({
     target: z.array(LocalesEnum),
   })
     .refine((locales) => {
-      return locales.target.includes(locales.source);
+      return !locales.target.includes(locales.source);
     }, {
-      error: 'Source locale must be included in the target locales'
+      error: 'Source locale must not be included in the target locales'
     }),
   paths: FileConfig
 });

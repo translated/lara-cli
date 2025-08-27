@@ -1,6 +1,7 @@
 import { Credentials, Translator } from '@translated/lara';
+import Ora from 'ora';
 
-export default class TranslationProvider {
+export default class TranslationService {
 
   private readonly client: Translator;
 
@@ -9,7 +10,11 @@ export default class TranslationProvider {
     const keySecret = process.env.LARA_ACCESS_KEY_SECRET!;
 
     if(!keyId || !keySecret) {
-      throw new Error('LARA_ACCESS_KEY_ID and LARA_ACCESS_KEY_SECRET must be set');
+      Ora({
+        text: 'LARA_ACCESS_KEY_ID and LARA_ACCESS_KEY_SECRET must be set',
+        color: 'red',
+      }).fail();
+      process.exit(1);
     }
 
     this.client = new Translator(new Credentials(keyId, keySecret));
