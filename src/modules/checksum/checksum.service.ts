@@ -9,7 +9,7 @@ type Lock = {
   files: Record<string, FileKey>;
 };
 
-export default class ChecksumService {
+export class ChecksumService {
 
   private static readonly CHECKSUM_FILE = '.lara.lock';
 

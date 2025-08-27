@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 import { SUPPORTED_FILE_TYPES } from './config.const.js';
 import { LocalesEnum } from '../common/common.types.js';
 
-export const IncludePath = z.string()
+const IncludePath = z.string()
   .min(1, 'Path cannot be empty')
   .refine((path) => {
     const supportedExtensions = SUPPORTED_FILE_TYPES.map(ext => `.${ext}`);
@@ -45,7 +45,7 @@ const FileConfig = z.object({
   include: z.array(IncludePath),
 });
 
-export const Config = z.object({
+const Config = z.object({
   locales: z.object({
     source: LocalesEnum,
     target: z.array(LocalesEnum),
@@ -58,4 +58,10 @@ export const Config = z.object({
   paths: FileConfig
 });
 
-export type ConfigType = z.infer<typeof Config>;
+type ConfigType = z.infer<typeof Config>;
+
+export {
+  Config,
+  ConfigType,
+  IncludePath,
+};

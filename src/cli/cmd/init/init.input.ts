@@ -1,8 +1,9 @@
 import { checkbox, input } from '@inquirer/prompts';
 import Ora from 'ora';
 
+import * as PathLocator from '../../../modules/path/path.locator.js';
+
 import { LocalesEnum } from '../../../modules/common/common.types.js';
-import PathLocator from '../../../modules/path/path.locator.js';
 import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
 import { IncludePath } from '../../../modules/config/config.types.js';
 import { Options } from './init.types.js';

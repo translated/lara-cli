@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import TranslationEngine from '../../../modules/translation/translation.engine.js';
+import { TranslationEngine } from '../../../modules/translation/translation.engine.js';
 
 export default new Command()
   .command('translate')

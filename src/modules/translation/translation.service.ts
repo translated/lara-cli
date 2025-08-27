@@ -1,7 +1,7 @@
 import { Credentials, Translator } from '@translated/lara';
 import Ora from 'ora';
 
-export default class TranslationService {
+export class TranslationService {
 
   private readonly client: Translator;
 

@@ -1,7 +1,6 @@
-import { flatten, unflatten } from 'flat';
+import { flatten as flat, unflatten as unflat } from 'flat';
 
-export class JsonParser {
-  /**
+/**
    * Parses a JSON string and returns a flattened object
    *
    * @param json - The JSON string to parse
@@ -22,12 +21,12 @@ export class JsonParser {
    *   "dashboard.content.1": "content 2",
    * }
    */
-  public static parseFlattened(json: string): Record<string, string> {
-    const parsed = JSON.parse(json);
-    return flatten(parsed);
-  }
+function parseFlattened(json: string): Record<string, string> {
+  const parsed = JSON.parse(json);
+  return flat(parsed);
+}
 
-  /**
+/**
    * Unflattens a flattened object
    * 
    * @param flattened - The flattened object to unflatten
@@ -48,7 +47,11 @@ export class JsonParser {
    *   }
    * }
    */
-  public static unflatten(flattened: Record<string, string>): Record<string, unknown> {
-    return unflatten(flattened);
-  }
+function unflatten(flattened: Record<string, string>): Record<string, unknown> {
+  return unflat(flattened);
 }
+
+export {
+  parseFlattened,
+  unflatten,
+};

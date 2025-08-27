@@ -3,11 +3,12 @@ import Ora from 'ora';
 import { confirm } from '@inquirer/prompts';
 
 import { LocalesEnum } from '../../../modules/common/common.types.js';
-import ConfigProvider from '../../../modules/config/config.provider.js';
+import { ConfigProvider } from '../../../modules/config/config.provider.js';
 import { ConfigType } from '../../../modules/config/config.types.js';
-import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
 
-import { CommandUtils } from '../../lib/utils.js';
+import * as CommandUtils from '../../lib/utils.js';
+
+import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
 import { pathsInput, sourceInput, targetInput } from './init.input.js';
 import { Options } from './init.types.js';
 
@@ -69,11 +70,12 @@ export default new Command()
 
     const spinner = Ora({ text: 'Creating config file...', color: 'yellow' }).start();
 
-    ConfigProvider.saveConfig(config);
+    ConfigProvider.getInstance().saveConfig(config);
 
     spinner.succeed('Config file created successfully');
 
-    Ora().info('Config file created successfully! Make sure to insert your API keys in the .env file and you can run `lara translate` to start translating your files. You can find more info at https://support.laratranslate.com/en/about-lara');
+    Ora().info('Config file created successfully! Make sure to insert your API keys in the .env file and you can run `lara translate` to start translating your files.');
+    Ora().info('You can find more info at https://support.laratranslate.com/en/about-lara');
   })
 
 function handleNonInteractiveMode(options: Options): ConfigType {
@@ -89,7 +91,7 @@ function handleNonInteractiveMode(options: Options): ConfigType {
 }
 
 async function handleInteractiveMode(options: Options): Promise<ConfigType> {
-  if(ConfigProvider.doesConfigExists() && !options.force) {
+  if(ConfigProvider.getInstance().doesConfigExists() && !options.force) {
     const shouldOverwrite = await confirm({
       message: 'Config file already exists, do you want to overwrite it?',
     });

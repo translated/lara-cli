@@ -5,13 +5,22 @@ import yaml from 'yaml';
 import { CONFIG_PATH } from './config.const.js';
 import { Config, type ConfigType } from './config.types.js';
 
-class ConfigProvider {
+export class ConfigProvider {
+
+  private static instance: ConfigProvider | null = null;
 
   private config: ConfigType | null = null;
   private readonly configPath: string;
 
-  constructor() {
+  private constructor() {
     this.configPath = path.resolve(process.cwd(), CONFIG_PATH);
+  }
+
+  public static getInstance() {
+    if(!ConfigProvider.instance) {
+      ConfigProvider.instance = new ConfigProvider();
+    }
+    return ConfigProvider.instance;
   }
 
   public doesConfigExists() {
@@ -48,5 +57,3 @@ class ConfigProvider {
     this.config = config;
   }
 }
-
-export default new ConfigProvider();

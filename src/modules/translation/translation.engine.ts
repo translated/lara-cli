@@ -1,24 +1,26 @@
 import fs from 'fs/promises';
 import Ora from 'ora';
 
-import ConfigProvider from '../config/config.provider.js';
+import { ConfigProvider } from '../config/config.provider.js';
 import { ConfigType } from '../config/config.types.js';
-import PathLocator from '../path/path.locator.js';
-import { JsonParser } from '../json/json.parser.js';
-import TranslatorService from './translation.service.js';
-import ChecksumService from '../checksum/checksum.service.js';
+import { TranslationService } from './translation.service.js';
+import { ChecksumService } from '../checksum/checksum.service.js';
+import { LaraApiError } from '@translated/lara';
 
-export default class TranslationEngine {
+import * as PathLocator from '../path/path.locator.js';
+import * as JsonParser from '../json/json.parser.js';
+
+export class TranslationEngine {
 
   private config: ConfigType;
 
-  private readonly translatorService: TranslatorService;
+  private readonly translatorService: TranslationService;
   private readonly checksumService: ChecksumService;
 
   constructor() {
-    this.config = ConfigProvider.getConfig();
+    this.config = ConfigProvider.getInstance().getConfig();
 
-    this.translatorService = new TranslatorService();
+    this.translatorService = new TranslationService();
     this.checksumService = new ChecksumService();
   }
 
@@ -63,11 +65,9 @@ export default class TranslationEngine {
       });
 
       if(keysToTranslate.length === 0) {
-        spinner.succeed(`Translation in ${targetLocale} completed. No keys to translate.`);
+        spinner.succeed(`Translation in ${targetLocale} completed (no new keys to translate).`);
         continue;
       }
-
-      console.log(keysToTranslate);
 
       await Promise.all(keysToTranslate.map(async (key) => {
         const content = sourceFlattenedJson[key];
@@ -75,15 +75,27 @@ export default class TranslationEngine {
           Ora().warn(`Key ${key} not found in source file`);
           return;
         }
-    
-        const translatedContent = await this.translatorService.translate(content, sourceLocale, targetLocale);
-        targetFlattenedJson[key] = translatedContent;
+   
+        try {
+          const translatedContent = await this.translatorService.translate(content, sourceLocale, targetLocale);
+          targetFlattenedJson[key] = translatedContent;
+        } catch(error) {
+          if(error instanceof LaraApiError) {
+            Ora().fail(`${error.message}. Please check your API key and try again.`);
+            process.exit(1);
+          } else {
+            Ora().fail(`Error translating key ${key} in ${targetLocale} locale: ${error}`);
+            process.exit(1);
+          }
+        }
       }));
 
       spinner.succeed(`Translation in ${targetLocale} completed`);
 
       const unflattened = JsonParser.unflatten(targetFlattenedJson);
 
+      // Ensure the directory exists before writing the file
+      await PathLocator.ensureDirectoryExists(targetContentPath);
       await fs.writeFile(targetContentPath, JSON.stringify(unflattened, null, 2));
     }
   }
@@ -135,4 +147,3 @@ export default class TranslationEngine {
     return keysToTranslate;
   }
 }
-
