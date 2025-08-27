@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { TranslationEngine } from '../../../modules/translation/translation.engine.js';
+import Ora from 'ora';
 
 export default new Command()
   .command('translate')
@@ -7,5 +8,10 @@ export default new Command()
   .action(async () => {
     const translationEngine = new TranslationEngine();
 
-    await translationEngine.translate();
+    try{
+      await translationEngine.translate();
+    } catch(error) {
+      Ora({ text: error.message, color: 'red' }).fail();
+      process.exit(1);
+    }
   });

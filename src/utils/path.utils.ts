@@ -46,38 +46,19 @@ function buildPath(path: string, locale: string): string {
    * ]
    */
 async function searchPaths(): Promise<string[]> {
-  const paths = await findAllEligibleFilesInRoot();
+  const paths = await findAllEligibleFiles(process.cwd(), 0);
 
   const normalizedPaths = paths.map((path) => normalizePath(path)).filter((path) => path !== null);
   return Array.from(new Set(normalizedPaths));
 }
 
-// Finds all eligible files in the root path
-async function findAllEligibleFilesInRoot(): Promise<string[]> {
-  const rootPath = process.cwd();
-
-  const files = await fs.readdir(rootPath);
-
-  const paths: string[] = [];
-
-  // This first loop is to find all the directories in the root path.
-  // We do not want to search in the files inside the root path.
-  for(const file of files) {
-    const stats = await fs.stat(file);
-
-    if(stats.isDirectory()) {
-      // Skip hidden files and directories, along with default excluded directories
-      const isExcluded = defaultExcludedDirectories.has(file) || file.startsWith('.');
-
-      if(!isExcluded) {
-        paths.push(...await findAllEligibleFiles(path.join(rootPath, file)));
-      }
-    }
-  }
-
-  return paths;
-}
-
+/**
+ * Finds all eligible files starting from the root path
+ * 
+ * @param rootPath - The root path to start searching from.
+ * @param level - The current level of the search.
+ * @returns A promise that resolves to an array of paths.
+ */
 async function findAllEligibleFiles(rootPath: string, level: number = 0): Promise<string[]> {
   const files = await fs.readdir(rootPath);
     
@@ -91,6 +72,7 @@ async function findAllEligibleFiles(rootPath: string, level: number = 0): Promis
     }
   
     if (stats.isDirectory()) {
+      // Skip excluded directories
       const isExcluded = defaultExcludedDirectories.has(file);
   
       if (level >= DEFAULT_MAX_DEPTH_LEVEL || isExcluded) {
@@ -101,6 +83,11 @@ async function findAllEligibleFiles(rootPath: string, level: number = 0): Promis
     } 
 
     if (stats.isFile()) {
+      // At root level (level 0), skip files - only process directories
+      if (level === 0) {
+        return [];
+      }
+      
       const extension = path.extname(filePath).slice(1);
       if (SUPPORTED_FILE_TYPES.includes(extension)) {
         return [filePath];
@@ -114,8 +101,14 @@ async function findAllEligibleFiles(rootPath: string, level: number = 0): Promis
   return results.flat();
 }
 
-// Normalizes the path by replacing the locale with a placeholder.
-// Example: src/i18n/en-US/pages/home.json -> src/i18n/[locale]/pages/home.json
+/**
+ * Normalizes the path by replacing the locale with a placeholder.
+ * 
+ * @param filePath - The path to normalize.
+ * @returns The normalized path.
+ * 
+ * Example: src/i18n/en-US/pages/home.json -> src/i18n/[locale]/pages/home.json
+ */
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
   const parts = relativeFilePath.split('/');

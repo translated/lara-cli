@@ -92,12 +92,10 @@ export class TranslationEngine {
           targetFlattenedJson[key] = translatedContent;
         } catch(error) {
           if(error instanceof LaraApiError) {
-            Ora().fail(`${error.message}. Please check your API key and try again.`);
-            process.exit(1);
-          } else {
-            Ora().fail(`Error translating key ${key} in ${targetLocale} locale: ${error}`);
-            process.exit(1);
+            throw new Error(`${error.message}. Please check your API key and try again.`);
           }
+
+          throw new Error(`Error translating key ${key} in ${targetLocale} locale: ${error}`);
         }
       }));
 
@@ -120,8 +118,7 @@ export class TranslationEngine {
     try {
       sourceContent = await fs.readFile(sourceContentPath, 'utf8');
     } catch {
-      Ora().fail(`Error reading input path: ${sourceContentPath}. Make sure the file exists and is valid JSON.`);
-      process.exit(1);
+      throw new Error(`Error reading input path: ${sourceContentPath}. Make sure the file exists and is valid JSON.`);
     }
 
     const flattenedJson = parseFlattened(sourceContent!);
