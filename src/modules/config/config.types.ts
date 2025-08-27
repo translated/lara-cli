@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { SUPPORTED_FILE_TYPES } from './config.const.js';
+import { SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { LocalesEnum } from '../common/common.types.js';
 
 const IncludePath = z.string()

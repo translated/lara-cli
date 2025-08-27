@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
 
-import { CONFIG_PATH } from './config.const.js';
 import { Config, type ConfigType } from './config.types.js';
 
 export class ConfigProvider {
@@ -10,10 +9,12 @@ export class ConfigProvider {
   private static instance: ConfigProvider | null = null;
 
   private config: ConfigType | null = null;
+
+  private static readonly CONFIG_FILE_NAME: string = '.lara.yaml';
   private readonly configPath: string;
 
   private constructor() {
-    this.configPath = path.resolve(process.cwd(), CONFIG_PATH);
+    this.configPath = path.resolve(process.cwd(), ConfigProvider.CONFIG_FILE_NAME);
   }
 
   public static getInstance() {
