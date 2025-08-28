@@ -6,9 +6,9 @@ export default new Command()
   .command('translate')
   .description('Translate all files specified in the config file')
   .action(async () => {
-    const translationEngine = new TranslationEngine();
-
     try{
+      const translationEngine = new TranslationEngine();
+
       await translationEngine.translate();
     } catch(error) {
       Ora({ text: error.message, color: 'red' }).fail();
