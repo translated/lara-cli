@@ -103,13 +103,13 @@ async function handleInteractiveMode(options: Options): Promise<ConfigType> {
   }
 
   const inputSource = await sourceInput(options);
-  const inputTarget = await targetInput(options, inputSource);
+  const inputTarget = await targetInput(inputSource);
   const inputPaths = await pathsInput(options);
 
   return {
     locales: {
       source: LocalesEnum.parse(inputSource),
-      target: LocalesEnum.array().parse(inputTarget.split(/[\s,]+/)),
+      target: inputTarget,
     },
     paths: {
       include: inputPaths,

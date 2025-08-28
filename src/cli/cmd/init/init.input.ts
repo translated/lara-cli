@@ -1,10 +1,10 @@
 import { checkbox, input } from '@inquirer/prompts';
 import Ora from 'ora';
 
-import { searchPaths } from '../../../utils/path.utils.js';
+import { searchPaths } from '../../../utils/path.js';
 
 import { LocalesEnum } from '../../../modules/common/common.types.js';
-import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
+import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
 import { IncludePath } from '../../../modules/config/config.types.js';
 import { Options } from './init.types.js';
 
@@ -18,29 +18,19 @@ export async function sourceInput(options: Options) {
   });
 }
 
-export async function targetInput(options: Options, source: string) {
-  return await input({
-    message: 'What are the target locales? (separated by a comma, a space or a combination of both)',
-    default: options.target.join(', '),
+export async function targetInput(source: string) {
+  const choices = AVAILABLE_LOCALES
+    .filter((locale) => locale !== source)
+    .map((locale) => ({
+      name: locale,
+      value: locale,
+    }));
+
+  return await checkbox({
+    message: 'What are the target locales?',
+    choices,
     validate: (value) => {
-      const locales = value.split(/[\s,]+/);
-    
-      const invalidLocales = [];
-      for(const locale of locales) {
-        if(!LocalesEnum.safeParse(locale).success) {
-          invalidLocales.push(locale);
-        }
-    
-        if(locale === source) {
-          return `Target locale cannot be the same as the source locale: ${locale}`;
-        }
-      }
-    
-      if(invalidLocales.length > 0) {
-        return `Invalid values: ${invalidLocales.join(', ')}. Please insert a valid locale`;
-      }
-    
-      return true;
+      return value.length > 0 || 'Please select at least one locale';
     },
   });
 }
