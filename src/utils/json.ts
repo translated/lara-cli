@@ -23,7 +23,7 @@ import { flatten as flat, unflatten as unflat } from 'flat';
    */
 function parseFlattened(json: string): Record<string, unknown> {
   const parsed = JSON.parse(json);
-  return flat(parsed);
+  return flat(parsed, { delimiter: '/' });
 }
 
 /**
@@ -48,7 +48,7 @@ function parseFlattened(json: string): Record<string, unknown> {
    * }
    */
 function unflatten(flattened: Record<string, unknown>): Record<string, unknown> {
-  return unflat(flattened);
+  return unflat(flattened, { delimiter: '/' });
 }
 
 export {

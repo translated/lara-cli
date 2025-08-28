@@ -4,13 +4,33 @@ import path from 'path';
 import {
   AVAILABLE_LOCALES,
   DEFAULT_EXCLUDED_DIRECTORIES,
-  DEFAULT_MAX_DEPTH_LEVEL,
   SUPPORTED_FILE_TYPES,
-} from '../modules/common/common.const.js';
+} from '#modules/common/common.const.js';
 
+const DEFAULT_MAX_DEPTH_LEVEL = 6;
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 const defaultExcludedDirectories: Set<string> = new Set(DEFAULT_EXCLUDED_DIRECTORIES);
+
+/**
+ * Checks if the path is relative
+ * 
+ * @param path - The path to check.
+ * @returns True if the path is relative, false otherwise.
+ */
+function isRelative(path: string): boolean {
+  return !path.startsWith('/') && !path.startsWith('./') && !path.startsWith('../');
+}
+
+/**
+ * Gets the file extension from the path
+ * 
+ * @param path - The path to get the file extension from.
+ * @returns The file extension.
+ */
+function getFileExtension(path: string): string {
+  return path.split('.').pop() ?? '';
+}
 
 /**
    * Ensures that the directory for the given file path exists
@@ -38,6 +58,44 @@ function buildPath(path: string, locale: string): string {
 }
 
 /**
+ * Searches for files by wildcard pattern
+ * 
+ * @param pattern - The pattern to search for. (e.g. 'src/i18n/en-US/*.json')
+ * @returns A promise that resolves to an array of paths.
+ */
+async function searchFilePathsByWildcardPattern(pattern: string): Promise<string[]> {
+  const lastSlashIndex = pattern.lastIndexOf('/');
+  if (lastSlashIndex === -1) {
+    throw new Error(`Invalid pattern: no directory separator found for ${pattern}`);
+  }
+  
+  const rootPath = pattern.substring(0, lastSlashIndex + 1);
+  const filePattern = pattern.substring(lastSlashIndex);
+  
+  if(!rootPath) {
+    throw new Error(`Invalid pattern: no root path found for ${pattern}`);
+  }
+  if(!filePattern) {
+    throw new Error(`Invalid pattern: no file pattern found for ${pattern}`);
+  }
+
+  const files = await fs.readdir(rootPath);
+
+  const paths: string[] = [];
+  for(const file of files) {
+    if(!file.match(filePattern)) {
+      continue;
+    }
+
+    paths.push(path.join(rootPath, file));
+  }
+
+  return paths
+    .map((path) => normalizePath(path))
+    .filter((path) => path !== null);
+}
+
+/**
    * Searches and return for paths that are compatible with localisation purposes
    *
    * @returns {Promise<string[]>} - A promise that resolves to an array of paths. Example:
@@ -45,7 +103,7 @@ function buildPath(path: string, locale: string): string {
    *  'src/i18n/[locale].json',
    * ]
    */
-async function searchPaths(): Promise<string[]> {
+async function searchLocalePaths(): Promise<string[]> {
   const paths = await findAllEligibleFiles(process.cwd(), 0);
 
   const normalizedPaths = paths.map((path) => normalizePath(path)).filter((path) => path !== null);
@@ -88,7 +146,7 @@ async function findAllEligibleFiles(rootPath: string, level: number = 0): Promis
         return [];
       }
       
-      const extension = path.extname(filePath).slice(1);
+      const extension = getFileExtension(filePath);
       if (SUPPORTED_FILE_TYPES.includes(extension)) {
         return [filePath];
       }
@@ -165,7 +223,10 @@ function normalizePath(filePath: string): string | null {
 }
 
 export {
+  getFileExtension,
+  isRelative,
+  searchFilePathsByWildcardPattern,
   ensureDirectoryExists,
   buildPath,
-  searchPaths,
+  searchLocalePaths,
 };

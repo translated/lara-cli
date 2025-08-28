@@ -2,15 +2,15 @@ import { Command, Option } from 'commander';
 import Ora from 'ora';
 import { confirm } from '@inquirer/prompts';
 
-import { LocalesEnum } from '../../../modules/common/common.types.js';
-import { ConfigProvider } from '../../../modules/config/config.provider.js';
-import { ConfigType } from '../../../modules/config/config.types.js';
+import { LocalesEnum } from '#modules/common/common.types.js';
+import { ConfigProvider } from '#modules/config/config.provider.js';
 
-import { isRunningInInteractiveMode } from '../../../utils/cli.utils.js';
+import { isRunningInInteractiveMode } from '#utils/cli.js';
 
-import { COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
+import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { pathsInput, sourceInput, targetInput } from './init.input.js';
-import { Options } from './init.types.js';
+import { InitOptions } from './init.types.js';
+import { ConfigType } from '#modules/config/config.types.js';
 
 export default new Command()
   .command('init')
@@ -63,7 +63,7 @@ export default new Command()
       })
       .default(['./src/i18n/[locale].json'])
   )
-  .action(async (options: Options, command: Command) => {
+  .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
       ? await handleInteractiveMode(options)
       : handleNonInteractiveMode(options);
@@ -78,19 +78,25 @@ export default new Command()
     Ora().info('You can find more info at https://support.laratranslate.com/en/about-lara');
   })
 
-function handleNonInteractiveMode(options: Options): ConfigType {
+function handleNonInteractiveMode(options: InitOptions): ConfigType {
   return {
+    version: '1.0.0',
     locales: {
       source: options.source,
       target: options.target,
     },
-    paths: {
-      include: options.paths,
+    files: {
+      json: {
+        include: options.paths,
+        exclude: [],
+        lockedKeys: [],
+        ignoredKeys: [],
+      },
     },
   }
 }
 
-async function handleInteractiveMode(options: Options): Promise<ConfigType> {
+async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> {
   if(ConfigProvider.getInstance().doesConfigExists() && !options.force) {
     const shouldOverwrite = await confirm({
       message: 'Config file already exists, do you want to overwrite it?',
@@ -107,12 +113,18 @@ async function handleInteractiveMode(options: Options): Promise<ConfigType> {
   const inputPaths = await pathsInput(options);
 
   return {
+    version: '1.0.0',
     locales: {
-      source: LocalesEnum.parse(inputSource),
+      source: inputSource,
       target: inputTarget,
     },
-    paths: {
-      include: inputPaths,
+    files: {
+      json: {
+        include: inputPaths,
+        exclude: [],
+        lockedKeys: [],
+        ignoredKeys: [],
+      },
     },
   }
 }

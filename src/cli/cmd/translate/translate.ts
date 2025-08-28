@@ -1,17 +1,114 @@
-import { Command } from 'commander';
-import { TranslationEngine } from '../../../modules/translation/translation.engine.js';
+import { Command, Option } from 'commander';
 import Ora from 'ora';
+
+import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
+import { LocalesEnum } from '#modules/common/common.types.js';
+import { ConfigProvider } from '#modules/config/config.provider.js';
+import { ConfigType } from '#modules/config/config.types.js';
+import { buildPath, searchFilePathsByWildcardPattern } from '#utils/path.js';
+import { TranslationEngine } from '#modules/translation/translation.engine.js';
+
+type TranslateOptions = {
+  target: string[];
+  input: string[];
+
+  force: boolean;
+  parallel: boolean;
+};
 
 export default new Command()
   .command('translate')
   .description('Translate all files specified in the config file')
-  .action(async () => {
-    try{
-      const translationEngine = new TranslationEngine();
+  .addOption(
+    new Option('-t, --target <locales>', 'The locale to translate to (separated by a comma, a space or a combination of both)')
+      .argParser((value) => {
+        const locales = value.split(COMMA_AND_SPACE_REGEX);
 
-      await translationEngine.translate();
+        return locales.map((locale) => {
+          const parsed = LocalesEnum.safeParse(locale);
+
+          if(!parsed.success) {
+            Ora({ text: `Invalid locale: ${locale}`, color: 'red' }).fail();
+            return process.exit(1);
+          }
+
+          return parsed.data;
+        })
+      })
+      .default([])
+  )
+  .addOption(
+    new Option('-f, --force', 'Force translation even if the files have not changed')
+      .default(false)
+  )
+  .addOption(
+    new Option('-p, --parallel', 'Run the translations in parallel')
+      .default(false)
+  )
+  .action(async (options: TranslateOptions) => {
+    try{
+      const config = ConfigProvider.getInstance().getConfig();
+
+      if(options.target.includes(config.locales.source)) {
+        throw new Error('Source locale cannot be included in the target locales');
+      }
+
+      for(const fileType of Object.keys(config.files)) {
+        await handleFileType(config, options, fileType);
+      }
     } catch(error) {
       Ora({ text: error.message, color: 'red' }).fail();
       process.exit(1);
     }
+
+    Ora().succeed('Localization completed! Happy coding!');
   });
+
+async function handleFileType(config: ConfigType, options: TranslateOptions, fileType: string) {
+
+  const fileConfig = config.files[fileType]!;
+  const sourceLocale = config.locales.source;
+  const targetLocales = options.target.length > 0
+    ? options.target
+    : config.locales.target;
+
+  const inputPaths: Set<string> = new Set();
+
+  for(const includePath of fileConfig.include) {
+    if(!includePath.includes('*')) {
+      inputPaths.add(includePath);
+      continue;
+    } 
+
+    // Search files based on the presence of source files. (e.g. src/i18n/[locale]/*.json -> src/i18n/en-US/*.json)
+    const sourcePattern = buildPath(includePath, sourceLocale);
+    const files = await searchFilePathsByWildcardPattern(sourcePattern);
+
+    files.forEach((file) => {
+      inputPaths.add(file);
+    });
+  }
+
+  const translationPromises = Array.from(inputPaths).map(async (inputPath) => {
+    const translationEngine = new TranslationEngine({
+      sourceLocale,
+      targetLocales,
+
+      inputPath,
+      force: options.force,
+      lockedKeys: fileConfig.lockedKeys,
+      ignoredKeys: fileConfig.ignoredKeys
+    });
+
+    return await translationEngine.translate();
+  });
+
+  if(options.parallel) {
+    await Promise.all(translationPromises);
+    return;
+  }
+
+  for(const promise of translationPromises) {
+    await promise;
+  }
+}

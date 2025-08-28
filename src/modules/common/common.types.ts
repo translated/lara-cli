@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
-import { AVAILABLE_LOCALES } from './common.const.js';
+import { AVAILABLE_LOCALES, SUPPORTED_FILE_TYPES } from './common.const.js';
 
 export const LocalesEnum = z.enum(AVAILABLE_LOCALES);
 
-export type LocalesType = z.infer<typeof LocalesEnum>;
+export const SupportedFileTypesEnum = z.enum(SUPPORTED_FILE_TYPES);
+

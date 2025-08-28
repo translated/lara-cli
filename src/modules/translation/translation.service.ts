@@ -2,9 +2,11 @@ import { Credentials, Translator } from '@translated/lara';
 
 export class TranslationService {
 
+  private static instance: TranslationService;
+
   private readonly client: Translator;
 
-  constructor() {
+  private constructor() {
     const keyId = process.env.LARA_ACCESS_KEY_ID!;
     const keySecret = process.env.LARA_ACCESS_KEY_SECRET!;
 
@@ -15,8 +17,17 @@ export class TranslationService {
     this.client = new Translator(new Credentials(keyId, keySecret));
   }
 
-  public async translate(text: string, sourceLocale: string, targetLocale: string) {
+  public static getInstance(): TranslationService {
+    if(!TranslationService.instance) {
+      TranslationService.instance = new TranslationService();
+    }
+
+    return TranslationService.instance;
+  }
+
+  public async translate(text: string, sourceLocale: string, targetLocale: string): Promise<string> {
     const response = await this.client.translate(text, sourceLocale, targetLocale);
+
     return response.translation;
   }
 }

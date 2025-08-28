@@ -1,67 +1,75 @@
 import { z } from 'zod/v4';
 
+import { LocalesEnum, SupportedFileTypesEnum } from '../common/common.types.js';
 import { SUPPORTED_FILE_TYPES } from '../common/common.const.js';
-import { LocalesEnum } from '../common/common.types.js';
+import { getFileExtension, isRelative } from '#utils/path.js';
 
-const IncludePath = z.string()
-  .min(1, 'Path cannot be empty')
-  .refine((path) => {
-    const supportedExtensions = SUPPORTED_FILE_TYPES.map(ext => `.${ext}`);
-    return supportedExtensions.some(ext => path.endsWith(ext));
-  }, {
-    error: `File must end with one of the supported extensions: ${SUPPORTED_FILE_TYPES.map(ext => `.${ext}`).join(', ')}`
+const FilePath = z.string()
+  .refine((path) => isRelative(path), {
+    message: 'Path must be relative (cannot start with /, ./, or ../)',
+  })
+  .refine((path) => SUPPORTED_FILE_TYPES.includes(getFileExtension(path)), {
+    message: `Path must end with a valid file extension (${SUPPORTED_FILE_TYPES.map((type) => `.${type}`).join(', ')})`,
+  })
+  .refine((path) => !path.includes('**'), {
+    message: 'Recursive wildcards (**) are not allowed',
   })
   .refine((path) => {
-    return !path.includes('..') && !path.startsWith('/');
-  }, {
-    error: 'Path cannot contain ".." or start with "/" (absolute path)'
-  })
-  .refine((path) => {
-    const localePattern = /\[locale\]/g;
-    const matches = path.match(localePattern);
-    
-    if (!matches) {
-      return false;
+    const wildcardRegex = /\*/g;
+    const wildcards = path.match(wildcardRegex);
+
+    if(!wildcards) {
+      return true;
     }
-    
-    // Check if [locale] is used as a folder (followed by /) or as a file (followed by . or end of string)
-    const validPatterns = [
-      /\[locale\]\//, // [locale] as folder
-      /\[locale\]\.[^/]+$/, // [locale] as file (with extension at end)
-      /\/\[locale\]$/ // [locale] as final folder/file without extension
-    ];
-    
-    return validPatterns.some(pattern => pattern.test(path));
+
+    // Check if the wildcard is in the allowed format (e.g., *.json, src/*.json)
+    return /^(?:.*\/)?(\*\.[a-zA-Z0-9]+)$/.test(path);
   }, {
-    error: 'Path must contain at least one "[locale]" as a folder or as a file (e.g., folder/[locale]/file.json, folder/[locale].json, folder/[locale]/[locale].json)'
+    message: 'Wildcards (*) are only allowed in the format *.extension (e.g., *.json, src/*.json)',
   })
   .refine((path) => {
-    return !/[<>:"|*?]/.test(path);
+    // Check for /[locale]/ pattern (directory) or [locale].extension pattern (filename)
+    const hasDirectoryPattern = path.includes('/[locale]/');
+    const hasFilenamePattern = /\[locale\]\.[a-zA-Z0-9]+$/.test(path);
+    
+    return hasDirectoryPattern || hasFilenamePattern;
   }, {
-    error: 'Invalid characters in file path'
+    message: 'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension)',
   });
 
-const FileConfig = z.object({
-  include: z.array(IncludePath),
-});
+const KeyPath = z.string()
+  .refine((path) => /^[a-zA-Z0-9_\-./*]+$/.test(path), {
+    message: 'Key path must contain only alphanumeric characters, underscore, dash, dot, slash, and asterisk',
+  })
+  .refine((path) => !path.startsWith('/') && !path.endsWith('/'), {
+    message: 'Key path cannot start or end with a slash',
+  })
+  .refine((path) => path.split('/').some((segment) => segment !== '*'), {
+    message: 'Key path must contain at least one non-wildcard segment',
+  })
+
 
 const Config = z.object({
+  version: z.string(),
+
   locales: z.object({
     source: LocalesEnum,
     target: z.array(LocalesEnum),
-  })
-    .refine((locales) => {
-      return !locales.target.includes(locales.source);
-    }, {
-      error: 'Source locale must not be included in the target locales'
-    }),
-  paths: FileConfig
+  }),
+
+  files: z.record(SupportedFileTypesEnum, z.object({
+    include: z.array(FilePath),
+    exclude: z.array(FilePath).default([]),
+    lockedKeys: z.array(KeyPath).default([]),
+    ignoredKeys: z.array(KeyPath).default([]),
+  })),
 });
 
 type ConfigType = z.infer<typeof Config>;
 
 export {
+  FilePath,
+  KeyPath,
   Config,
-  ConfigType,
-  IncludePath,
+  type ConfigType,
 };

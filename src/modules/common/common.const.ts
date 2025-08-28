@@ -1,18 +1,48 @@
 export const COMMA_AND_SPACE_REGEX = /[\s,]+/;
 
 export const AVAILABLE_LOCALES = [
-  'en-US',
+  'ar-SA',
+  'bg-BG',
+  'ca-ES',
   'zh-CN',
   'zh-TW',
-  'ja-JP',
-  'ko-KR',
+  'zh-HK',
+  'hr-HR',
+  'cs-CZ',
+  'da-DK',
+  'nl-BE',
+  'nl-NL',
+  'en-AU',
+  'en-CA',
+  'en-IE',
+  'en-GB',
+  'en-US',
+  'fi-FI',
+  'fr-CA',
   'fr-FR',
   'de-DE',
-  'es-ES',
+  'el-GR',
+  'he-IL',
+  'hu-HU',
+  'id-ID',
   'it-IT',
-  'pt-PT',
+  'ja-JP',
+  'ko-KR',
+  'ms-MY',
+  'nb-NO',
+  'pl-PL',
   'pt-BR',
-  'ru-RU'
+  'pt-PT',
+  'ru-RU',
+  'sk-SK',
+  'es-AR',
+  'es-419',
+  'es-MX',
+  'es-ES',
+  'sv-SE',
+  'th-TH',
+  'tr-TR',
+  'uk-UA',
 ];
 
 export const DEFAULT_EXCLUDED_DIRECTORIES = [
@@ -25,7 +55,5 @@ export const DEFAULT_EXCLUDED_DIRECTORIES = [
   'test',
   'tests',
 ];
-
-export const DEFAULT_MAX_DEPTH_LEVEL = 6;
 
 export const SUPPORTED_FILE_TYPES = ['json'];

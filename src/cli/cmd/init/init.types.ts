@@ -1,8 +1,6 @@
-import { LocalesType } from '../../../modules/common/common.types.js';
-
-export type Options = {
+export type InitOptions = {
   force: boolean;
-  source: LocalesType;
-  target: LocalesType[];
+  source: string;
+  target: string[];
   paths: string[];
 };

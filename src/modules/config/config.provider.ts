@@ -10,7 +10,7 @@ export class ConfigProvider {
 
   private config: ConfigType | null = null;
 
-  private static readonly CONFIG_FILE_NAME: string = '.lara.yaml';
+  private static readonly CONFIG_FILE_NAME: string = 'lara.yaml';
   private readonly configPath: string;
 
   private constructor() {

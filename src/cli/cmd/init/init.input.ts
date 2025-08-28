@@ -1,14 +1,14 @@
 import { checkbox, input } from '@inquirer/prompts';
 import Ora from 'ora';
 
-import { searchPaths } from '../../../utils/path.js';
+import { searchLocalePaths } from '#utils/path.js';
 
-import { LocalesEnum } from '../../../modules/common/common.types.js';
-import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '../../../modules/common/common.const.js';
-import { IncludePath } from '../../../modules/config/config.types.js';
-import { Options } from './init.types.js';
+import { LocalesEnum } from '#modules/common/common.types.js';
+import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
+import { InitOptions } from './init.types.js';
+import { FilePath } from '#modules/config/config.types.js';
 
-export async function sourceInput(options: Options) {
+export async function sourceInput(options: InitOptions) {
   return await input({
     message: 'What is the source locale?',
     default: options.source,
@@ -35,10 +35,10 @@ export async function targetInput(source: string) {
   });
 }
 
-export async function pathsInput(options: Options) {
+export async function pathsInput(options: InitOptions) {
   const spinner = Ora({ text: 'Searching for paths...', color: 'yellow' }).start();
 
-  const paths = await searchPaths();
+  const paths = await searchLocalePaths();
   if(paths.length === 0) {
     spinner.warn('No paths found');
   } else {
@@ -67,7 +67,7 @@ export async function pathsInput(options: Options) {
       const paths = value.split(COMMA_AND_SPACE_REGEX);
 
       for(const path of paths) {
-        const parsedPath = IncludePath.safeParse(path);
+        const parsedPath = FilePath.safeParse(path);
         if(!parsedPath.success) {
           return parsedPath.error.issues[0]?.message || 'Invalid path';
         }
