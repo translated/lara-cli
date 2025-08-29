@@ -61,6 +61,7 @@ export default new Command()
   });
 
 async function handleFileType(fileType: string, options: TranslateOptions, config: ConfigType) {
+  const spinner = Ora({ text: `Translating ${fileType} files...`, color: 'yellow' }).start();
 
   const fileConfig = config.files[fileType]!;
   const sourceLocale = config.locales.source;
@@ -100,4 +101,6 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
 
     await translationEngine.translate();
   }
+
+  spinner.succeed(`Translated ${fileType} files!`);
 }
