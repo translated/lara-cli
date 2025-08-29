@@ -12,6 +12,8 @@ import { pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { appendFileSync } from 'fs';
+import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
+
 
 export default new Command()
   .command('init')
@@ -79,7 +81,7 @@ export default new Command()
 function handleNonInteractiveMode(options: InitOptions): ConfigType {
   if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
     Ora({ 
-      text: 'No API credentials found on machine. Without API credentials, Lara CLI will not be able to translate your files. You can insert them anytime later by modifying your system environment variables or your .env file. You can find more info at https://support.laratranslate.com/en/about-lara', 
+      text: `No API credentials found on machine. ${NO_API_CREDENTIALS_MESSAGE}`, 
       color: 'yellow' 
     }).warn();
 
@@ -135,7 +137,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       Ora({ text: 'API credentials inserted successfully', color: 'green' }).succeed();
     } else {
       Ora({ 
-        text: 'Without API credentials, Lara CLI will not be able to translate your files. You can insert them anytime later by modifying your system environment variables or your .env file. You can find more info at https://support.laratranslate.com/en/about-lara', 
+        text: NO_API_CREDENTIALS_MESSAGE, 
         color: 'yellow' 
       }).warn();
     }
