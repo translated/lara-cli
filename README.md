@@ -59,6 +59,41 @@ When you run Lara for the first time, it translates your project while leaving e
 
 After the initial translation, a `.lara.lock` file is generated to keep track of changes. From that point on, whenever you modify your source locale file and request a new translation, **only the updated keys will be translated**.
 
+
+## 🖥️ Local Development
+To test Lara CLI locally and use it in other projects, follow these steps:
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/humanstech/lara-cli.git
+cd lara-cli
+```
+
+2. **Install dependencies and build**
+```bash
+pnpm install
+pnpm run build
+```
+
+3. **Setup pnpm global bin directory (first time only)**
+```bash
+pnpm setup
+```
+
+4. **Link globally**
+```bash
+pnpm link --global
+```
+
+5. **Use anywhere**
+```bash
+# Now you can use 'lara' from any directory
+lara-cli init --help
+lara-cli translate --help
+```
+
+**Note:** After making changes to the source code, run `pnpm run build` to update the global command.
+
 ## 🆘 Need Help?
 - **Lara Translate API Issues:** Visit [Lara Translate API and Integrations Support](https://support.laratranslate.com)  
 - **Lara CLI Issues:** Open an issue on [GitHub](https://github.com/humanstech/lara-cli/issues)

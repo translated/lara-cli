@@ -197,7 +197,7 @@ files:
 ```yaml
 version: 1.0.0
 project:
-  context: "E-commerce platform for fashion retail"
+  context: "E-commerce platform for fashion retail" # Context used in translations
 locales:
   source: en-US
   target:

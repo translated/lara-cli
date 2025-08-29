@@ -61,7 +61,7 @@ export default new Command()
           return path.toString();
         })
       })
-      .default(['./src/i18n/[locale].json'])
+      .default(['src/i18n/[locale].json'])
   )
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
