@@ -35,6 +35,10 @@ const KeyPath = z.string()
 const Config = z.object({
   version: z.string(),
 
+  project: z.object({
+    context: z.string().optional(),
+  }).optional(),
+
   locales: z.object({
     source: LocalesEnum,
     target: z.array(LocalesEnum),

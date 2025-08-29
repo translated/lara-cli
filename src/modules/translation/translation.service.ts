@@ -1,4 +1,4 @@
-import { Credentials, Translator } from '@translated/lara';
+import { Credentials, TranslateOptions, Translator } from '@translated/lara';
 
 export class TranslationService {
 
@@ -25,8 +25,8 @@ export class TranslationService {
     return TranslationService.instance;
   }
 
-  public async translate(text: string, sourceLocale: string, targetLocale: string): Promise<string> {
-    const response = await this.client.translate(text, sourceLocale, targetLocale);
+  public async translate(text: string, sourceLocale: string, targetLocale: string, options: TranslateOptions): Promise<string> {
+    const response = await this.client.translate(text, sourceLocale, targetLocale, options);
 
     return response.translation;
   }

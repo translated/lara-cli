@@ -35,14 +35,10 @@ export default new Command()
           return parsed.data;
         })
       })
-      .default([])
+      .default('')
   )
   .addOption(
     new Option('-f, --force', 'Force translation even if the files have not changed')
-      .default(false)
-  )
-  .addOption(
-    new Option('-p, --parallel', 'Run the translations in parallel')
       .default(false)
   )
   .action(async (options: TranslateOptions) => {
@@ -89,7 +85,7 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
     });
   }
 
-  const translationPromises = Array.from(inputPaths).map(async (inputPath) => {
+  for(const inputPath of inputPaths) {
     const translationEngine = new TranslationEngine({
       sourceLocale,
       targetLocales,
@@ -97,18 +93,11 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
       inputPath,
       force: options.force,
       lockedKeys: fileConfig.lockedKeys,
-      ignoredKeys: fileConfig.ignoredKeys
+      ignoredKeys: fileConfig.ignoredKeys,
+
+      context: config.project?.context,
     });
 
-    return await translationEngine.translate();
-  });
-
-  if(options.parallel) {
-    await Promise.all(translationPromises);
-    return;
-  }
-
-  for(const promise of translationPromises) {
-    await promise;
+    await translationEngine.translate();
   }
 }

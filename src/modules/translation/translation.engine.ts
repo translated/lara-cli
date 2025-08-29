@@ -16,6 +16,8 @@ export type TranslationEngineOptions = {
 
   lockedKeys: string[];
   ignoredKeys: string[];
+
+  context: string | undefined;
 };
 
 /**
@@ -41,6 +43,8 @@ export class TranslationEngine {
   private readonly lockedPatterns: Matcher[];
   private readonly ignoredPatterns: Matcher[];
 
+  private readonly instructions: string[] | undefined;
+
   private readonly translatorService: TranslationService;
 
   constructor(options: TranslationEngineOptions) {
@@ -53,6 +57,10 @@ export class TranslationEngine {
 
     this.lockedPatterns = options.lockedKeys.map(pattern => picomatch(pattern));
     this.ignoredPatterns = options.ignoredKeys.map(pattern => picomatch(pattern));
+
+    this.instructions = options.context ? [
+      `Translate the content taking into account the context of the project: ${options.context}`,
+    ] : undefined;
 
     this.translatorService = TranslationService.getInstance();
   }
@@ -125,7 +133,9 @@ export class TranslationEngine {
       return value;
     }
     
-    return await this.translatorService.translate(value, sourceLocale, targetLocale);
+    return await this.translatorService.translate(value, sourceLocale, targetLocale, {
+      instructions: this.instructions,
+    });
   }
 
   private isIgnored(key: string): boolean {
