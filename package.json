@@ -27,7 +27,9 @@
   },
   "scripts": {
     "build": "rm -rf build && npx tsc",
-    "start": "rm -rf build && npx tsc && node build/index.js"
+    "start": "rm -rf build && npx tsc && node build/index.js",
+    "lint": "npx eslint src/**/*.ts",
+    "lint:fix": "npx eslint src/**/*.ts --fix"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
