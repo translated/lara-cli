@@ -42,7 +42,8 @@ export class ConfigProvider {
     const safeConfig = Config.safeParse(yaml.parse(config));
 
     if(!safeConfig.success) {
-      throw new Error(`Invalid config file: ${safeConfig.error.issues[0]?.message || 'Unknown error'}`);
+      const issues = safeConfig.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
+      throw new Error(`Invalid config file for properties:\n${issues.join('\n')}`);
     }
     this.config = safeConfig.data;
 
