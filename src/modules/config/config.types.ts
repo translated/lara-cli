@@ -4,7 +4,7 @@ import { LocalesEnum, SupportedFileTypesEnum } from '../common/common.types.js';
 import { SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { getFileExtension, isRelative } from '#utils/path.js';
 
-const FilePath = z.string()
+const IncludeFilePath = z.string()
   .refine((path) => isRelative(path), {
     message: 'Path must be relative (cannot start with /, ./, or ../)',
   })
@@ -21,6 +21,11 @@ const FilePath = z.string()
     return hasDirectoryPattern || hasFilenamePattern;
   }, {
     message: 'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension)',
+  });
+
+const ExcludeFilePath = z.string()
+  .refine((path) => isRelative(path), {
+    message: 'Path must be relative (cannot start with /, ./, or ../)',
   });
 
 const KeyPath = z.string()
@@ -45,8 +50,8 @@ const Config = z.object({
   }),
 
   files: z.record(SupportedFileTypesEnum, z.object({
-    include: z.array(FilePath),
-    exclude: z.array(FilePath).default([]),
+    include: z.array(IncludeFilePath),
+    exclude: z.array(ExcludeFilePath).default([]),
     lockedKeys: z.array(KeyPath).default([]),
     ignoredKeys: z.array(KeyPath).default([]),
   })),
@@ -68,7 +73,7 @@ const Config = z.object({
 type ConfigType = z.infer<typeof Config>;
 
 export {
-  FilePath,
+  IncludeFilePath as FilePath,
   KeyPath,
   Config,
   type ConfigType,

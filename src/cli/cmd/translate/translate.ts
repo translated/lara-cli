@@ -7,6 +7,7 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
 import { searchLocalePathsByPattern } from '#utils/path.js';
+import picomatch from 'picomatch';
 
 type TranslateOptions = {
   target: string[];
@@ -69,6 +70,7 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
     ? options.target
     : config.locales.target;
 
+  const excludePatterns = fileConfig.exclude.map((key) => picomatch(key));
   const inputPaths: Set<string> = new Set();
 
   for(const includePath of fileConfig.include) {
@@ -82,6 +84,10 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
     const files = await searchLocalePathsByPattern(includePath);
 
     files.forEach((file) => {
+      if(excludePatterns.some((pattern) => pattern(file))) {
+        return;
+      }
+
       inputPaths.add(file);
     });
   }
