@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander';
 import Ora from 'ora';
-import { confirm } from '@inquirer/prompts';
+import { confirm, input } from '@inquirer/prompts';
 
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -11,6 +11,7 @@ import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
+import { appendFileSync } from 'fs';
 
 export default new Command()
   .command('init')
@@ -72,13 +73,19 @@ export default new Command()
 
     ConfigProvider.getInstance().saveConfig(config);
 
-    spinner.succeed('Config file created successfully');
-
-    Ora().info('Config file created successfully! Make sure to insert your API keys in the .env file and you can run `lara translate` to start translating your files.');
-    Ora().info('You can find more info at https://support.laratranslate.com/en/about-lara');
+    spinner.succeed('Config file created successfully! You can run `lara translate` to start translating your files.');
   })
 
 function handleNonInteractiveMode(options: InitOptions): ConfigType {
+  if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
+    Ora({ 
+      text: 'No API credentials found on machine. Without API credentials, Lara CLI will not be able to translate your files. You can insert them anytime later by modifying your system environment variables or your .env file. You can find more info at https://support.laratranslate.com/en/about-lara', 
+      color: 'yellow' 
+    }).warn();
+
+    return process.exit(1);
+  }
+
   return {
     version: '1.0.0',
     locales: {
@@ -111,6 +118,28 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
   const inputSource = await sourceInput(options);
   const inputTarget = await targetInput(inputSource);
   const inputPaths = await pathsInput(options);
+
+  if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
+    const shouldInsertCredentials = await confirm({
+      message: 'No API credentials found on machine, do you want to insert them now in a .env file?',
+    });
+
+    if(shouldInsertCredentials) {
+      const apiKey = await input({ message: 'Insert your API Key:' });
+      const apiSecret = await input({ message: 'Insert your API Secret:' });
+
+      const envContent = `LARA_ACCESS_KEY_ID=${apiKey}\nLARA_ACCESS_KEY_SECRET=${apiSecret}\n`;
+
+      appendFileSync('.env', `\n${envContent}`);
+
+      Ora({ text: 'API credentials inserted successfully', color: 'green' }).succeed();
+    } else {
+      Ora({ 
+        text: 'Without API credentials, Lara CLI will not be able to translate your files. You can insert them anytime later by modifying your system environment variables or your .env file. You can find more info at https://support.laratranslate.com/en/about-lara', 
+        color: 'yellow' 
+      }).warn();
+    }
+  }
 
   return {
     version: '1.0.0',
