@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
 import path from 'path';
+import { glob } from 'glob';
 
 import {
   AVAILABLE_LOCALES,
@@ -7,10 +8,8 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 
-const DEFAULT_MAX_DEPTH_LEVEL = 6;
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
-const defaultExcludedDirectories: Set<string> = new Set(DEFAULT_EXCLUDED_DIRECTORIES);
 
 /**
  * Checks if the path is relative
@@ -30,6 +29,21 @@ function isRelative(path: string): boolean {
  */
 function getFileExtension(path: string): string {
   return path.split('.').pop() ?? '';
+}
+
+/**
+ * Reads a file safely, returning a fallback value if the file does not exist
+ * 
+ * @param filePath - The path to the file.
+ * @param fallback - The fallback value to return if the file does not exist.
+ * @returns The file content.
+ */
+async function readSafe(filePath: string, fallback: string = ''): Promise<string> {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch {
+    return fallback;
+  }
 }
 
 /**
@@ -53,46 +67,34 @@ async function ensureDirectoryExists(filePath: string): Promise<void> {
    * @param locale - The locale to replace the placeholder with. Example: 'en-US'
    * @returns The built path. Example: 'src/i18n/en-US.json'
    */
-function buildPath(path: string, locale: string): string {
-  return path.replaceAll('[locale]', locale);
+function buildLocalePath(filePath: string, locale: string): string {
+  return filePath.replaceAll('[locale]', locale);
 }
 
 /**
- * Searches for files by wildcard pattern
+ * Searches for paths by a pattern
  * 
- * @param pattern - The pattern to search for. (e.g. 'src/i18n/en-US/*.json')
+ * @param pattern - The pattern to search for. Example: 'src/i18n/[locale].json'
  * @returns A promise that resolves to an array of paths.
+ * 
  */
-async function searchFilePathsByWildcardPattern(pattern: string): Promise<string[]> {
-  const lastSlashIndex = pattern.lastIndexOf('/');
-  if (lastSlashIndex === -1) {
-    throw new Error(`Invalid pattern: no directory separator found for ${pattern}`);
-  }
-  
-  const rootPath = pattern.substring(0, lastSlashIndex + 1);
-  const filePattern = pattern.substring(lastSlashIndex);
-  
-  if(!rootPath) {
-    throw new Error(`Invalid pattern: no root path found for ${pattern}`);
-  }
-  if(!filePattern) {
-    throw new Error(`Invalid pattern: no file pattern found for ${pattern}`);
-  }
+async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
+  const localePattern = pattern.replaceAll('[locale]', `{${AVAILABLE_LOCALES.join(',')}}`);
+  const paths = await glob(localePattern, {
+    cwd: process.cwd(),
+    ignore: DEFAULT_EXCLUDED_DIRECTORIES.map(dir => `${dir}/**`),
+  });
 
-  const files = await fs.readdir(rootPath);
+  const localePaths: string[] = [];
 
-  const paths: string[] = [];
-  for(const file of files) {
-    if(!file.match(filePattern)) {
-      continue;
+  for (const path of paths) {
+    const normalizedPath = normalizePath(path);
+    if (normalizedPath !== null) {
+      localePaths.push(normalizedPath);
     }
-
-    paths.push(path.join(rootPath, file));
   }
-
-  return paths
-    .map((path) => normalizePath(path))
-    .filter((path) => path !== null);
+  
+  return localePaths;
 }
 
 /**
@@ -104,59 +106,26 @@ async function searchFilePathsByWildcardPattern(pattern: string): Promise<string
    * ]
    */
 async function searchLocalePaths(): Promise<string[]> {
-  const paths = await findAllEligibleFiles(process.cwd(), 0);
-
-  const normalizedPaths = paths.map((path) => normalizePath(path)).filter((path) => path !== null);
-  return Array.from(new Set(normalizedPaths));
-}
-
-/**
- * Finds all eligible files starting from the root path
- * 
- * @param rootPath - The root path to start searching from.
- * @param level - The current level of the search.
- * @returns A promise that resolves to an array of paths.
- */
-async function findAllEligibleFiles(rootPath: string, level: number = 0): Promise<string[]> {
-  const files = await fs.readdir(rootPath);
+  // Use simple pattern if only one file type, otherwise use brace expansion
+  const pattern = SUPPORTED_FILE_TYPES.length === 1 
+    ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
+    : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
     
-  const filePromises = files.map(async (file) => {
-    const filePath = path.join(rootPath, file);
-    const stats = await fs.stat(filePath);
-     
-    // Skip hidden files and directories
-    if(file.startsWith('.')) {
-      return [];
-    }
-  
-    if (stats.isDirectory()) {
-      // Skip excluded directories
-      const isExcluded = defaultExcludedDirectories.has(file);
-  
-      if (level >= DEFAULT_MAX_DEPTH_LEVEL || isExcluded) {
-        return [];
-      }
-  
-      return await findAllEligibleFiles(filePath, level + 1);
-    } 
-
-    if (stats.isFile()) {
-      // At root level (level 0), skip files - only process directories
-      if (level === 0) {
-        return [];
-      }
-      
-      const extension = getFileExtension(filePath);
-      if (SUPPORTED_FILE_TYPES.includes(extension)) {
-        return [filePath];
-      }
-    }
-      
-    return [];
+  const allJsonPaths = await glob(pattern, {
+    cwd: process.cwd(),
+    ignore: DEFAULT_EXCLUDED_DIRECTORIES.map(dir => `${dir}/**`),
   });
+
+  const pathsWithLocales: string[] = [];
   
-  const results = await Promise.all(filePromises);
-  return results.flat();
+  for (const jsonPath of allJsonPaths) {
+    const normalizedPath = normalizePath(jsonPath);
+    if (normalizedPath !== null) {
+      pathsWithLocales.push(normalizedPath);
+    }
+  }
+
+  return Array.from(new Set(pathsWithLocales));
 }
 
 /**
@@ -186,23 +155,18 @@ function normalizePath(filePath: string): string | null {
       if(!currentLocale && availableLocales.has(filename ?? '')) {
         currentLocale = filename!;
       }
-
       if(filename === currentLocale) {
         normalizedPath += `[locale].${extension}`;
         continue;
       }
-
       normalizedPath += part;
       continue;
     }
       
-    // If the current substring is a locale, we should need to replace it with [locale].
     // There might be situations where there might be more than one locale in the path.
-    // This is why we need to check if the current locale is already set, and treat it as a normal part of the path.
+    // If the locale is already set, we should treat the other locale as a normal part of the path.
     //
-    // Example:
-    // src/i18n/en-US/pages/home.json -> src/i18n/[locale]/pages/home.json
-    // src/i18n/en-US/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
+    // (e.g.) src/i18n/en-US/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
     if(!currentLocale && availableLocales.has(part)) {
       currentLocale = part;
     }
@@ -211,22 +175,21 @@ function normalizePath(filePath: string): string | null {
       normalizedPath += '[locale]/';
       continue;
     }
-
     normalizedPath += part + '/';
   }
 
   if(!currentLocale) {
     return null;
   }
-
   return normalizedPath;
 }
 
 export {
   getFileExtension,
   isRelative,
-  searchFilePathsByWildcardPattern,
+  readSafe,
   ensureDirectoryExists,
-  buildPath,
+  buildLocalePath,
+  searchLocalePathsByPattern,
   searchLocalePaths,
 };

@@ -10,11 +10,9 @@ node_modules/
 # OS files
 .DS_Store
 
-# Config
-.lara.yaml
-
-# Lock file
-.lara.lock
+# Lara 
+lara.yaml
+.lara/
 
 # Test files
 i18n-test/

@@ -2,7 +2,6 @@ import { checkbox, input } from '@inquirer/prompts';
 import Ora from 'ora';
 
 import { searchLocalePaths } from '#utils/path.js';
-
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { InitOptions } from './init.types.js';
@@ -39,43 +38,42 @@ export async function pathsInput(options: InitOptions) {
   const spinner = Ora({ text: 'Searching for paths...', color: 'yellow' }).start();
 
   const paths = await searchLocalePaths();
+
   if(paths.length === 0) {
     spinner.warn('No paths found');
-  } else {
-    spinner.succeed('Paths found successfully');
-  }
 
-  if(paths.length > 0) {
-    const inputPaths = await checkbox({
-      message: 'Select the paths to watch',
-      choices: paths.map((path) => ({
-        name: path,
-        value: path,
-      })),
+    const inputPath = await input({
+      message: 'No paths found, enter the paths to watch (separated by a comma, a space or a combination of both)',
+      default: options.paths.join(', '),
       validate: (value) => {
-        return value.length > 0 || 'Please select at least one path';
+        const paths = value.split(COMMA_AND_SPACE_REGEX);
+  
+        for(const path of paths) {
+          const parsedPath = FilePath.safeParse(path);
+          if(!parsedPath.success) {
+            return parsedPath.error.issues[0]?.message || 'Invalid path';
+          }
+        }
+  
+        return true;
       },
     });
-
-    return inputPaths;
+  
+    return inputPath.split(COMMA_AND_SPACE_REGEX);
   }
+  
+  spinner.succeed('Paths found successfully');
 
-  const inputPath = await input({
-    message: 'No paths found, enter the paths to watch (separated by a comma, a space or a combination of both)',
-    default: options.paths.join(', '),
+  const inputPaths = await checkbox({
+    message: 'Select the paths to watch',
+    choices: paths.map((path) => ({
+      name: path,
+      value: path,
+    })),
     validate: (value) => {
-      const paths = value.split(COMMA_AND_SPACE_REGEX);
-
-      for(const path of paths) {
-        const parsedPath = FilePath.safeParse(path);
-        if(!parsedPath.success) {
-          return parsedPath.error.issues[0]?.message || 'Invalid path';
-        }
-      }
-
-      return true;
+      return value.length > 0 || 'Please select at least one path';
     },
   });
 
-  return inputPath.split(COMMA_AND_SPACE_REGEX);
+  return inputPaths;
 }

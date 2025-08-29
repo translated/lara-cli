@@ -32,12 +32,15 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
 
   const fileContent = parseFlattened(fs.readFileSync(fileName, 'utf8'));
 
-  for(const key in fileChecksum.keys) {
-    if(!fileContent[key]) {
+  let changed: boolean = false;
+
+  for(const key in fileContent) {
+    if(!fileChecksum.keys[key]) {
       changelog[key] = {
         value: fileContent[key],
         state: 'new'
       };
+      changed = true;
       continue;
     }
 
@@ -51,14 +54,17 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
       };
       continue;
     }
-    
-    if(newHash !== oldHash) {
-      changelog[key] = {
-        value: fileContent[key],
-        state: 'updated'
-      };
-      continue;
-    }
+
+    changelog[key] = {
+      value: fileContent[key],
+      state: 'updated'
+    };
+    changed = true;
+    continue;
+  }
+
+  if(changed) {
+    saveChecksum(fileName, fileContent);
   }
 
   return changelog;
@@ -72,7 +78,8 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
  */
 function saveChecksum(fileName: string, values: Record<string, unknown>) {
   const checksumDirectory = getChecksumDirectory();
-  const checksumFile = path.join(checksumDirectory, `${fileName}.lock`);
+  const hash = getHash(fileName);
+  const checksumFile = path.join(checksumDirectory, `${hash}.lock`);
 
   const keys = Object.fromEntries(
     Object.entries(values)

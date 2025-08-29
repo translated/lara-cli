@@ -5,8 +5,8 @@ import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType } from '#modules/config/config.types.js';
-import { buildPath, searchFilePathsByWildcardPattern } from '#utils/path.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
+import { searchLocalePathsByPattern } from '#utils/path.js';
 
 type TranslateOptions = {
   target: string[];
@@ -54,7 +54,7 @@ export default new Command()
       }
 
       for(const fileType of Object.keys(config.files)) {
-        await handleFileType(config, options, fileType);
+        await handleFileType(fileType, options, config);
       }
     } catch(error) {
       Ora({ text: error.message, color: 'red' }).fail();
@@ -64,7 +64,7 @@ export default new Command()
     Ora().succeed('Localization completed! Happy coding!');
   });
 
-async function handleFileType(config: ConfigType, options: TranslateOptions, fileType: string) {
+async function handleFileType(fileType: string, options: TranslateOptions, config: ConfigType) {
 
   const fileConfig = config.files[fileType]!;
   const sourceLocale = config.locales.source;
@@ -75,14 +75,14 @@ async function handleFileType(config: ConfigType, options: TranslateOptions, fil
   const inputPaths: Set<string> = new Set();
 
   for(const includePath of fileConfig.include) {
+    // Static path, no need to search for files
     if(!includePath.includes('*')) {
       inputPaths.add(includePath);
       continue;
     } 
 
-    // Search files based on the presence of source files. (e.g. src/i18n/[locale]/*.json -> src/i18n/en-US/*.json)
-    const sourcePattern = buildPath(includePath, sourceLocale);
-    const files = await searchFilePathsByWildcardPattern(sourcePattern);
+    // Dynamic path, search for files
+    const files = await searchLocalePathsByPattern(includePath);
 
     files.forEach((file) => {
       inputPaths.add(file);

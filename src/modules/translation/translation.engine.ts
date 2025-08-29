@@ -1,7 +1,10 @@
-import Ora from 'ora';
+import picomatch, { Matcher } from 'picomatch';
 
 import { TranslationService } from './translation.service.js';
 import { calculateChecksum } from '#utils/checksum.js';
+import { parseFlattened, unflatten } from '#utils/json.js';
+import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
+import { writeFile } from 'fs/promises';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -35,8 +38,8 @@ export class TranslationEngine {
 
   private readonly force: boolean;
 
-  private readonly lockedKeys: string[];
-  private readonly ignoredKeys: string[];
+  private readonly lockedPatterns: Matcher[];
+  private readonly ignoredPatterns: Matcher[];
 
   private readonly translatorService: TranslationService;
 
@@ -48,22 +51,88 @@ export class TranslationEngine {
 
     this.force = options.force;
 
-    this.lockedKeys = options.lockedKeys;
-    this.ignoredKeys = options.ignoredKeys;
+    this.lockedPatterns = options.lockedKeys.map(pattern => picomatch(pattern));
+    this.ignoredPatterns = options.ignoredKeys.map(pattern => picomatch(pattern));
 
     this.translatorService = TranslationService.getInstance();
   }
 
   public async translate() {
-    Ora({ text: `Translating files in ${this.inputPath} to ${this.targetLocales.join(', ')}...` }).start();
-      
     await this.handleInputPath(this.inputPath);
-
-    Ora().succeed(`Translated files in ${this.inputPath} successfully`);
-
   }
 
   private async handleInputPath(inputPath: string) {
-    const changelog = calculateChecksum(inputPath);
+    const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
+    const changelog = calculateChecksum(sourcePath);
+
+    for(const targetLocale of this.targetLocales) {
+      const targetPath = buildLocalePath(inputPath, targetLocale);
+      const targetJson = parseFlattened(await readSafe(targetPath, '{}'));
+
+      const newContent = Object.fromEntries(await Promise.all(
+        Object.entries(changelog).map(async ([key, value]) => {
+          // If the key is ignored, we should NOT include it in the new content
+          if(this.isIgnored(key)) {
+            return [];
+          }
+
+          const state = value.state;
+          const sourceValue = value.value;
+          const targetValue = targetJson[key];
+
+          // If the key is locked, we should NOT elaborate it and therefore return the source value
+          if(this.isLocked(key)) {
+            return [key, sourceValue];
+          }
+
+          // If the target value does not exists or the force flag is set, we should always translate the source value
+          if(!targetValue || this.force) {
+            const translatedValue = await this.translateKey(sourceValue, this.sourceLocale, targetLocale);
+            return [key, translatedValue];
+          }
+
+          // If the key is unchanged, we should keep the target value
+          if(state === 'unchanged') {
+            return [key, targetValue];
+          }
+
+
+          // If the key is new and the target value exists, we should keep the target value
+          if(state === 'new' && targetValue) {
+            return [key, targetValue];
+          }
+
+          // Last case where the key is updated
+
+          if(typeof sourceValue !== 'string') {
+            // If the source value is not a string, we take for granted that it cannot be translated, therefore we return the source value
+            return [key, sourceValue];
+          }
+
+          const translatedValue = await this.translateKey(sourceValue, this.sourceLocale, targetLocale);
+          return [key, translatedValue];
+        })
+      ));
+
+      await ensureDirectoryExists(targetPath);
+      await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, 4));
+    };
+  }
+
+  private async translateKey(value: unknown, sourceLocale: string, targetLocale: string) {
+    // If the value is not a string, we return it as is. We take for granted that it cannot be translated
+    if(typeof value !== 'string') {
+      return value;
+    }
+    
+    return await this.translatorService.translate(value, sourceLocale, targetLocale);
+  }
+
+  private isIgnored(key: string): boolean {
+    return this.ignoredPatterns.some(pattern => pattern(key));
+  }
+
+  private isLocked(key: string): boolean {
+    return this.lockedPatterns.some(pattern => pattern(key));
   }
 }

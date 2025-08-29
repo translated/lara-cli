@@ -8,27 +8,13 @@ const FilePath = z.string()
   .refine((path) => isRelative(path), {
     message: 'Path must be relative (cannot start with /, ./, or ../)',
   })
-  .refine((path) => SUPPORTED_FILE_TYPES.includes(getFileExtension(path)), {
+  .refine((path) => {
+    const fileExtension = getFileExtension(path);
+    return SUPPORTED_FILE_TYPES.includes(fileExtension);
+  }, {
     message: `Path must end with a valid file extension (${SUPPORTED_FILE_TYPES.map((type) => `.${type}`).join(', ')})`,
   })
-  .refine((path) => !path.includes('**'), {
-    message: 'Recursive wildcards (**) are not allowed',
-  })
   .refine((path) => {
-    const wildcardRegex = /\*/g;
-    const wildcards = path.match(wildcardRegex);
-
-    if(!wildcards) {
-      return true;
-    }
-
-    // Check if the wildcard is in the allowed format (e.g., *.json, src/*.json)
-    return /^(?:.*\/)?(\*\.[a-zA-Z0-9]+)$/.test(path);
-  }, {
-    message: 'Wildcards (*) are only allowed in the format *.extension (e.g., *.json, src/*.json)',
-  })
-  .refine((path) => {
-    // Check for /[locale]/ pattern (directory) or [locale].extension pattern (filename)
     const hasDirectoryPattern = path.includes('/[locale]/');
     const hasFilenamePattern = /\[locale\]\.[a-zA-Z0-9]+$/.test(path);
     
@@ -38,9 +24,6 @@ const FilePath = z.string()
   });
 
 const KeyPath = z.string()
-  .refine((path) => /^[a-zA-Z0-9_\-./*]+$/.test(path), {
-    message: 'Key path must contain only alphanumeric characters, underscore, dash, dot, slash, and asterisk',
-  })
   .refine((path) => !path.startsWith('/') && !path.endsWith('/'), {
     message: 'Key path cannot start or end with a slash',
   })
@@ -63,6 +46,19 @@ const Config = z.object({
     lockedKeys: z.array(KeyPath).default([]),
     ignoredKeys: z.array(KeyPath).default([]),
   })),
+}).refine((data) => {
+  for (const [fileType, fileConfig] of Object.entries(data.files)) {
+    for (const includePath of fileConfig.include) {
+      const fileExtension = getFileExtension(includePath);
+      
+      if (fileExtension !== fileType) {
+        return false;
+      }
+    }
+  }
+  return true;
+}, {
+  message: 'File type must match the file extension',
 });
 
 type ConfigType = z.infer<typeof Config>;
