@@ -10,24 +10,28 @@ type ChecksumChangelog = Record<string, {
   state: 'new' | 'updated' | 'unchanged';
 }>;
 
-type ChecksumLock = {
-  // The version of the checksum lock.
+type ChecksumFile = {
   version: string;
-  // The keys of the file as key -> value hash.
-  keys: Record<string, string>;
+  // File hash -> key - hashed value mapping
+  files: Record<string, Record<string, unknown>>;
 };
 
-const CHECKSUM_FOLDER = '.lara';
+const CHECKSUM_FILE = 'lara.lock';
+const checksumFilePath = path.join(process.cwd(), CHECKSUM_FILE);
+
+let cachedChecksumFile: ChecksumFile | null = null;
 
 /**
- * Calculates the checksum of a file.
+ * Calculates the checksum of a file. And saves the checksum.
  * 
  * @param fileName - The name of the file.
  * @param fileContent - The content of the file.
  * @returns The changelog of the file.
  */
 function calculateChecksum(fileName: string): ChecksumChangelog {
-  const fileChecksum = getFileChecksum(fileName);
+  const checksumFile = getChecksumFile();
+  const checksum = checksumFile.files[getHash(fileName)] || {};
+
   const changelog: ChecksumChangelog = {};
 
   const fileContent = parseFlattened(fs.readFileSync(fileName, 'utf8'));
@@ -35,7 +39,7 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
   let changed: boolean = false;
 
   for(const key in fileContent) {
-    if(!fileChecksum.keys[key]) {
+    if(!checksum[key]) {
       changelog[key] = {
         value: fileContent[key],
         state: 'new'
@@ -45,7 +49,7 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
     }
 
     const newHash = getHash(fileContent[key]);
-    const oldHash = fileChecksum.keys[key];
+    const oldHash = checksum[key];
 
     if(newHash === oldHash) {
       changelog[key] = {
@@ -64,11 +68,12 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
   }
 
   if(changed) {
-    saveChecksum(fileName, fileContent);
+    updateChecksum(fileName, fileContent);
   }
 
   return changelog;
 }
+
 
 /**
  * Saves the checksum of a file.
@@ -76,23 +81,41 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
  * @param fileName - The name of the file.
  * @param values - The values to save.
  */
-function saveChecksum(fileName: string, values: Record<string, unknown>) {
-  const checksumDirectory = getChecksumDirectory();
-  const hash = getHash(fileName);
-  const checksumFile = path.join(checksumDirectory, `${hash}.lock`);
+function updateChecksum(fileName: string, values: Record<string, unknown>) {
+  const checksumFile = getChecksumFile();
+  const fileNameHash = getHash(fileName);
 
-  const keys = Object.fromEntries(
-    Object.entries(values)
-      .filter(([, value]) => value !== undefined)
-      .map(([key, value]) => [key, getHash(value)])
-  )
+  const hashedValues = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, getHash(value)]));
 
-  const checksumLock: ChecksumLock = {
-    version: '1.0.0',
-    keys
-  };
-  
-  fs.writeFileSync(checksumFile, yaml.stringify(checksumLock));
+  checksumFile.files[fileNameHash] = hashedValues;
+
+  cachedChecksumFile = checksumFile;
+  fs.writeFileSync(checksumFilePath, yaml.stringify(checksumFile));
+}
+
+/**
+ * Returns the checksum lock of a file.
+ * 
+ * @param fileName - The name of the file.
+ * @returns The checksum lock of the file.
+ */
+function getChecksumFile(): ChecksumFile {
+  if(cachedChecksumFile) {
+    return cachedChecksumFile;
+  }
+
+  if(!fs.existsSync(checksumFilePath)) {
+    cachedChecksumFile = {
+      version: '1.0.0',
+      files: {}
+    };
+
+    fs.writeFileSync(checksumFilePath, yaml.stringify(cachedChecksumFile));
+    return cachedChecksumFile;
+  }
+
+  cachedChecksumFile = yaml.parse(fs.readFileSync(checksumFilePath, 'utf8')) as ChecksumFile;
+  return cachedChecksumFile;
 }
 
 /**
@@ -106,47 +129,6 @@ function getHash(s: unknown) {
   return crypto.createHash('md5').update(data).digest('hex');
 }
 
-/**
- * Returns the checksum lock of a file.
- * 
- * @param fileName - The name of the file.
- * @returns The checksum lock of the file.
- */
-function getFileChecksum(fileName: string): ChecksumLock {
-  const checksumDirectory = getChecksumDirectory();
-  const fileNameHash = getHash(fileName);
-
-  const checksumFile = path.join(checksumDirectory, `${fileNameHash}.lock`);
-
-  if(!fs.existsSync(checksumFile)) {
-    const checkSum = {
-      version: '1.0.0',
-      keys: {}
-    };
-
-    fs.writeFileSync(checksumFile, yaml.stringify(checkSum));
-
-    return checkSum;
-  }
-
-  return yaml.parse(fs.readFileSync(checksumFile, 'utf8')) as ChecksumLock;
-}
-
-/**
- * Returns the checksum directory. Creates the directory if it doesn't exist.
- * 
- * @returns The checksum directory.
- */
-function getChecksumDirectory() {
-  const checksumDirectory = path.join(process.cwd(), CHECKSUM_FOLDER);
-  if(!fs.existsSync(checksumDirectory)) {
-    fs.mkdirSync(checksumDirectory);
-  }
-
-  return checksumDirectory;
-}
-
 export {
-  calculateChecksum,
-  saveChecksum
+  calculateChecksum
 };
