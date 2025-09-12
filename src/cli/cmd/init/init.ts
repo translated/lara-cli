@@ -35,7 +35,7 @@ export default new Command()
 
         return locale.data;
       })
-      .default('en-US')
+      .default('en')
   )
   .addOption(
     new Option('-t --target <locales>', 'Target locales, separated by a comma, a space or a combination of both')

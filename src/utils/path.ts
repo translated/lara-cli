@@ -64,8 +64,8 @@ async function ensureDirectoryExists(filePath: string): Promise<void> {
    * Builds a path by replacing the [locale] placeholder with the given locale
    *
    * @param path - The path to build. Example: 'src/i18n/[locale].json'
-   * @param locale - The locale to replace the placeholder with. Example: 'en-US'
-   * @returns The built path. Example: 'src/i18n/en-US.json'
+   * @param locale - The locale to replace the placeholder with. Example: 'en'
+   * @returns The built path. Example: 'src/i18n/en.json'
    */
 function buildLocalePath(filePath: string, locale: string): string {
   return filePath.replaceAll('[locale]', locale);
@@ -134,7 +134,7 @@ async function searchLocalePaths(): Promise<string[]> {
  * @param filePath - The path to normalize.
  * @returns The normalized path.
  * 
- * Example: src/i18n/en-US/pages/home.json -> src/i18n/[locale]/pages/home.json
+ * Example: src/i18n/en/pages/home.json -> src/i18n/[locale]/pages/home.json
  */
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
@@ -166,7 +166,7 @@ function normalizePath(filePath: string): string | null {
     // There might be situations where there might be more than one locale in the path.
     // If the locale is already set, we should treat the other locale as a normal part of the path.
     //
-    // (e.g.) src/i18n/en-US/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
+    // (e.g.) src/i18n/en/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
     if(!currentLocale && availableLocales.has(part)) {
       currentLocale = part;
     }

@@ -16,7 +16,7 @@ lara init
 
 ### Non-Interactive Mode
 ```bash
-lara init --source en-US --target "es-ES, fr-FR" --paths "./src/i18n/[locale].json" --force
+lara init --source en --target "es-ES, fr-FR" --paths "./src/i18n/[locale].json" --force
 ```
 
 ## Command Options
@@ -28,7 +28,7 @@ lara init --source en-US --target "es-ES, fr-FR" --paths "./src/i18n/[locale].js
 
 ### `-s, --source <locale>`
 - **Type**: String (locale code)
-- **Default**: `en-US`
+- **Default**: `en`
 - **Description**: Sets the source locale for your project
 - **Validation**: Must be a valid locale from the supported locales list
 
@@ -56,7 +56,7 @@ lara init --source en-US --target "es-ES, fr-FR" --paths "./src/i18n/[locale].js
 ## Supported Locales
 
 The init command supports the following locales:
-`ar-SA`, `bg-BG`, `ca-ES`, `cs-CZ`, `da-DK`, `de-DE`, `el-GR`, `en-AU`, `en-CA`, `en-GB`, `en-IE`, `en-US`, `es-419`, `es-AR`, `es-ES`, `es-MX`, `fi-FI`, `fr-CA`, `fr-FR`, `he-IL`, `hr-HR`, `hu-HU`, `id-ID`, `it-IT`, `ja-JP`, `ko-KR`, `ms-MY`, `nb-NO`, `nl-BE`, `nl-NL`, `pl-PL`, `pt-BR`, `pt-PT`, `ru-RU`, `sk-SK`, `sv-SE`, `th-TH`, `tr-TR`, `uk-UA`, `zh-CN`, `zh-HK`, `zh-TW`
+`ar-SA`, `bg-BG`, `ca-ES`, `cs-CZ`, `da-DK`, `de-DE`, `el-GR`, `en-AU`, `en-CA`, `en-GB`, `en-IE`, `en`, `es-419`, `es-AR`, `es-ES`, `es-MX`, `fi-FI`, `fr-CA`, `fr-FR`, `he-IL`, `hr-HR`, `hu-HU`, `id-ID`, `it-IT`, `ja-JP`, `ko-KR`, `ms-MY`, `nb-NO`, `nl-BE`, `nl-NL`, `pl-PL`, `pt-BR`, `pt-PT`, `ru-RU`, `sk-SK`, `sv-SE`, `th-TH`, `tr-TR`, `uk-UA`, `zh-CN`, `zh-HK`, `zh-TW`
 
 ## Operating Modes
 
@@ -81,7 +81,7 @@ The command generates a `lara.yaml` file with the following structure:
 ```yaml
 version: "1.0.0"
 locales:
-  source: en-US
+  source: en
   target:
     - es-ES
     - it-IT
@@ -167,5 +167,5 @@ lara init --force --paths "./app/i18n/[locale].json, ./shared/translations/[loca
 
 ### Complete non-interactive setup:
 ```bash
-lara init --source en-US --target "es-ES, fr-FR, de-DE" --paths "./src/locales/[locale].json" --force
+lara init --source en --target "es-ES, fr-FR, de-DE" --paths "./src/locales/[locale].json" --force
 ```

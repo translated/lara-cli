@@ -180,7 +180,7 @@ keys:
 ```yaml
 version: 1.0.0
 locales:
-  source: en-US
+  source: en
   target:
     - es-ES
     - fr-FR
@@ -199,7 +199,7 @@ version: 1.0.0
 project:
   context: "E-commerce platform for fashion retail" # Context used in translations
 locales:
-  source: en-US
+  source: en
   target:
     - es-ES
     - fr-FR
