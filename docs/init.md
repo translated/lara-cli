@@ -11,12 +11,12 @@ The init command creates a `lara.yaml` configuration file in your project's root
 
 ### Basic Usage
 ```bash
-lara init
+lara-cli init
 ```
 
 ### Non-Interactive Mode
 ```bash
-lara init --source en --target "es-ES, fr-FR" --paths "./src/i18n/[locale].json" --force
+lara-cli init --source en --target "es-ES, fr-FR" --paths "./src/i18n/[locale].json" --force
 ```
 
 ## Command Options
@@ -145,27 +145,27 @@ Excluded directories during search:
 After successful initialization, the command provides guidance for next steps:
 
 1. **Environment Setup**: Reminds you to add API keys to your `.env` file
-2. **Translation Command**: Suggests running `lara translate` to begin translating files
+2. **Translation Command**: Suggests running `lara-cli translate` to begin translating files
 3. **Documentation**: Points to the support documentation at https://support.laratranslate.com/en/about-lara
 
 ## Examples
 
 ### Initialize with defaults in interactive mode:
 ```bash
-lara init
+lara-cli init
 ```
 
 ### Initialize with Spanish and French as targets:
 ```bash
-lara init --target "es-ES, fr-FR"
+lara-cli init --target "es-ES, fr-FR"
 ```
 
 ### Force overwrite existing config with custom paths:
 ```bash
-lara init --force --paths "./app/i18n/[locale].json, ./shared/translations/[locale].json"
+lara-cli init --force --paths "./app/i18n/[locale].json, ./shared/translations/[locale].json"
 ```
 
 ### Complete non-interactive setup:
 ```bash
-lara init --source en --target "es-ES, fr-FR, de-DE" --paths "./src/locales/[locale].json" --force
+lara-cli init --source en --target "es-ES, fr-FR, de-DE" --paths "./src/locales/[locale].json" --force
 ```

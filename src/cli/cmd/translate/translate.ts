@@ -93,6 +93,8 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
   }
 
   for(const inputPath of inputPaths) {
+    spinner.text = `Translating ${inputPath}...`;
+    
     const translationEngine = new TranslationEngine({
       sourceLocale,
       targetLocales,

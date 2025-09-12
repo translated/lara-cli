@@ -10,24 +10,24 @@ The translate command is the core functionality of the Lara CLI. It reads your s
 
 ### Basic Usage
 ```bash
-lara translate
+lara-cli translate
 ```
 
 ### Translate to specific locales
 ```bash
-lara translate --target "es-ES, fr-FR"
+lara-cli translate --target "es-ES, fr-FR"
 ```
 
 ### Force retranslation of all content
 ```bash
-lara translate --force
+lara-cli translate --force
 ```
 
 ## Prerequisites
 
 Before using the translate command, you must:
 
-1. **Initialize your project**: Run `lara init` to create a `lara.yaml` configuration file
+1. **Initialize your project**: Run `lara-cli init` to create a `lara.yaml` configuration file
 2. **Set up environment variables**: Configure your Lara API credentials in a `.env` file:
    ```bash
    LARA_ACCESS_KEY_ID=your_access_key_id
@@ -251,20 +251,20 @@ ignoredKeys:
 
 ### Translate all configured locales
 ```bash
-lara translate
+lara-cli translate
 ```
 
 ### Translate specific locales only
 ```bash
-lara translate --target "es-ES, fr-FR"
+lara-cli translate --target "es-ES, fr-FR"
 ```
 
 ### Force retranslation of everything
 ```bash
-lara translate --force
+lara-cli translate --force
 ```
 
 ### Translate single locale with force
 ```bash
-lara translate --target "es-ES" --force
+lara-cli translate --target "es-ES" --force
 ```

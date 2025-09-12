@@ -26,8 +26,26 @@ export class TranslationService {
   }
 
   public async translate(text: string, sourceLocale: string, targetLocale: string, options: TranslateOptions): Promise<string> {
-    const response = await this.client.translate(text, sourceLocale, targetLocale, options);
+    const maxRetries = 5;
+    let attempt = 0;
 
-    return response.translation;
+    while (attempt < maxRetries) {
+      try {
+        const response = await this.client.translate(text, sourceLocale, targetLocale, options);
+        return response.translation;
+      } catch (error) {
+        attempt++;
+        
+        if (attempt >= maxRetries) {
+          throw error;
+        }
+
+        // Wait 200ms before retrying
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    // This should never be reached, but TypeScript requires it
+    throw new Error('Max retries exceeded');
   }
 }

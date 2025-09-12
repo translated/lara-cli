@@ -123,13 +123,18 @@ export class TranslationEngine {
       ));
 
       await ensureDirectoryExists(targetPath);
-      await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, 4));
+      await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, 2) + '\n');
     };
   }
 
   private async translateKey(value: unknown, sourceLocale: string, targetLocale: string) {
     // If the value is not a string, we return it as is. We take for granted that it cannot be translated
     if(typeof value !== 'string') {
+      return value;
+    }
+
+    // If the value is an empty string, we return it as is
+    if(value.trim() === '') {
       return value;
     }
     
