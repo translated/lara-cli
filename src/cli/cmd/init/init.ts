@@ -75,7 +75,7 @@ export default new Command()
 
     ConfigProvider.getInstance().saveConfig(config);
 
-    spinner.succeed('Config file created successfully! You can run `lara translate` to start translating your files.');
+    spinner.succeed('Config file created successfully! You can run `lara-cli translate` to start translating your files.');
   })
 
 function handleNonInteractiveMode(options: InitOptions): ConfigType {

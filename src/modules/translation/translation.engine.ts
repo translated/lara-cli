@@ -21,6 +21,41 @@ export type TranslationEngineOptions = {
 };
 
 /**
+ * Detects the formatting used in a JSON string
+ * @param jsonContent - The JSON string to analyze
+ * @returns Object with indentation and trailing newline information
+ */
+function detectFormatting(jsonContent: string): { indentation: string | number; trailingNewline: string } {
+  const lines = jsonContent.split('\n');
+  let indentation: string | number = 2; // default
+  
+  // Detect indentation
+  for (const line of lines) {
+    const match = line.match(/^(\s+)\S/);
+    if (match && match[1]) {
+      const indent = match[1];
+      
+      // Check if it's tabs
+      if (indent.includes('\t')) {
+        indentation = '\t';
+        break;
+      }
+      
+      // Check if it's spaces
+      if (indent.match(/^ +$/)) {
+        indentation = indent.length;
+        break;
+      }
+    }
+  }
+  
+  // Detect trailing newline
+  const trailingNewline = jsonContent.endsWith('\n') ? '\n' : '';
+  
+  return { indentation, trailingNewline };
+}
+
+/**
  * Handles the translation of a given input path to a set of target locales.
  * Every instance of this class is responsible for translating a single input path.
  * 
@@ -75,7 +110,9 @@ export class TranslationEngine {
 
     for(const targetLocale of this.targetLocales) {
       const targetPath = buildLocalePath(inputPath, targetLocale);
-      const targetJson = parseFlattened(await readSafe(targetPath, '{}'));
+      const targetContent = await readSafe(targetPath, '{}');
+      const targetJson = parseFlattened(targetContent);
+      const formatting = detectFormatting(targetContent);
 
       const newContent = Object.fromEntries(await Promise.all(
         Object.entries(changelog).map(async ([key, value]) => {
@@ -123,7 +160,7 @@ export class TranslationEngine {
       ));
 
       await ensureDirectoryExists(targetPath);
-      await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, 2) + '\n');
+      await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, formatting.indentation) + formatting.trailingNewline);
     };
   }
 
