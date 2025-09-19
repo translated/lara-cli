@@ -32,7 +32,7 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 
 Create a `.env` file (or add the following lines to an existing `.env`) in the project where you want to run translations.
 
-💡 If you don’t have these API keys yet, visit https://support.laratranslate.com/it/chiave-api-per-le-api-di-lara.
+💡 If you don’t have these API keys yet, visit https://support.laratranslate.com/en/api-key-for-laras-api.
 
 
 ```
