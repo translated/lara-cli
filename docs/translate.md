@@ -15,12 +15,17 @@ lara-cli translate
 
 ### Translate to specific locales
 ```bash
-lara-cli translate --target "es-ES, fr-FR"
+lara-cli translate --target "es, fr"
 ```
 
 ### Force retranslation of all content
 ```bash
 lara-cli translate --force
+```
+
+### Force translation of specific locales
+```bash
+lara-cli translate --force --target "es"
 ```
 
 ## Prerequisites
@@ -173,98 +178,3 @@ keys:
 - **new**: Key exists in source but not in previous checksum
 - **updated**: Key exists but content hash has changed
 - **unchanged**: Key exists with identical hash
-
-## Configuration Examples
-
-### Basic Configuration
-```yaml
-version: 1.0.0
-locales:
-  source: en
-  target:
-    - es-ES
-    - fr-FR
-files:
-  json:
-    include:
-      - ./src/i18n/[locale].json
-    exclude: []
-    lockedKeys: []
-    ignoredKeys: []
-```
-
-### Advanced Configuration
-```yaml
-version: 1.0.0
-project:
-  context: "E-commerce platform for fashion retail" # Context used in translations
-locales:
-  source: en
-  target:
-    - es-ES
-    - fr-FR
-    - de-DE
-files:
-  json:
-    include:
-      - ./src/i18n/[locale]/**/*.json
-      - ./public/locales/[locale].json
-    exclude:
-      - "**/metadata/**"    # Exclude files contained in any metadata folder
-      - "**/config/**"      # Exclude files contained in any config folder
-    lockedKeys:
-      - "**/id"
-      - "**/path"
-      - "**/url"
-      - "api/**"
-    ignoredKeys:
-      - "metadata/**"
-      - "internal/**"
-```
-
-## Pattern Matching
-
-### Pattern Matching
-The command supports glob patterns for flexible file and key matching:
-
-- `*`: Matches any characters except path separators
-- `**`: Matches any characters including path separators (recursive)
-- `?`: Matches any single character
-- `[abc]`: Matches any character in the specified set
-- `{a,b}`: Matches any of the listed alternatives
-
-### Key Pattern Examples
-```yaml
-lockedKeys:
-  - "**/id"           # Any key ending with "id"
-  - "api/**"          # Any key starting with "api/"
-  - "config/*/url"    # URLs in config sections
-  - "metadata/**"     # Entire metadata sections
-
-ignoredKeys:
-  - "internal/**"     # Internal configuration
-  - "**/debug"        # Debug information
-  - "temp/**"         # Temporary data
-```
-
-## Examples
-
-### Translate all configured locales
-```bash
-lara-cli translate
-```
-
-### Translate specific locales only
-```bash
-lara-cli translate --target "es-ES, fr-FR"
-```
-
-### Force retranslation of everything
-```bash
-lara-cli translate --force
-```
-
-### Translate single locale with force
-```bash
-lara-cli translate --target "es-ES" --force
-```

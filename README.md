@@ -18,6 +18,7 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 - [Local Development Setup](#local-development-setup)
 - [How Lara CLI Works Under the Hood](#how-lara-cli-works-under-the-hood)
 - [Technology Stack](#technology-stack)
+- [Supported Locales](#supported-locales)
 
 
 ## Requirements
@@ -32,7 +33,7 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 
 Create a `.env` file (or add the following lines to an existing `.env`) in the project where you want to run translations.
 
-💡 If you don’t have these API keys yet, visit https://support.laratranslate.com/en/api-key-for-laras-api.
+💡 If you don't have these API keys yet, visit https://support.laratranslate.com/en/api-key-for-laras-api.
 
 
 ```
@@ -44,7 +45,7 @@ Replace the placeholders with your **actual credentials**.
 
 ### Initialize Your Project
 
-In your project directory, run:
+In your project directory, run for interactive mode:
 
 ```bash
 lara-cli init
@@ -61,6 +62,8 @@ lara-cli translate
 ```
 
 That's it – you're ready to go!
+
+> **📖 Documentation:** For detailed information about commands, see [Init Command](docs/init.md) and [Translate Command](docs/translate.md).
 
 
 ## 🖥️ Local Development Setup
@@ -158,3 +161,26 @@ Lara CLI is built with modern technologies to ensure reliability, performance, a
 - **Lara Translation API** - For high-quality, context-aware translations
 
 The codebase follows a modular architecture with clear separation of concerns, making it easy to extend and maintain.
+
+
+## Supported Locales
+
+| Code  | Language            | Code   | Language             |
+|-------|---------------------|--------|----------------------|
+| ar    | Arabic              | nb     | Norwegian Bokmål     |
+| ca    | Catalan             | pl     | Polish               |
+| da    | Danish              | pt     | Portuguese           |
+| de    | German              | pt-BR  | Portuguese (Brazil)  |
+| el    | Greek               | ru     | Russian              |
+| en    | English             | sk     | Slovak               |
+| es    | Spanish             | sv     | Swedish              |
+| fi    | Finnish             | th     | Thai                 |
+| fr    | French              | tr     | Turkish              |
+| he    | Hebrew              | uk     | Ukrainian            |
+| hr    | Croatian            | zh     | Chinese              |
+| hu    | Hungarian           | zh-CN  | Chinese (China)      |
+| id    | Indonesian          | zh-TW  | Chinese (Taiwan)     |
+| it    | Italian             | bg     | Bulgarian            |
+| ja    | Japanese            | cs     | Czech                |
+| ko    | Korean              | ms     | Malay                |
+| nl    | Dutch               |        |                      |
