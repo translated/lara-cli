@@ -19,6 +19,7 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 - [How Lara CLI Works Under the Hood](#how-lara-cli-works-under-the-hood)
 - [Technology Stack](#technology-stack)
 - [Supported Locales](#supported-locales)
+- [Documentation](#documentation)
 
 
 ## Requirements
@@ -33,10 +34,10 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 
 Create a `.env` file (or add the following lines to an existing `.env`) in the project where you want to run translations.
 
-💡 If you don't have these API keys yet, visit https://support.laratranslate.com/en/api-key-for-laras-api.
+💡 **Tip:** If you don't have API keys yet, visit [Lara's API key documentation](https://support.laratranslate.com/en/api-key-for-laras-api).
 
 
-```
+```bash
 LARA_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
 LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
 ```
@@ -45,11 +46,13 @@ Replace the placeholders with your **actual credentials**.
 
 ### Initialize Your Project
 
-In your project directory, run for interactive mode:
+In your project directory, run:
 
 ```bash
 lara-cli init
 ```
+
+This will start the interactive initialization process.
 
 The CLI will **automatically detect your localization directories** and guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
 
@@ -165,6 +168,8 @@ The codebase follows a modular architecture with clear separation of concerns, m
 
 ## Supported Locales
 
+Lara CLI supports the following locale codes as both source and target languages for translation. You can specify any of these locales in your configuration to translate content between them.
+
 | Code  | Language            | Code   | Language             |
 |-------|---------------------|--------|----------------------|
 | ar    | Arabic              | nb     | Norwegian Bokmål     |
@@ -183,4 +188,13 @@ The codebase follows a modular architecture with clear separation of concerns, m
 | it    | Italian             | bg     | Bulgarian            |
 | ja    | Japanese            | cs     | Czech                |
 | ko    | Korean              | ms     | Malay                |
-| nl    | Dutch               |        |                      |
+| nl    | Dutch               |
+
+
+## Documentation
+
+For detailed documentation on using Lara CLI:
+
+- [Init Command](docs/init.md) - How to initialize your project
+- [Translate Command](docs/translate.md) - How to translate your files
+- [Lara.yaml Configuration](docs/lara_yaml.md) - Complete configuration reference

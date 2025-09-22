@@ -25,7 +25,7 @@ lara-cli translate --force
 
 ### Force translation of specific locales
 ```bash
-lara-cli translate --force --target "es"
+lara-cli translate --target "es" --force
 ```
 
 ## Prerequisites
@@ -46,7 +46,7 @@ Before using the translate command, you must:
 - **Type**: String (comma/space-separated locales)
 - **Default**: Uses target locales from `lara.yaml` configuration
 - **Description**: Specifies which target locales to translate to
-- **Format**: Locales can be separated by commas, spaces, or both (e.g., `"es-ES, fr-FR"` or `"es-ES fr-FR"`)
+- **Format**: Locales can be separated by commas, spaces, or both (e.g., `"es, fr"` or `"es fr"`)
 - **Validation**: Each locale must be valid and supported; cannot include the source locale
 
 ### `-f, --force`
@@ -67,6 +67,8 @@ The command loads your `lara.yaml` configuration file to determine:
 - Exclusion patterns
 - Locked and ignored key patterns
 - Project context (if specified)
+
+For complete details about the configuration file structure, see: [Lara.yaml Configuration Reference](lara_yaml.md)
 
 ### 2. File Discovery
 For each file type in your configuration:
@@ -178,3 +180,25 @@ keys:
 - **new**: Key exists in source but not in previous checksum
 - **updated**: Key exists but content hash has changed
 - **unchanged**: Key exists with identical hash
+
+## Examples
+
+### Translate all configured locales
+```bash
+lara-cli translate
+```
+
+### Translate specific locales only
+```bash
+lara-cli translate --target "es, fr"
+```
+
+### Force retranslation of everything
+```bash
+lara-cli translate --force
+```
+
+### Translate single locale with force
+```bash
+lara-cli translate --target "es" --force
+```
