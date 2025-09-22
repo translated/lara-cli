@@ -168,27 +168,63 @@ The codebase follows a modular architecture with clear separation of concerns, m
 
 ## Supported Locales
 
-Lara CLI supports the following locale codes as both source and target languages for translation. You can specify any of these locales in your configuration to translate content between them.
+Lara CLI supports translation between various locale codes following two main standards:
 
-| Code  | Language            | Code   | Language             |
-|-------|---------------------|--------|----------------------|
-| ar    | Arabic              | nb     | Norwegian Bokmål     |
-| ca    | Catalan             | pl     | Polish               |
-| da    | Danish              | pt     | Portuguese           |
-| de    | German              | pt-BR  | Portuguese (Brazil)  |
-| el    | Greek               | ru     | Russian              |
-| en    | English             | sk     | Slovak               |
-| es    | Spanish             | sv     | Swedish              |
-| fi    | Finnish             | th     | Thai                 |
-| fr    | French              | tr     | Turkish              |
-| he    | Hebrew              | uk     | Ukrainian            |
-| hr    | Croatian            | zh     | Chinese              |
-| hu    | Hungarian           | zh-CN  | Chinese (China)      |
-| id    | Indonesian          | zh-TW  | Chinese (Taiwan)     |
-| it    | Italian             | bg     | Bulgarian            |
-| ja    | Japanese            | cs     | Czech                |
-| ko    | Korean              | ms     | Malay                |
-| nl    | Dutch               |
+### ISO 639-1 Language Codes
+These are basic language identifiers (e.g., `en` for English, `fr` for French) that work across all regions where the language is spoken.
+
+### ISO 3166-1 Locale Codes
+These are language + region combinations (e.g., `en-US` for English in the United States, `fr-CA` for French in Canada) that provide more specific regional context.
+
+> **Note:** You can use either format as both source and target languages. The translation service will automatically handle the appropriate regional variants when using ISO 3166-1 codes.
+
+### Supported Language Codes
+
+#### ISO 639-1 (Language Only)
+
+| Code  | Language            | Code  | Language            |
+|-------|---------------------|-------|---------------------|
+| ar    | Arabic              | de    | German              |
+| bg    | Bulgarian           | el    | Greek               |
+| ca    | Catalan             | en    | English             |
+| cs    | Czech               | es    | Spanish             |
+| da    | Danish              | fi    | Finnish             |
+| fr    | French              | he    | Hebrew              |
+| hr    | Croatian            | hu    | Hungarian           |
+| id    | Indonesian          | it    | Italian             |
+| ja    | Japanese            | ko    | Korean              |
+| ms    | Malay               | nb    | Norwegian Bokmål    |
+| nl    | Dutch               | pl    | Polish              |
+| pt    | Portuguese          | ru    | Russian             |
+| sk    | Slovak              | sv    | Swedish             |
+| th    | Thai                | tr    | Turkish             |
+| uk    | Ukrainian           | zh    | Chinese             |
+
+#### ISO 3166-1 (Language + Region)
+
+| Code     | Language & Region                    | Code     | Language & Region                    |
+|----------|--------------------------------------|----------|--------------------------------------|
+| ar-SA    | Arabic (Saudi Arabia)                | en-AU    | English (Australia)                  |
+| bg-BG    | Bulgarian (Bulgaria)                 | en-CA    | English (Canada)                     |
+| ca-ES    | Catalan (Spain)                      | en-GB    | English (United Kingdom)             |
+| cs-CZ    | Czech (Czech Republic)               | en-IE    | English (Ireland)                    |
+| da-DK    | Danish (Denmark)                     | en-US    | English (United States)              |
+| de-DE    | German (Germany)                     | es-419   | Spanish (Latin America)              |
+| el-GR    | Greek (Greece)                       | es-AR    | Spanish (Argentina)                  |
+| fi-FI    | Finnish (Finland)                    | es-ES    | Spanish (Spain)                      |
+| fr-CA    | French (Canada)                      | es-MX    | Spanish (Mexico)                     |
+| he-IL    | Hebrew (Israel)                      | fr-FR    | French (France)                      |
+| hr-HR    | Croatian (Croatia)                   | hu-HU    | Hungarian (Hungary)                  |
+| id-ID    | Indonesian (Indonesia)               | it-IT    | Italian (Italy)                      |
+| ja-JP    | Japanese (Japan)                     | ko-KR    | Korean (South Korea)                 |
+| ms-MY    | Malay (Malaysia)                     | nb-NO    | Norwegian Bokmål (Norway)            |
+| nl-BE    | Dutch (Belgium)                      | nl-NL    | Dutch (Netherlands)                  |
+| pl-PL    | Polish (Poland)                      | pt-BR    | Portuguese (Brazil)                  |
+| pt-PT    | Portuguese (Portugal)                | ru-RU    | Russian (Russia)                     |
+| sk-SK    | Slovak (Slovakia)                    | sv-SE    | Swedish (Sweden)                     |
+| th-TH    | Thai (Thailand)                      | tr-TR    | Turkish (Turkey)                     |
+| uk-UA    | Ukrainian (Ukraine)                  | zh-CN    | Chinese (China)                      |
+| zh-HK    | Chinese (Hong Kong)                  | zh-TW    | Chinese (Taiwan)                     |
 
 
 ## Documentation
