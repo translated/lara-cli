@@ -1,34 +1,59 @@
 import { checkbox, input } from '@inquirer/prompts';
 import Ora from 'ora';
-
 import { searchLocalePaths } from '#utils/path.js';
-import { LocalesEnum } from '#modules/common/common.types.js';
 import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { InitOptions } from './init.types.js';
 import { FilePath } from '#modules/config/config.types.js';
+import { select } from 'inquirer-select-pro';
 
-export async function sourceInput(options: InitOptions) {
-  return await input({
+export async function sourceInput(options: InitOptions): Promise<string> {
+  const choices = AVAILABLE_LOCALES.map((locale) => ({
+    label: locale,
+    value: locale,
+  }));
+
+  const result = await select({
     message: 'What is the source locale?',
-    default: options.source,
+    multiple: false,
+    defaultValue: options.source,
+    clearInputWhenSelected: true,
+    options: (input: string) => {
+      return choices.filter((locale) => locale.label.includes(input));
+    },
     validate: (value) => {
-      return LocalesEnum.safeParse(value).success || 'Please insert a valid locale';
+      return !!value;
     },
   });
+
+  if(!result) {
+    throw new Error('Source locale selection is required');
+  }
+
+  return result;
 }
 
 export async function targetInput(source: string, defaults: string[] = []) {
   const choices = AVAILABLE_LOCALES
     .filter((locale) => locale !== source)
     .map((locale) => ({
-      name: locale,
+      label: locale,
       value: locale,
-      checked: defaults.includes(locale),
     }));
 
-  return await checkbox({
+    
+  return await select({
     message: 'What are the target locales?',
-    choices,
+    defaultValue: defaults,
+    theme: {
+      icon: {
+        checked: '◉',
+        unchecked: '◯',
+        cursor: '›',
+      },
+    },
+    options: (input: string) => {
+      return choices.filter((locale) => locale.label.includes(input));
+    },
     validate: (value) => {
       return value.length > 0 || 'Please select at least one locale';
     },
