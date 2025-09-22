@@ -24,7 +24,7 @@ export default new Command()
       .default(false)
   )
   .addOption(
-    new Option('-s --source', 'Source locale')
+    new Option('-s --source <locale>', 'Source locale')
       .argParser((value) => {
         const locale = LocalesEnum.safeParse(value);
 
