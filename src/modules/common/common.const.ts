@@ -33,7 +33,7 @@ export const ISO_639_1_LOCALES = [
   'uk',
 ]
 
-export const ISO_3166_1_LOCALES = [
+export const BCP_47_LOCALES = [
   'ar-SA',
   'bg-BG',
   'ca-ES',
@@ -80,7 +80,7 @@ export const ISO_3166_1_LOCALES = [
 
 export const AVAILABLE_LOCALES = [
   ...ISO_639_1_LOCALES,
-  ...ISO_3166_1_LOCALES,
+  ...BCP_47_LOCALES,
 ];
 
 export const DEFAULT_EXCLUDED_DIRECTORIES = [

@@ -168,19 +168,20 @@ The codebase follows a modular architecture with clear separation of concerns, m
 
 ## Supported Locales
 
-Lara CLI supports translation between various locale codes following two main standards:
+Lara CLI supports translations using different locale codes, following two main standards:
 
 ### ISO 639-1 Language Codes
-These are basic language identifiers (e.g., `en` for English, `fr` for French) that work across all regions where the language is spoken.
+These are basic language identifiers (e.g., `en` for English, `fr` for French) that apply to all regions where the language is spoken.
 
-### ISO 3166-1 Locale Codes
-These are language + region combinations (e.g., `en-US` for English in the United States, `fr-CA` for French in Canada) that provide more specific regional context.
+### BCP 47 Language Tags
+These are standardized language tags defined by BCP 47, combining ISO 639-1 language codes with ISO 3166-1 country codes (e.g., `en-US` for English in the United States, `fr-CA` for French in Canada). They provide more precise regional context and are often called "locale identifiers".
 
-> **Note:** You can use either format as both source and target languages. The translation service will automatically handle the appropriate regional variants when using ISO 3166-1 codes.
+> **Note:** You can use either ISO 639-1 codes or BCP 47 tags as source and target languages. The translation service will automatically handle the appropriate regional variants.
+
 
 ### Supported Language Codes
 
-#### ISO 639-1 (Language Only)
+#### ISO 639-1 Language Codes
 
 | Code  | Language            | Code  | Language            |
 |-------|---------------------|-------|---------------------|
@@ -200,7 +201,7 @@ These are language + region combinations (e.g., `en-US` for English in the Unite
 | th    | Thai                | tr    | Turkish             |
 | uk    | Ukrainian           | zh    | Chinese             |
 
-#### ISO 3166-1 (Language + Region)
+#### BCP 47 Language Tags / Locale Identifiers
 
 | Code     | Language & Region                    | Code     | Language & Region                    |
 |----------|--------------------------------------|----------|--------------------------------------|
