@@ -118,7 +118,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
   }
 
   const inputSource = await sourceInput(options);
-  const inputTarget = await targetInput(inputSource);
+  const inputTarget = await targetInput(inputSource, options.target);
   const inputPaths = await pathsInput(options);
 
   if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {

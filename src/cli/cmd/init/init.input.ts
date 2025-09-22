@@ -17,12 +17,13 @@ export async function sourceInput(options: InitOptions) {
   });
 }
 
-export async function targetInput(source: string) {
+export async function targetInput(source: string, defaults: string[] = []) {
   const choices = AVAILABLE_LOCALES
     .filter((locale) => locale !== source)
     .map((locale) => ({
       name: locale,
       value: locale,
+      checked: defaults.includes(locale),
     }));
 
   return await checkbox({
@@ -69,6 +70,7 @@ export async function pathsInput(options: InitOptions) {
     choices: paths.map((path) => ({
       name: path,
       value: path,
+      checked: options.paths.includes(path),
     })),
     validate: (value) => {
       return value.length > 0 || 'Please select at least one path';
