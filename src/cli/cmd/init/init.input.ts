@@ -16,6 +16,7 @@ export async function sourceInput(options: InitOptions): Promise<string> {
     message: 'What is the source locale?',
     multiple: false,
     defaultValue: options.source,
+    confirmDelete: true,
     options: (input: string) => {
       return choices.filter((locale) => locale.label.includes(input));
     },
