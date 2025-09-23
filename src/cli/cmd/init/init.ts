@@ -53,7 +53,6 @@ export default new Command()
           return parsed.data;
         })
       })
-      .default(['it-IT', 'es-ES'])
   )
   .addOption(
     new Option('-p --paths <paths>', 'Paths to watch, separated by a comma, a space or a combination of both')

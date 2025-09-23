@@ -11,12 +11,11 @@ export async function sourceInput(options: InitOptions): Promise<string> {
     label: locale,
     value: locale,
   }));
-
+  
   const result = await select({
     message: 'What is the source locale?',
     multiple: false,
     defaultValue: options.source,
-    clearInputWhenSelected: true,
     options: (input: string) => {
       return choices.filter((locale) => locale.label.includes(input));
     },
