@@ -1,4 +1,4 @@
-import { checkbox, input } from '@inquirer/prompts';
+import { input } from '@inquirer/prompts';
 import Ora from 'ora';
 import { searchLocalePaths } from '#utils/path.js';
 import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
@@ -51,6 +51,7 @@ export async function targetInput(source: string, defaults: string[] = []) {
         cursor: '›',
       },
     },
+    clearInputWhenSelected: true,
     options: (input: string) => {
       return choices.filter((locale) => locale.label.includes(input));
     },
@@ -90,17 +91,26 @@ export async function pathsInput(options: InitOptions) {
   
   spinner.succeed('Paths found successfully');
 
-  const inputPaths = await checkbox({
+  const optionPaths = paths.map((path) => ({
+    name: path,
+    value: path,
+    checked: options.paths.includes(path),
+  }));
+
+  return await select({
     message: 'Select the paths to watch',
-    choices: paths.map((path) => ({
-      name: path,
-      value: path,
-      checked: options.paths.includes(path),
-    })),
+    theme: {
+      icon: {
+        checked: '◉',
+        unchecked: '◯',
+        cursor: '›',
+      },
+    },
+    options: (input: string) => {
+      return optionPaths.filter((path) => path.name.includes(input));
+    },
     validate: (value) => {
       return value.length > 0 || 'Please select at least one path';
     },
   });
-
-  return inputPaths;
 }
