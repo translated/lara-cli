@@ -4,7 +4,7 @@
 
 Lara CLI automates translation of your i18n JSON files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n JSON files.
 
-[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/humanstech/lara-cli)
+[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/translated/lara-cli)
 
 </div>
 
@@ -74,7 +74,7 @@ That's it – you're ready to go!
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/humanstech/lara-cli.git
+git clone https://github.com/translated/lara-cli.git
 ```
 
 2. **Navigate to the cloned repository**
