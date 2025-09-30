@@ -104,7 +104,6 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
       value: locale,
     }));
 
-
   let addMoreTargetLocales = true;
   if(autoDetectedLocales.length > 0) {
     // For large lists, just show count; for small lists, show the locales
@@ -118,7 +117,7 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
   }
 
   if(!addMoreTargetLocales) {
-    return [...defaults, ...autoDetectedLocales];
+    return Array.from(new Set([...defaults, ...autoDetectedLocales]));
   }
 
   const additionalLocalesMessage = autoDetectedLocales.length > 0
