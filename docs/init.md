@@ -17,13 +17,33 @@ There are two operating modes available for generating a `lara.yaml` file for yo
 ### Interactive Mode (Default)
 When running `lara-cli init` without the `--non-interactive` flag, the command operates in interactive mode:
 
-1. **Config File Check**: If a `lara.yaml` file already exists and `--force` is not used, prompts for confirmation to overwrite
-2. **Source Locale Input**: Prompts for the source locale with validation
-3. **Target Locales Selection**: Shows a checkbox list of available locales (excluding the source locale)
-4. **Path Discovery**: 
+1. **Credential Reset** (if `--reset-credentials` flag is provided):
+   - Prompts for confirmation to reset API credentials
+   - Asks for new API Key and Secret
+   - Updates the `.env` file while preserving other environment variables
+
+2. **Config File Check**: If a `lara.yaml` file already exists and `--force` is not used, prompts for confirmation to overwrite
+
+3. **Source Locale Input**: Prompts for the source locale with searchable selection
+
+4. **Target Locales Selection**:
+   - **Auto-Detection**: Asks if you want to automatically detect target locales from your existing project files
+   - If auto-detection finds locales:
+     - Displays found locales (shows all for small lists, formatted table for large lists)
+     - Option to add all detected locales or select specific ones
+     - Option to add additional locales beyond the auto-detected ones
+   - If no auto-detection or no locales found:
+     - Shows searchable list of all available locales (excluding source locale)
+   - **Smart Display**: For enterprise projects with many locales (>10), uses formatted tables for better readability
+
+5. **Path Discovery**: 
    - Automatically searches for existing internationalization files in your project
    - If files are found, presents them as selectable options
    - If no files are found, prompts for manual path input with validation
+
+6. **API Credentials Setup** (if not already configured):
+   - Prompts to add API credentials to `.env` file
+   - Option to skip and configure later
 
 ```bash
 # Example of interactive mode
@@ -69,6 +89,65 @@ By default, only `locales.source`, `locales.target` and `files.json.include` pro
 
 For complete details about the configuration file, see the [Lara.yaml Configuration Reference](lara_yaml.md)
 
+## Target Locale Auto-Detection
+
+One of the most powerful features of the init command is **automatic target locale detection**. This feature scans your project directory for existing locale files and automatically identifies target locales, saving you time and reducing manual configuration.
+
+### How It Works
+
+1. **Project Scanning**: The CLI searches through your project directories for files that match common internationalization patterns
+2. **Locale Extraction**: Identifies locale codes from:
+   - Directory names (e.g., `/locales/es/`, `/i18n/fr/`)
+   - File names (e.g., `es.json`, `fr-CA.json`)
+3. **Smart Filtering**: Automatically excludes the source locale from detected targets
+4. **User Confirmation**: Presents the detected locales for your review and selection
+
+### Benefits
+
+- **Time Saving**: No need to manually type or select from a long list of locales
+- **Accuracy**: Reduces human error by reading directly from your existing file structure
+- **Flexibility**: You can choose to accept all detected locales or select specific ones
+- **Extensibility**: Option to add additional locales beyond what was auto-detected
+
+### Example Workflow
+
+```bash
+? Automatically detect target locales? Yes
+⠙ Searching for target locales...
+✔ Found 3 target locale(s): es, fr, it
+
+? Add all 3 detected locales to the target list? 
+  (No to choose specific locales) Yes
+
+? Add more target locales? (Already added: es, fr, it) Yes
+
+? Select additional target locales (3 already added)
+  › ◉ de
+    ◉ pt
+    ◯ ja
+
+ℹ Target locales selected: es, fr, it, de, pt (3 auto-detected, 2 manually added)
+```
+
+### Enterprise-Scale Support
+
+For projects with many locales (>10), the CLI uses **formatted table displays** for better readability:
+
+```bash
+✔ Found 24 target locale(s)
+
+Detected locales:
+  es      fr      it      de      
+  pt      nl      pl      ru      
+  ja      zh      ko      ar      
+  hi      th      vi      id      
+  tr      uk      cs      sk      
+  hr      ro      bg      hu      
+
+? Add all 24 detected locales to the target list? Yes
+```
+
+This ensures that even enterprise projects with extensive localization needs remain manageable and easy to configure.
 
 ## Post-Initialization
 
@@ -195,3 +274,8 @@ The command will:
 # Display help for the init command
 lara-cli init --help
 ```
+
+## Need More Help?
+
+- [Translate Command](translate.md) - Next steps after initialization
+- [Configuration Reference](lara_yaml.md) - Detailed configuration options

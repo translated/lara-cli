@@ -56,7 +56,12 @@ lara-cli init
 
 This will start the interactive initialization process.
 
-The CLI will **automatically detect your localization directories** and guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
+The CLI will **automatically detect your localization directories and target locales** from your existing project files, then guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
+
+**Key features:**
+- 🔍 **Auto-detection**: Scans your project for existing locale files and automatically suggests target locales
+- 📊 **Smart display**: For enterprise projects with many locales, uses formatted tables for better readability
+- ⚙️ **Flexible configuration**: Choose detected locales or manually add/remove as needed
 
 ### Translate Your Files!
 
