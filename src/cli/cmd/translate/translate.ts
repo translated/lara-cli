@@ -8,6 +8,8 @@ import { ConfigType } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
 import { searchLocalePathsByPattern } from '#utils/path.js';
 import picomatch from 'picomatch';
+import { handleLaraApiError } from '#utils/error.js';
+import { LaraApiError } from '@translated/lara';
 
 type TranslateOptions = {
   target: string[];
@@ -107,8 +109,18 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
       context: config.project?.context,
     });
 
-    await translationEngine.translate();
-  }
+    try{
+      await translationEngine.translate();
 
-  spinner.succeed(`Translated ${fileType} files!`);
+      spinner.succeed(`Translated ${fileType} files!`);
+    } catch(error) {
+      if(error instanceof LaraApiError) {
+        handleLaraApiError(error, inputPath, spinner);
+        continue;
+      }
+      
+      const message = error.message;
+      spinner.fail(`Error translating ${inputPath}: ${message}`);
+    }
+  }
 }

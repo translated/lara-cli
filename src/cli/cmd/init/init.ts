@@ -11,7 +11,7 @@ import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
-import { appendFileSync } from 'fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
 
 
@@ -65,6 +65,10 @@ export default new Command()
       })
       .default(['src/i18n/[locale].json'])
   )
+  .addOption(
+    new Option('-r --reset-credentials', 'Reset credentials')
+      .default(false)
+  )
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
       ? await handleInteractiveMode(options)
@@ -105,6 +109,16 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
 }
 
 async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> {
+  if(options.resetCredentials) {
+    const shouldOverwrite = await confirm({
+      message: 'Do you want to reset the API credentials?',
+    });
+
+    if(shouldOverwrite) {
+      await resetCredentials();
+    }
+  }
+
   if(ConfigProvider.getInstance().doesConfigExists() && !options.force) {
     const shouldOverwrite = await confirm({
       message: 'Config file already exists, do you want to overwrite it?',
@@ -129,7 +143,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       const apiKey = await input({ message: 'Insert your API Key:' });
       const apiSecret = await input({ message: 'Insert your API Secret:' });
 
-      const envContent = `LARA_ACCESS_KEY_ID=${apiKey}\nLARA_ACCESS_KEY_SECRET=${apiSecret}\n`;
+      const envContent = `# Lara API credentials\nLARA_ACCESS_KEY_ID=${apiKey}\nLARA_ACCESS_KEY_SECRET=${apiSecret}\n`;
 
       appendFileSync('.env', `\n${envContent}`);
 
@@ -157,4 +171,35 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       },
     },
   }
+}
+
+async function resetCredentials() {
+  const apiKey = await input({ message: 'Insert your New API Key:' });
+  const apiSecret = await input({ message: 'Insert your New API Secret:' });
+
+  const envPath = '.env';
+
+  if(!existsSync(envPath)) {
+    Ora({ text: 'No .env file found. Creating one...', color: 'yellow' }).warn();
+    writeFileSync(envPath, '');
+  }
+
+  let envContent = readFileSync(envPath, 'utf-8');
+
+  // Replace or add the key/value pairs
+  if (/^LARA_ACCESS_KEY_ID=/m.test(envContent)) {
+    envContent = envContent.replace(/^LARA_ACCESS_KEY_ID=.*$/m, `LARA_ACCESS_KEY_ID=${apiKey}`);
+  } else {
+    envContent += `\n# Lara API credentials\nLARA_ACCESS_KEY_ID=${apiKey}`;
+  }
+
+  if (/^LARA_ACCESS_KEY_SECRET=/m.test(envContent)) {
+    envContent = envContent.replace(/^LARA_ACCESS_KEY_SECRET=.*$/m, `LARA_ACCESS_KEY_SECRET=${apiSecret}`);
+  } else {
+    envContent += `\nLARA_ACCESS_KEY_SECRET=${apiSecret}`;
+  }
+
+  writeFileSync(envPath, envContent);
+
+  Ora({ text: 'API credentials reset successfully', color: 'green' }).succeed();
 }

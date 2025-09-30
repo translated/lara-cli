@@ -44,6 +44,8 @@ LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
 
 Replace the placeholders with your **actual credentials**.
 
+> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
+
 ### Initialize Your Project
 
 In your project directory, run:

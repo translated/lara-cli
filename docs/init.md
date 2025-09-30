@@ -114,6 +114,22 @@ Proceed to the [translate command documentation](translate.md#translate-command)
   - Must use `[locale]` either in directory (`/[locale]/`) or filename (`[locale].extension`)
 - **example**: `-p src/translations/locales/[locale]/[locale].json`
 
+### `-r`, `--reset-credentials`
+- **Type**: Boolean
+- **Default**: `false`
+- **Description**: Prompts to reset or update your Lara API credentials in the `.env` file
+- **Behavior**: 
+  - Only works in interactive mode (ignored if `--non-interactive` is used)
+  - Prompts for confirmation before resetting credentials
+  - Asks for new API Key and API Secret
+  - Updates existing credentials in `.env` file or creates the file if it doesn't exist
+  - Preserves other environment variables in the `.env` file
+- **Use Cases**:
+  - Your API keys have expired
+  - You need to switch to different API credentials
+  - Your credentials were compromised and need updating
+- **example**: `lara-cli init --reset-credentials`
+
 ### `-h`, `--help`
 - **Description**: Shows help information for the command
 
@@ -153,6 +169,25 @@ lara-cli init --paths "src/locales/[locale]/messages.json, public/i18n/[locale].
 # Full non-interactive configuration with all options
 lara-cli init --source "en" --target "de, fr, it" --paths "src/i18n/[locale]/common.json, src/i18n/[locale]/pages.json" --force --non-interactive
 ```
+
+### Reset API Credentials
+
+```bash
+# Reset or update your API credentials
+lara-cli init --reset-credentials
+```
+
+This is useful when:
+- Your API keys have expired and you received a 401 authentication error
+- You need to switch to different API credentials
+- Your credentials were compromised and need immediate updating
+
+The command will:
+1. Prompt you to confirm the credential reset
+2. Ask for your new API Key
+3. Ask for your new API Secret  
+4. Update the `.env` file (or create it if it doesn't exist)
+5. Preserve all other environment variables
 
 ### Getting Help
 

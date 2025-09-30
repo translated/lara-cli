@@ -3,4 +3,5 @@ export type InitOptions = {
   source: string;
   target: string[];
   paths: string[];
+  resetCredentials: boolean;
 };
