@@ -5,6 +5,7 @@ import {
   usePrefix,
   usePagination,
   useRef,
+  useEffect,
   isEnterKey,
   isUpKey,
   isDownKey,
@@ -162,18 +163,21 @@ export const searchableSelect = createPrompt(
       item.choice.label.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // In single-select mode, set active to the default value's index
-    const getInitialActiveIndex = (): number => {
-      if (!multiple && !config.multiple && config.default) {
-        const defaultValue = config.default;
-        const defaultIndex = items.findIndex((item) => item.choice.value === defaultValue);
-        return defaultIndex >= 0 ? defaultIndex : 0;
-      }
-      return 0;
-    };
-
-    const [active, setActive] = useState<number>(getInitialActiveIndex());
+    const [active, setActive] = useState<number>(0);
     const [errorMsg, setError] = useState<string | undefined>(undefined);
+    const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+    // Initialize cursor position to default value on first render
+    useEffect(() => {
+      if (!isInitialized && !multiple && !config.multiple && config.default) {
+        const defaultValue = config.default;
+        const defaultIndex = filteredItems.findIndex((item) => item.choice.value === defaultValue);
+        if (defaultIndex >= 0) {
+          setActive(defaultIndex);
+        }
+        setIsInitialized(true);
+      }
+    }, [isInitialized, multiple, config.multiple, config.default, filteredItems]);
 
     // Ensure active index is within bounds of filtered items
     if (active >= filteredItems.length && filteredItems.length > 0) {
@@ -382,8 +386,14 @@ export const searchableSelect = createPrompt(
  * @returns Promise resolving to array of selected values
  */
 export default function customSearchableSelect<Value>(
+  config: CustomSelectConfig<Value>
+): Promise<Value[]>;
+export default function customSearchableSelect<Value>(
+  config: CustomMultiSelectConfig<Value>
+): Promise<Value[]>;
+export default function customSearchableSelect<Value>(
   config: CustomSelectConfig<Value> | CustomMultiSelectConfig<Value>
 ): Promise<Value[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return searchableSelect(config as any);
+  type PromptFunction = <T>(config: CustomSelectPromptConfig<T>) => Promise<T[]>;
+  return (searchableSelect as unknown as PromptFunction)(config);
 }

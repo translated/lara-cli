@@ -52,7 +52,7 @@ export async function autoTargetInput(source: string): Promise<string[]> {
     return locales;
   }
 
-  Ora({ text: 'The user did not want to automatically detect target locales.', color: 'red' }).fail();
+  Ora({ text: 'Automatic detection of target locales was skipped.', color: 'blue' }).info();
   return [];
 }
 

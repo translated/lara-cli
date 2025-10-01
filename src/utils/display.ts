@@ -43,7 +43,16 @@ export function formatLocaleList(locales: string[], maxDisplay: number = 5): str
  * //   es      fr      it      de
  * //   pt      nl
  */
-export function displayLocaleTable({ locales, title, columns = 4, spinner, type = 'info' }: {locales: string[], title: string, columns?: number, spinner?: OraType, type?: 'info' | 'succeed'}): void {
+
+type DisplayLocaleTableOptions = {
+  locales: string[];
+  title: string;
+  columns?: number;
+  spinner?: OraType;
+  type?: 'info' | 'succeed';
+}
+
+export function displayLocaleTable({ locales, title, columns = 4, spinner, type = 'info' }: DisplayLocaleTableOptions): void {
   const rows: string[][] = [];
   
   for (let i = 0; i < locales.length; i += columns) {
