@@ -177,6 +177,20 @@ project:
 
 The context helps the translation engine better understand the domain of your content.
 
+#### External Context
+
+Lara supports the use of external context to enhance translation quality. This feature allows you to pass texts as context that do not need translation but can assist in the translation process. Here are the primary use cases:
+
+1. Translating a short title of a blog post while providing some of the post content to help the model disambiguate.
+2. Translating the last message of a chat by providing previous messages in the correct order as context.
+3. Integrating Lara into a CAT tool for professional translators where content has been segmented into sentences, allowing surrounding sentences to be used as context.
+
+Only the segments marked for translation are translated, while others remain as they are, providing context without incurring additional charges.
+
+> **Good News**: Unlike generic LLMs, the characters provided to Lara as context are not charged. This can significantly reduce costs compared to using generic LLMs.
+
+For more information, visit the [Lara Translate documentation](https://developers.laratranslate.com/docs/adapt-to-context).
+
 ## Path Patterns
 
 All path specifications in `lara.yaml` use the `[locale]` placeholder to identify where the locale code should be inserted.

@@ -5,6 +5,7 @@ import { calculateChecksum } from '#utils/checksum.js';
 import { parseFlattened, unflatten } from '#utils/json.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { writeFile } from 'fs/promises';
+import { TextBlock } from './translation.service.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -78,7 +79,7 @@ export class TranslationEngine {
   private readonly lockedPatterns: Matcher[];
   private readonly ignoredPatterns: Matcher[];
 
-  private readonly instructions: string[] | undefined;
+  private readonly context: string | undefined;
 
   private readonly translatorService: TranslationService;
 
@@ -93,9 +94,9 @@ export class TranslationEngine {
     this.lockedPatterns = options.lockedKeys.map(pattern => picomatch(pattern));
     this.ignoredPatterns = options.ignoredKeys.map(pattern => picomatch(pattern));
 
-    this.instructions = options.context ? [
-      `Translate the content taking into account the context of the project: ${options.context}`,
-    ] : undefined;
+    this.context = options.context ? 
+      `Translate the content taking into account the context of the project: ${options.context}`
+      : undefined;
 
     this.translatorService = TranslationService.getInstance();
   }
@@ -174,10 +175,16 @@ export class TranslationEngine {
     if(value.trim() === '') {
       return value;
     }
-    
-    return await this.translatorService.translate(value, sourceLocale, targetLocale, {
-      instructions: this.instructions,
-    });
+
+    const textBlocks: TextBlock[] = [];
+    if(this.context) {
+      textBlocks.push({ text: this.context, translatable: false });
+    }
+    textBlocks.push({ text: value, translatable: true });
+
+    const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale);
+
+    return translations.pop()!.text;
   }
 
   private isIgnored(key: string): boolean {
