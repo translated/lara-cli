@@ -4,9 +4,9 @@ import { searchLocalePaths } from '#utils/path.js';
 import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { InitOptions } from './init.types.js';
 import { FilePath } from '#modules/config/config.types.js';
-import { select } from 'inquirer-select-pro';
 import { extractLocaleFromPath } from '#utils/locale.js';
 import { displayLocaleTable, formatLocaleList } from '#utils/display.js';
+import customSearchableSelect from '#utils/prompt.js';
 
 export async function sourceInput(options: InitOptions): Promise<string> {
   const choices = AVAILABLE_LOCALES.map((locale) => ({
@@ -14,29 +14,23 @@ export async function sourceInput(options: InitOptions): Promise<string> {
     value: locale,
   }));
   
-  const result = await select({
+  const result = await customSearchableSelect({
     message: 'What is the source locale?',
     multiple: false,
-    defaultValue: options.source,
-    confirmDelete: true,
-    options: (input: string) => {
-      return choices.filter((locale) => locale.label.includes(input));
-    },
-    validate: (value) => {
-      return !!value;
-    },
+    default: options.source,
+    choices: choices,
   });
 
-  if(!result) {
+  if(!result || result.length === 0) {
     throw new Error('Source locale selection is required');
   }
 
-  return result;
+  return result[0] || 'en';
 }
 
 export async function autoTargetInput(source: string): Promise<string[]> {
   const shouldAutoTarget = await confirm({
-    message: 'Automatically detect target locales?',
+    message: 'Automatically detect and add target locales?',
   });
 
   if (shouldAutoTarget) {
@@ -50,45 +44,15 @@ export async function autoTargetInput(source: string): Promise<string[]> {
 
     // For large lists, show a formatted table; for small lists, show inline
     if (locales.length > 10) {
-      spinner.succeed(`Found ${locales.length} target locale(s)`);
-      displayLocaleTable(locales, 'Detected locales');
+      displayLocaleTable({ locales, title: `Found ${locales.length} target locale(s)`, spinner, type: 'succeed' });
     } else {
       spinner.succeed(`Found ${locales.length} target locale(s): ${formatLocaleList(locales, 10)}`);
     }
 
-    const choices = locales.map((locale) => ({
-      label: locale,
-      value: locale,
-    }));
-
-    const shouldAddAll = await confirm({
-      message: `Add all ${locales.length} detected locales to the target list? (Select "No" to select specific locales from the detected locales list)`,
-    });
-
-    if (shouldAddAll) {
-      return locales;
-    }
-
-    const result = await select({
-      message: 'Select detected locales to include in the target list:',
-      theme: {
-        icon: {
-          checked: '◉',
-          unchecked: '◯',
-          cursor: '›',
-        },
-      },
-      clearInputWhenSelected: true,
-      options: (input: string) => {
-        return choices.filter((locale) => locale.label.includes(input));
-      },
-    });
-
-    if (result) {
-      return result;
-    }
+    return locales;
   }
 
+  Ora({ text: 'The user did not want to automatically detect target locales.', color: 'red' }).fail();
   return [];
 }
 
@@ -112,7 +76,7 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
       : `${autoDetectedLocales.length} locale(s) already added`;
     
     addMoreTargetLocales = await confirm({
-      message: `Add more target locales? (${alreadyAddedMessage})`,
+      message: `Do you want to add more target locales? (${alreadyAddedMessage})`,
     });
   }
 
@@ -121,12 +85,14 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
   }
 
   const additionalLocalesMessage = autoDetectedLocales.length > 0
-    ? `Select additional target locales (${autoDetectedLocales.length} already added)`
+    ? 'Select additional target locales'
     : 'What are the target locales?';
 
-  const additionalLocales = await select({
+  const additionalLocales = await customSearchableSelect({
     message: additionalLocalesMessage,
-    defaultValue: defaults,
+    choices: choices,
+    multiple: true,
+    default: defaults,
     theme: {
       icon: {
         checked: '◉',
@@ -134,11 +100,7 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
         cursor: '›',
       },
     },
-    clearInputWhenSelected: true,
-    options: (input: string) => {
-      return choices.filter((locale) => locale.label.includes(input));
-    },
-    validate: (value) => {
+    validate: (value: string[]) => {
       if (autoDetectedLocales.length === 0 && value.length === 0) {
         return 'Please select at least one locale';
       }
@@ -168,10 +130,9 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
 
     // For large lists, show a formatted table; for small lists, show inline
     if (allTargetLocales.length > 10) {
-      Ora().info(`Total ${allTargetLocales.length} target locale(s) selected${summaryText}`);
-      displayLocaleTable(allTargetLocales, 'Selected target locales');
+      displayLocaleTable({ locales: allTargetLocales, title: `Total ${allTargetLocales.length} target locale(s) selected${summaryText}`, type: 'succeed' });
     } else {
-      Ora().info(`Target locales selected: ${formatLocaleList(allTargetLocales, 10)}${summaryText}`);
+      Ora().succeed(`Target locales selected: ${formatLocaleList(allTargetLocales, 10)}${summaryText}`);
     }
   }
 
@@ -214,8 +175,14 @@ export async function pathsInput(options: InitOptions) {
     checked: options.paths.includes(path),
   }));
 
-  return await select({
+  return await customSearchableSelect({
     message: 'Select the paths to watch',
+    choices: optionPaths.map((path) => ({
+      value: path.value,
+      label: path.name,
+    })),
+    multiple: true,
+    default: options.paths,
     theme: {
       icon: {
         checked: '◉',
@@ -223,10 +190,7 @@ export async function pathsInput(options: InitOptions) {
         cursor: '›',
       },
     },
-    options: (input: string) => {
-      return optionPaths.filter((path) => path.name.includes(input));
-    },
-    validate: (value) => {
+    validate: (value: string[]) => {
       return value.length > 0 || 'Please select at least one path';
     },
   });

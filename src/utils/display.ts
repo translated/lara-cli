@@ -1,4 +1,4 @@
-import Ora from 'ora';
+import Ora, { Ora as OraType } from 'ora';
 
 /**
  * Formats a list of locales for display in a user-friendly way.
@@ -43,7 +43,7 @@ export function formatLocaleList(locales: string[], maxDisplay: number = 5): str
  * //   es      fr      it      de
  * //   pt      nl
  */
-export function displayLocaleTable(locales: string[], title: string, columns: number = 4): void {
+export function displayLocaleTable({ locales, title, columns = 4, spinner, type = 'info' }: {locales: string[], title: string, columns?: number, spinner?: OraType, type?: 'info' | 'succeed'}): void {
   const rows: string[][] = [];
   
   for (let i = 0; i < locales.length; i += columns) {
@@ -56,5 +56,9 @@ export function displayLocaleTable(locales: string[], title: string, columns: nu
   
   const tableOutput = `${title}:\n${formattedRows.join('\n')}`;
   
-  Ora().info(tableOutput);
+  if(spinner) {
+    spinner[type](tableOutput);
+  } else {
+    Ora()[type](tableOutput);
+  }
 }

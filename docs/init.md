@@ -112,21 +112,19 @@ One of the most powerful features of the init command is **automatic target loca
 ### Example Workflow
 
 ```bash
-? Automatically detect target locales? Yes
+? Automatically detect and add target locales? Yes
 ⠙ Searching for target locales...
 ✔ Found 3 target locale(s): es, fr, it
 
-? Add all 3 detected locales to the target list? 
-  (No to choose specific locales) Yes
+? Do you want to add more target locales? (3 locale(s) already added) Yes
 
-? Add more target locales? (Already added: es, fr, it) Yes
-
-? Select additional target locales (3 already added)
-  › ◉ de
+? Select additional target locales
+(Type to search, ↑/↓ navigate, Space select, Ctrl+A toggle all)
+  › ◯ de
     ◉ pt
     ◯ ja
 
-ℹ Target locales selected: es, fr, it, de, pt (3 auto-detected, 2 manually added)
+ℹ Selected additional target locales: ko, nb, pl
 ```
 
 ### Enterprise-Scale Support

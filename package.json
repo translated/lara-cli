@@ -12,13 +12,13 @@
     "lara-cli": "./build/index.js"
   },
   "dependencies": {
+    "@inquirer/core": "^10.2.2",
     "@inquirer/prompts": "^7.8.4",
     "@translated/lara": "^1.6.5",
     "commander": "^14.0.0",
     "dotenv": "^17.2.1",
     "flat": "^6.0.1",
     "glob": "^11.0.3",
-    "inquirer-select-pro": "1.0.0-alpha.9",
     "ora": "^8.2.0",
     "picomatch": "^4.0.3",
     "yaml": "^2.8.1",

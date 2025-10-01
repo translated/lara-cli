@@ -125,7 +125,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     });
 
     if(!shouldOverwrite) {
-      Ora({ text: 'Config file already exists, and the user did not want to overwrite it', color: 'red' }).fail();
+      Ora({ text: 'Config file already exists and the user did not want to overwrite it', color: 'red' }).fail();
       return process.exit(1);
     }
   }
