@@ -95,7 +95,13 @@ export async function resetCredentials(): Promise<void> {
     writeFileSync(envPath, '');
   }
 
-  let envContent = readFileSync(envPath, 'utf-8');
+  let envContent = '';
+  try {
+    envContent = readFileSync(envPath, 'utf-8');
+  } catch (err) {
+    Ora({ text: `Failed to read .env file: ${err.message}. Please check file permissions.`, color: 'red' }).fail();
+    throw err;
+  }
 
   // Replace or add the key/value pairs
   if (/^LARA_ACCESS_KEY_ID=/m.test(envContent)) {
