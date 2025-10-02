@@ -62,9 +62,9 @@ export function getExistingContext(force: boolean): string | undefined {
 function validateCredential(credential: string, name: string): string {
   const sanitized = credential.trim().replace(/[\r\n]+/g, '');
   // Accept alphanumeric, dash, underscore, min 8 chars, max 128 chars
-  if (!/^[A-Za-z0-9\-_]{8,128}$/.test(sanitized)) {
+  if (sanitized.length < 8 || sanitized.length > 128) {
     throw new Error(
-      `${name} must be 8-128 characters and contain only letters, numbers, dashes, or underscores.`
+      `${name} must be 8-128 characters.`
     );
   }
   return sanitized;
@@ -83,8 +83,12 @@ export async function resetCredentials(): Promise<void> {
   try {
     apiKey = validateCredential(apiKeyRaw, 'API Key');
     apiSecret = validateCredential(apiSecretRaw, 'API Secret');
-  } catch (err: any) {
-    Ora({ text: err.message, color: 'red' }).fail();
+  } catch (err: unknown) {
+    if(err instanceof Error) {
+      Ora({ text: err.message, color: 'red' }).fail();
+    } else {
+      Ora({ text: 'An unknown error occurred', color: 'red' }).fail();
+    }
     throw err;
   }
 
@@ -98,8 +102,12 @@ export async function resetCredentials(): Promise<void> {
   let envContent = '';
   try {
     envContent = readFileSync(envPath, 'utf-8');
-  } catch (err) {
-    Ora({ text: `Failed to read .env file: ${err.message}. Please check file permissions.`, color: 'red' }).fail();
+  } catch (err: unknown) {
+    if(err instanceof Error) {
+      Ora({ text: `Failed to read .env file: ${err.message}. Please check file permissions.`, color: 'red' }).fail();
+    } else {
+      Ora({ text: 'An unknown error occurred', color: 'red' }).fail();
+    }
     throw err;
   }
 
