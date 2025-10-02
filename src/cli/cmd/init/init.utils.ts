@@ -121,3 +121,12 @@ export async function resetCredentials(): Promise<void> {
   Ora({ text: 'API credentials reset successfully', color: 'green' }).succeed();
 }
 
+/**
+ * Normalizes the context by trimming the string and returning undefined if it's empty.
+ * 
+ * @param context - Context
+ * @returns Normalized context
+ */
+export function normalizeContext(context: string): string | undefined {
+  return context.trim() || undefined;
+}

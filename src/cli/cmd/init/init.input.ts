@@ -7,6 +7,7 @@ import { FilePath } from '#modules/config/config.types.js';
 import { extractLocaleFromPath } from '#utils/locale.js';
 import { displayLocaleTable, formatLocaleList } from '#utils/display.js';
 import customSearchableSelect from '#utils/prompt.js';
+import { normalizeContext } from './init.utils.js';
 
 export async function sourceInput(options: InitOptions): Promise<string> {
   const choices = AVAILABLE_LOCALES.map((locale) => ({
@@ -202,12 +203,12 @@ export async function contextInput(existingContext?: string, cliContext?: string
     if (existingContext) {
       Ora().info('Updating project context from CLI option');
     }
-    return cliContext.trim() || undefined;
+    return normalizeContext(cliContext);
   }
 
   // Priority 2: Reuse existing context
   if (existingContext) {
-    return existingContext.trim() || undefined;
+    return normalizeContext(existingContext);
   }
 
   // Priority 3: Prompt user for new context
@@ -217,5 +218,5 @@ export async function contextInput(existingContext?: string, cliContext?: string
     default: '',
   });
 
-  return userContext.trim() || undefined;
+  return normalizeContext(userContext);
 }
