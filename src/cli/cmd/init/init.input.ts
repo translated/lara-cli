@@ -195,3 +195,27 @@ export async function pathsInput(options: InitOptions) {
     },
   });
 }
+
+export async function contextInput(existingContext?: string, cliContext?: string): Promise<string | undefined> {
+  // Priority 1: Use CLI-provided context
+  if (cliContext) {
+    if (existingContext) {
+      Ora().info('Updating project context from CLI option');
+    }
+    return cliContext.trim() || undefined;
+  }
+
+  // Priority 2: Reuse existing context
+  if (existingContext) {
+    return existingContext.trim() || undefined;
+  }
+
+  // Priority 3: Prompt user for new context
+  Ora().info('Project context helps improve translation quality.');
+  const userContext = await input({
+    message: 'Enter project context (e.g., domain, terminology, tone):',
+    default: '',
+  });
+
+  return userContext.trim() || undefined;
+}
