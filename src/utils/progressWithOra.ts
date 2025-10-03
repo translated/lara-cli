@@ -1,16 +1,15 @@
 import Ora, { Ora as OraType } from 'ora';
 
-interface ProgressState {
-  done: number;
-  total: number;
-  startTime: number;
-}
-
 class ProgressWithOra {
   public spinner!: OraType;
-  private global: ProgressState = { done: 0, total: 0, startTime: 0 };
-  private local: ProgressState = { done: 0, total: 0, startTime: 0 };
+  private done = 0;
+  private total = 0;
+  private totalKeys = 0;
+  private processedKeys = 0;
   private readonly width = 40;
+  private readonly batchTimes: number[] = [];
+  private readonly MAX_SAMPLES = 10;
+  private readonly MIN_SAMPLES_FOR_ETA = 5;
 
   public init({ message, spinner }: { message?: string; spinner?: OraType }): void {
     if (spinner) {
@@ -21,7 +20,7 @@ class ProgressWithOra {
     this.spinner = Ora({ text: message ?? 'Processing...', color: 'yellow' }).start();
   }
 
-  public startGlobal({ message, total }: { message: string; total: number }): void {
+  public start({ message, total, totalKeys }: { message: string; total: number; totalKeys?: number }): void {
     if (!this.spinner) {
       this.init({ message });
     }
@@ -30,93 +29,101 @@ class ProgressWithOra {
       throw new Error('Progress total must be greater than 0');
     }
 
-    this.global = { done: 0, total, startTime: Date.now() };
+    this.total = total;
+    this.done = 0;
+    this.totalKeys = totalKeys ?? total;
+    this.processedKeys = 0;
+    this.batchTimes.length = 0;
+
     this.setText(message);
-    process.stdout.write('\n\n');
-    this.renderDualProgress();
+    process.stdout.write('\n');
+    this.renderProgress();
   }
 
-  public startLocal({ message, total }: { message: string; total: number }): void {
-    if (total <= 0) {
-      throw new Error('Progress total must be greater than 0');
+  public tick(count: number = 1, keysProcessed?: number, batchTime?: number): void {
+    this.done = Math.min(this.done + count, this.total);
+    
+    if (keysProcessed && keysProcessed > 0) {
+      this.processedKeys += keysProcessed;
+      
+      if (batchTime && batchTime > 0) {
+        const timePerKey = batchTime / keysProcessed;
+        this.batchTimes.push(timePerKey);
+        
+        if (this.batchTimes.length > this.MAX_SAMPLES) {
+          this.batchTimes.shift();
+        }
+      }
     }
-
-    this.local = { done: 0, total, startTime: Date.now() };
-    this.setText(message);
-    this.renderDualProgress();
-  }
-
-  public tickGlobal(count: number = 1): void {
-    this.global.done = Math.min(this.global.done + count, this.global.total);
-    this.renderDualProgress();
-  }
-
-  public tickLocal(count: number = 1): void {
-    this.local.done = Math.min(this.local.done + count, this.local.total);
-    this.renderDualProgress();
-  }
-
-  public tickBoth(count: number = 1): void {
-    this.global.done = Math.min(this.global.done + count, this.global.total);
-    this.local.done = Math.min(this.local.done + count, this.local.total);
-    this.renderDualProgress();
+    
+    this.renderProgress();
   }
 
   public setText(text: string): void {
     this.spinner.text = text;
   }
 
-  private renderDualProgress(): void {
-    const globalBar = this.buildProgressBar(this.global, 'All Files    ');
-    const localBar = this.buildProgressBar(this.local, 'Current File ');
+  public reset({ total, done, totalKeys }: { total: number; done?: number; totalKeys?: number }): void {
+    if (total <= 0) {
+      throw new Error('Progress total must be greater than 0');
+    }
 
-    process.stdout.write('\x1b[1B');
-    process.stdout.write('\x1b[2K\r');
-    process.stdout.write(globalBar);
-    process.stdout.write('\x1b[1B');
-    process.stdout.write('\x1b[2K\r');
-    process.stdout.write(localBar);
-    process.stdout.write('\x1b[2A');
+    this.total = total;
+    this.done = done ?? 0;
+    this.totalKeys = totalKeys ?? total;
+    this.processedKeys = 0;
+    this.batchTimes.length = 0;
+    this.renderProgress();
   }
 
-  private buildProgressBar(state: ProgressState, label: string): string {
-    if (state.total === 0) return `${label}: N/A`;
-
-    const ratio = state.done / state.total;
+  private renderProgress(): void {
+    const ratio = this.done / this.total;
     const filled = Math.round(ratio * this.width);
     const empty = this.width - filled;
     const percent = (ratio * 100).toFixed(1);
-    const eta = this.calculateETA(state);
-    const progress = `${state.done}/${state.total}`;
-    return `${label}: |${'█'.repeat(filled)}${'-'.repeat(empty)}| ${percent}% (${progress}) ${eta}`;
+    const progress = `${this.done}/${this.total}`;
+    const eta = this.calculateETA();
+    const bar = `|${'█'.repeat(filled)}${'-'.repeat(empty)}| ${percent}% (${progress}) ${eta}`;
+
+    process.stdout.write('\x1b[1B');
+    process.stdout.write('\x1b[2K\r');
+    process.stdout.write(`Progress: ${bar}`);
+    process.stdout.write('\x1b[1A');
   }
 
-  private calculateETA(state: ProgressState): string {
-    if (state.done === 0) return '';
+  private calculateETA(): string {
+    if (this.batchTimes.length < this.MIN_SAMPLES_FOR_ETA) {
+      return '';
+    }
 
-    const elapsed = Date.now() - state.startTime;
-    const rate = state.done / elapsed;
-    const remaining = (state.total - state.done) / rate;
+    if (this.processedKeys === 0 || this.processedKeys >= this.totalKeys) {
+      return '';
+    }
 
-    if (!isFinite(remaining) || remaining < 0) return '';
+    const movingAvgTimePerKey = this.batchTimes.reduce((sum, val) => sum + val, 0) / this.batchTimes.length;
+    const remainingKeys = this.totalKeys - this.processedKeys;
+    const remainingMs = movingAvgTimePerKey * remainingKeys;
 
-    const seconds = Math.ceil(remaining / 1000);
-    if (seconds < 60) return `(~${seconds}s)`;
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `(~${minutes}m ${secs}s)`;
+    if (!isFinite(remainingMs) || remainingMs < 0) {
+      return '';
+    }
+
+    const totalMinutes = Math.ceil(remainingMs / 1000 / 60);
+
+    if (totalMinutes < 1) {
+      return '(<1m)';
+    }
+
+    return `(~${totalMinutes}m)`;
   }
 
   public stop(message: string = 'Completed!', type: 'succeed' | 'fail' = 'succeed'): void {
-    this.global.done = this.global.total;
-    this.local.done = this.local.total;
-    this.renderDualProgress();
+    this.done = this.total;
+    this.renderProgress();
 
     process.stdout.write('\x1b[1B');
     process.stdout.write('\x1b[2K\r');
-    process.stdout.write('\x1b[1B');
-    process.stdout.write('\x1b[2K\r');
-    process.stdout.write('\x1b[2A');
+    process.stdout.write('\x1b[1A');
 
     this.spinner[type](message);
   }

@@ -110,16 +110,11 @@ export class TranslationEngine {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
     const changelog = calculateChecksum(sourcePath);
     const keysCount = Object.keys(changelog).length;
-    const localTotal = this.targetLocales.length * keysCount;
-
-    progressWithOra.startLocal({ 
-      message: `Translating ${inputPath}...`, 
-      total: localTotal 
-    });
-
+    
     for(const targetLocale of this.targetLocales) {
       progressWithOra.setText(`Translating ${inputPath} → ${targetLocale} (${keysCount} keys)...`);
-      
+
+      const batchStartTime = Date.now();
       const targetPath = buildLocalePath(inputPath, targetLocale);
       const targetContent = await readSafe(targetPath, '{}');
       const targetJson = parseFlattened(targetContent);
@@ -127,8 +122,6 @@ export class TranslationEngine {
 
       const newContent = Object.fromEntries(await Promise.all(
         Object.entries(changelog).map(async ([key, value]) => {
-          progressWithOra.tickLocal();
-          
           // If the key is ignored, we should NOT include it in the new content
           if(this.isIgnored(key)) {
             return [];
@@ -174,6 +167,8 @@ export class TranslationEngine {
 
       await ensureDirectoryExists(targetPath);
       await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, formatting.indentation) + formatting.trailingNewline);
+      const batchTime = Date.now() - batchStartTime;
+      progressWithOra.tick(1, keysCount, batchTime);
     }
   }
 

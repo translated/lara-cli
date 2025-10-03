@@ -6,11 +6,12 @@ import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
-import { searchLocalePathsByPattern } from '#utils/path.js';
+import { buildLocalePath, searchLocalePathsByPattern } from '#utils/path.js';
 import picomatch from 'picomatch';
 import { handleLaraApiError } from '#utils/error.js';
 import { LaraApiError } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
+import { calculateChecksum } from '#utils/checksum.js';
 
 type TranslateOptions = {
   target: string[];
@@ -53,9 +54,17 @@ export default new Command()
         throw new Error('Source locale cannot be included in the target locales');
       }
 
+      const spinner = Ora({ text: 'Calculating total work...', color: 'yellow' }).start();
+      const { totalElements, totalKeys } = await calculateTotalWork(options, config);
+      spinner.succeed(`Found ${totalElements} file × locale combinations (${totalKeys} keys)`);
+      
+      progressWithOra.start({ message: 'Translating files...', total: totalElements, totalKeys });
+      
       for(const fileType of Object.keys(config.files)) {
         await handleFileType(fileType, options, config);
       }
+      
+      progressWithOra.stop('All files translated successfully!');
     } catch(error) {
       Ora({ text: error.message, color: 'red' }).fail();
       process.exit(1);
@@ -67,10 +76,45 @@ export default new Command()
 async function handleFileType(fileType: string, options: TranslateOptions, config: ConfigType): Promise<void> {
   const fileConfig = config.files[fileType]!;
   const sourceLocale = config.locales.source;
+  const targetLocales = getTargetLocales(options, config);
+
+  const inputPathsArray = await getInputPaths(fileType, config);
+  
+  for(const inputPath of inputPathsArray) {
+    const translationEngine = new TranslationEngine({
+      sourceLocale,
+      targetLocales,
+      inputPath,
+      force: options.force,
+      lockedKeys: fileConfig.lockedKeys,
+      ignoredKeys: fileConfig.ignoredKeys,
+      context: config.project?.context,
+    });
+
+    try{
+      await translationEngine.translate();
+    } catch(error) {
+      if(error instanceof LaraApiError) {
+        handleLaraApiError(error, inputPath, progressWithOra.spinner);
+        continue;
+      }
+      
+      progressWithOra.stop(`Error translating ${inputPath}: ${error.message}`, 'fail');
+      return;
+    }
+  }
+}
+
+
+function getTargetLocales(options: TranslateOptions, config: ConfigType): string[] {
   const targetLocales = options.target.length > 0
     ? options.target
     : config.locales.target;
+  return targetLocales;
+}
 
+async function getInputPaths(fileType: string, config: ConfigType): Promise<string[]> {
+  const fileConfig = config.files[fileType]!;
   const excludePatterns = fileConfig.exclude.map((key) => picomatch(key));
   const inputPaths: Set<string> = new Set();
 
@@ -92,38 +136,26 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
       inputPaths.add(file);
     });
   }
+  return Array.from(inputPaths);
+}
 
-  const inputPathsArray = Array.from(inputPaths);
+async function calculateTotalWork(options: TranslateOptions, config: ConfigType): Promise<{ totalElements: number; totalKeys: number }> {
+  const sourceLocale = config.locales.source;
+  const targetLocales = getTargetLocales(options, config);
+  let totalKeys = 0;
+  let totalElements = 0;
 
-  progressWithOra.startGlobal({ 
-    message: `Translating ${fileType} files...`, 
-    total: inputPathsArray.length 
-  });
-
-  for(const inputPath of inputPathsArray) {
-    const translationEngine = new TranslationEngine({
-      sourceLocale,
-      targetLocales,
-      inputPath,
-      force: options.force,
-      lockedKeys: fileConfig.lockedKeys,
-      ignoredKeys: fileConfig.ignoredKeys,
-      context: config.project?.context,
-    });
-
-    try{
-      await translationEngine.translate();
-      progressWithOra.tickGlobal();
-    } catch(error) {
-      if(error instanceof LaraApiError) {
-        handleLaraApiError(error, inputPath, progressWithOra.spinner);
-        progressWithOra.tickGlobal();
-        continue;
-      }
-      
-      progressWithOra.stop(`Error translating ${inputPath}: ${error.message}`, 'fail');
-      return;
+  for(const fileType of Object.keys(config.files)) {
+    const inputPaths = await getInputPaths(fileType, config);
+    totalElements += inputPaths.length * targetLocales.length;
+    
+    for(const inputPath of inputPaths) {
+      const sourcePath = buildLocalePath(inputPath, sourceLocale);
+      const changelog = calculateChecksum(sourcePath);
+      const keysCount = Object.keys(changelog).length;
+      totalKeys += keysCount * targetLocales.length;
     }
   }
-  progressWithOra.stop(`${fileType} files translated!`);
+  
+  return { totalElements, totalKeys };
 }
