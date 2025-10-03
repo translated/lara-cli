@@ -123,9 +123,9 @@ One of the most powerful features of the init command is **automatic target loca
 ```bash
 ? Automatically detect and add target locales? Yes
 ⠙ Searching for target locales...
-✔ Found 3 target locale(s): es, fr, it
+✔ Found 3 target locales: es, fr, it
 
-? Do you want to add more target locales? (3 locale(s) already added) Yes
+? Do you want to add more target locales? (3 locales already added) Yes
 
 ? Select additional target locales
 (Type to search, ↑/↓ navigate, Space select, Ctrl+A toggle all)
@@ -141,7 +141,7 @@ One of the most powerful features of the init command is **automatic target loca
 For projects with many locales (>10), the CLI uses **formatted table displays** for better readability:
 
 ```bash
-✔ Found 24 target locale(s)
+✔ Found 24 target locales
 
 Detected locales:
   es      fr      it      de      

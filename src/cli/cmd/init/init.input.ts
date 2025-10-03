@@ -44,10 +44,11 @@ export async function autoTargetInput(source: string): Promise<string[]> {
     }
 
     // For large lists, show a formatted table; for small lists, show inline
+    const targetLocalesMessage = locales.length === 1 ? 'locale' : 'locales';
     if (locales.length > 10) {
-      displayLocaleTable({ locales, title: `Found ${locales.length} target locale(s)`, spinner, type: 'succeed' });
+      displayLocaleTable({ locales, title: `Found ${locales.length} target ${targetLocalesMessage}`, spinner, type: 'succeed' });
     } else {
-      spinner.succeed(`Found ${locales.length} target locale(s): ${formatLocaleList(locales, 10)}`);
+      spinner.succeed(`Found ${locales.length} target ${targetLocalesMessage}: ${formatLocaleList(locales, 10)}`);
     }
 
     return locales;
@@ -74,7 +75,7 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
     // For large lists, just show count; for small lists, show the locales
     const alreadyAddedMessage = autoDetectedLocales.length <= 5
       ? `Already added: ${formatLocaleList(autoDetectedLocales)}`
-      : `${autoDetectedLocales.length} locale(s) already added`;
+      : `${autoDetectedLocales.length} ${autoDetectedLocales.length === 1 ? 'locale' : 'locales'} already added`;
     
     addMoreTargetLocales = await confirm({
       message: `Do you want to add more target locales? (${alreadyAddedMessage})`,
@@ -131,7 +132,7 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
 
     // For large lists, show a formatted table; for small lists, show inline
     if (allTargetLocales.length > 10) {
-      displayLocaleTable({ locales: allTargetLocales, title: `Total ${allTargetLocales.length} target locale(s) selected${summaryText}`, type: 'succeed' });
+      displayLocaleTable({ locales: allTargetLocales, title: `Total ${allTargetLocales.length} target ${allTargetLocales.length === 1 ? 'locale' : 'locales'} selected${summaryText}`, type: 'succeed' });
     } else {
       Ora().succeed(`Target locales selected: ${formatLocaleList(allTargetLocales, 10)}${summaryText}`);
     }
