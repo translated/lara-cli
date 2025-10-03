@@ -189,11 +189,15 @@ function normalizePath(filePath: string): string | null {
  */
 async function searchPaths(): Promise<string[]> {
 
+  if (SUPPORTED_FILE_TYPES.length === 0) {
+    throw new Error('No supported file types configured');
+  }
+
   // Use simple pattern if only one file type, otherwise use brace expansion
-  const pattern = SUPPORTED_FILE_TYPES.length === 1 
+  const pattern = SUPPORTED_FILE_TYPES.length === 1
     ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
     : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
-   
+
   return glob(pattern, {
     cwd: process.cwd(),
     ignore: DEFAULT_EXCLUDED_DIRECTORIES.map(dir => `${dir}/**`),

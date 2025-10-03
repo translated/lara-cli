@@ -22,11 +22,11 @@ export async function sourceInput(options: InitOptions): Promise<string> {
     choices: choices,
   });
 
-  if(!result || result.length === 0) {
+  if(!result || result.length === 0 || !result[0]) {
     throw new Error('Source locale selection is required');
   }
 
-  return result[0] || 'en';
+  return result[0];
 }
 
 export async function autoTargetInput(source: string): Promise<string[]> {
