@@ -6,12 +6,11 @@ import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
-import { buildLocalePath, searchLocalePathsByPattern } from '#utils/path.js';
+import { searchLocalePathsByPattern } from '#utils/path.js';
 import picomatch from 'picomatch';
 import { handleLaraApiError } from '#utils/error.js';
 import { LaraApiError } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
-import { calculateChecksum } from '#utils/checksum.js';
 
 type TranslateOptions = {
   target: string[];
@@ -55,10 +54,10 @@ export default new Command()
       }
 
       const spinner = Ora({ text: 'Calculating total work...', color: 'yellow' }).start();
-      const { totalElements, totalKeys } = await calculateTotalWork(options, config);
-      spinner.succeed(`Found ${totalElements} file × locale combinations (${totalKeys} keys)`);
+      const { totalElements } = await calculateTotalWork(options, config);
+      spinner.succeed(`Found ${totalElements} file × locale combinations`);
       
-      progressWithOra.start({ message: 'Translating files...', total: totalElements, totalKeys });
+      progressWithOra.start({ message: 'Translating files...', total: totalElements });
       
       for(const fileType of Object.keys(config.files)) {
         await handleFileType(fileType, options, config);
@@ -139,23 +138,14 @@ async function getInputPaths(fileType: string, config: ConfigType): Promise<stri
   return Array.from(inputPaths);
 }
 
-async function calculateTotalWork(options: TranslateOptions, config: ConfigType): Promise<{ totalElements: number; totalKeys: number }> {
-  const sourceLocale = config.locales.source;
+async function calculateTotalWork(options: TranslateOptions, config: ConfigType): Promise<{ totalElements: number; }> {
   const targetLocales = getTargetLocales(options, config);
-  let totalKeys = 0;
   let totalElements = 0;
 
   for(const fileType of Object.keys(config.files)) {
     const inputPaths = await getInputPaths(fileType, config);
     totalElements += inputPaths.length * targetLocales.length;
-    
-    for(const inputPath of inputPaths) {
-      const sourcePath = buildLocalePath(inputPath, sourceLocale);
-      const changelog = calculateChecksum(sourcePath);
-      const keysCount = Object.keys(changelog).length;
-      totalKeys += keysCount * targetLocales.length;
-    }
   }
   
-  return { totalElements, totalKeys };
+  return { totalElements };
 }

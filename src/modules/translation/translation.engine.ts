@@ -114,7 +114,6 @@ export class TranslationEngine {
     for(const targetLocale of this.targetLocales) {
       progressWithOra.setText(`Translating ${inputPath} → ${targetLocale} (${keysCount} keys)...`);
 
-      const batchStartTime = Date.now();
       const targetPath = buildLocalePath(inputPath, targetLocale);
       const targetContent = await readSafe(targetPath, '{}');
       const targetJson = parseFlattened(targetContent);
@@ -167,8 +166,7 @@ export class TranslationEngine {
 
       await ensureDirectoryExists(targetPath);
       await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, formatting.indentation) + formatting.trailingNewline);
-      const batchTime = Date.now() - batchStartTime;
-      progressWithOra.tick(1, keysCount, batchTime);
+      progressWithOra.tick(1);
     }
   }
 
