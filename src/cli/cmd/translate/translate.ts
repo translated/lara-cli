@@ -28,16 +28,16 @@ export default new Command()
       .argParser((value) => {
         const locales = value.split(COMMA_AND_SPACE_REGEX);
 
-        return locales.map((locale) => {
+        for (const locale of locales) {
           const parsed = LocalesEnum.safeParse(locale);
 
           if(!parsed.success) {
             Ora({ text: `Invalid locale: ${locale}`, color: 'red' }).fail();
-            return process.exit(1);
+            process.exit(1);
           }
+        }
 
-          return parsed.data;
-        })
+        return locales.map((locale) => LocalesEnum.parse(locale));
       })
       .default('')
   )
@@ -56,20 +56,21 @@ export default new Command()
       const spinner = Ora({ text: 'Calculating total work...', color: 'yellow' }).start();
       const { totalElements } = await calculateTotalWork(options, config);
       spinner.succeed(`Found ${totalElements} file × locale combinations`);
-      
+
       progressWithOra.start({ message: 'Translating files...', total: totalElements });
-      
+
       for(const fileType of Object.keys(config.files)) {
         await handleFileType(fileType, options, config);
       }
-      
+
       progressWithOra.stop('All files translated successfully!');
+
+      Ora().succeed('Localization completed! Happy coding!');
     } catch(error) {
-      Ora({ text: error.message, color: 'red' }).fail();
+      const message = error instanceof Error ? error.message : String(error);
+      Ora({ text: message, color: 'red' }).fail();
       process.exit(1);
     }
-
-    Ora().succeed('Localization completed! Happy coding!');
   });
 
 async function handleFileType(fileType: string, options: TranslateOptions, config: ConfigType): Promise<void> {
@@ -97,8 +98,9 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
         handleLaraApiError(error, inputPath, progressWithOra.spinner);
         continue;
       }
-      
-      progressWithOra.stop(`Error translating ${inputPath}: ${error.message}`, 'fail');
+
+      const message = error instanceof Error ? error.message : String(error);
+      progressWithOra.stop(`Error translating ${inputPath}: ${message}`, 'fail');
       return;
     }
   }
@@ -109,6 +111,11 @@ function getTargetLocales(options: TranslateOptions, config: ConfigType): string
   const targetLocales = options.target.length > 0
     ? options.target
     : config.locales.target;
+
+  if (targetLocales.length === 0) {
+    throw new Error('No target locales specified. Please add target locales in config or use -t option.');
+  }
+
   return targetLocales;
 }
 
