@@ -18,6 +18,8 @@ files:
     include:
       - "src/i18n/[locale].json"
     exclude: []
+    fileInstructions: []
+    keyInstructions: []
     lockedKeys: []
     ignoredKeys: []
 ```
@@ -61,6 +63,20 @@ files:
       - "public/locales/[locale]/translations.json"
     exclude:
       - "**/metadata/**"
+    fileInstructions:
+      - path: "src/i18n/[locale].json"
+        instruction: "User interface translations"
+        keyInstructions:
+          - path: "product/title"
+            instruction: "Keep concise, maximum 60 characters"
+      - path: "public/locales/[locale]/translations.json"
+        instruction: "Marketing content"
+        keyInstructions:
+          - path: "campaign/**"
+            instruction: "Promotional messaging, enthusiastic tone"
+    keyInstructions:
+      - path: "checkout/**"
+        instruction: "Payment process, use formal tone"
     lockedKeys:
       - "**/id"
       - "config/*/url"
@@ -128,6 +144,59 @@ exclude:
 
 **Note:** Exclude patterns have little effect when your include patterns specify exact file paths without wildcards, as there's no potential for overlap.
 
+#### File Instructions
+
+```yaml
+fileInstructions:
+  - path: "src/i18n/[locale].json"
+    instruction: "User interface translations"
+    keyInstructions:
+      - path: "product/title"
+        instruction: "Keep concise, maximum 60 characters"
+      - path: "product/description/*"
+        instruction: "Detailed product information"
+  - path: "public/locales/[locale]/translations.json"
+    instruction: "Marketing content"
+    keyInstructions:
+      - path: "campaign/**"
+        instruction: "Promotional messaging"
+```
+
+An array of file-specific instructions. Each entry defines instructions for an individual file and optionally its keys:
+
+- **path**: The exact file path (must match an entry in `include`)
+- **instruction** (optional): Instruction that applies to all translations in this specific file
+- **keyInstructions** (optional): Array of key-specific instructions for this file only
+
+File instructions allow you to:
+- Provide different instructions for each translation file
+- Define file-specific key instructions
+- Handle files with different purposes or audiences differently
+
+#### Global Key Instructions
+
+```yaml
+keyInstructions:
+  - path: "checkout/**"
+    instruction: "Payment process, use formal tone"
+  - path: "**/cta"
+    instruction: "Call-to-action buttons"
+  - path: "error/**"
+    instruction: "Error messages, be clear and helpful"
+```
+
+An array of global key-specific instructions that apply to **all files**. Each entry has:
+
+- **path**: A key pattern using the same glob syntax as `lockedKeys` and `ignoredKeys`
+- **instruction**: Instruction information specific to keys matching this pattern
+
+Global key instructions are useful for:
+- Consistent handling of common key patterns across all files
+- Shared components or sections (checkout, errors, navigation)
+- Common UI elements (buttons, labels, tooltips)
+
+**Priority:** File-specific `keyInstructions` take precedence over global `keyInstructions` when both match the same key.
+
 #### Locked Keys
 
 ```yaml
@@ -166,30 +235,141 @@ This is useful for:
 - Internal configuration
 - Values that should be omitted in translations
 
-### Project Context
+### Translation Instructions
 
-You can optionally provide a project context to improve translation quality:
+Lara CLI supports translation instructions to adjust translation tone, style, and behavior. Adding contextual information helps clarify potential ambiguities in the source text and achieve even better translations.
+
+#### What Are Instructions?
+
+Instructions are directives written in natural language that guide Lara's translation process. They can specify formality, tone, domain-specific terminology, or any other translation requirement. Only **one instruction** is applied per translation, following a priority hierarchy.
+
+For detailed information about instructions, see the [Lara Translation Instructions documentation](https://developers.laratranslate.com/docs/adapt-to-instructions).
+
+#### Project Instruction
 
 ```yaml
 project:
-  context: "E-commerce platform for fashion retail"
+  instruction: "E-commerce platform for fashion retail"
 ```
 
-The context helps the translation engine better understand the domain of your content.
+The broadest level of instruction that applies to **all translations** in your project. Use this to describe:
+- Overall project domain (e-commerce, healthcare, education, etc.)
+- General brand voice and tone
+- Target audience characteristics
+- Industry-specific terminology requirements
 
-#### External Context
+#### File-Specific Instruction
 
-Lara supports the use of external context to enhance translation quality. This feature allows you to pass texts as context that do not need translation but can assist in the translation process. Here are the primary use cases:
+```yaml
+files:
+  json:
+    fileInstructions:
+      - path: "src/i18n/[locale].json"
+        instruction: "Product catalog and shopping interface"
+      - path: "src/admin/[locale].json"
+        instruction: "Admin panel for internal users"
+```
 
-1. Translating a short title of a blog post while providing some of the post content to help the model disambiguate.
-2. Translating the last message of a chat by providing previous messages in the correct order as context.
-3. Integrating Lara into a CAT tool for professional translators where content has been segmented into sentences, allowing surrounding sentences to be used as context.
+Instruction for **individual files**. Each file can have its own instruction to describe:
+- The specific purpose of this file
+- Target audience for this file (end users, admins, etc.)
+- Tone or style specific to this file
+- Technical constraints for this file
 
-Only the segments marked for translation are translated, while others remain as they are, providing context without incurring additional charges.
+#### Key Instructions
 
-> **Good News**: Unlike generic LLMs, the characters provided to Lara as context are not charged. This can significantly reduce costs compared to using generic LLMs.
+There are two types of key instructions:
 
-For more information, visit the [Lara Translate documentation](https://developers.laratranslate.com/docs/adapt-to-context).
+**File-Specific Key Instructions:**
+```yaml
+files:
+  json:
+    fileInstructions:
+      - path: "src/i18n/[locale].json"
+        instruction: "Product catalog"
+        keyInstructions:
+          - path: "product/title"
+            instruction: "Keep concise, maximum 60 characters"
+          - path: "product/price"
+            instruction: "Include currency symbol"
+```
+
+Applies only to keys within a specific file. Use this for:
+- File-specific length or formatting constraints
+- Special terminology for fields in this file
+- Requirements unique to this file's content
+
+**Global Key Instructions:**
+```yaml
+files:
+  json:
+    keyInstructions:
+      - path: "checkout/**"
+        instruction: "Payment process, use formal tone"
+      - path: "**/cta"
+        instruction: "Call-to-action buttons, use action verbs"
+      - path: "error/**"
+        instruction: "Error messages, be clear and helpful"
+```
+
+Applies to matching keys in **all files**. Use this for:
+- Consistent handling of common patterns across all files
+- Shared components (checkout, navigation, errors)
+- Universal UI elements that appear everywhere
+
+#### Instruction Priority (Override Strategy)
+
+Lara CLI uses an **override strategy** where only **one instruction** is applied per translation. The most specific instruction wins:
+
+**Priority (highest to lowest):**
+1. **File-specific key instruction** (highest priority)
+2. **Global key instruction**
+3. **File instruction**
+4. **Project instruction** (lowest priority)
+
+**Example:**
+
+```yaml
+project:
+  instruction: "E-commerce platform for fashion retail"
+files:
+  json:
+    fileInstructions:
+      - path: "src/i18n/[locale].json"
+        instruction: "Product catalog and shopping interface"
+        keyInstructions:
+          - path: "product/title"
+            instruction: "Keep concise, maximum 60 characters"
+    keyInstructions:
+      - path: "checkout/**"
+        instruction: "Payment and shipping process, use formal tone"
+```
+
+**Translation examples:**
+
+When translating `product/title` in `src/i18n/[locale].json`:
+- **Instruction used:** "Keep concise, maximum 60 characters"
+- **Reason:** File-specific key instruction (highest priority)
+
+When translating `checkout/button/pay` in `src/i18n/[locale].json`:
+- **Instruction used:** "Payment and shipping process, use formal tone"
+- **Reason:** Global key instruction (no file-specific key instruction matches)
+
+When translating `product/description` in `src/i18n/[locale].json`:
+- **Instruction used:** "Product catalog and shopping interface"
+- **Reason:** File instruction (no key instruction matches)
+
+When translating any key in `src/admin/[locale].json` (no specific instructions):
+- **Instruction used:** "E-commerce platform for fashion retail"
+- **Reason:** Project instruction (fallback when nothing more specific matches)
+
+**Best Practices:**
+- Use project instruction for domain and brand voice
+- Use file instruction when files serve different purposes
+- Use global key instructions for patterns that appear across multiple files
+- Use file-specific key instructions for unique requirements
+- Be specific and concise—instructions are directives, not translation content
+- Avoid contradictory instructions at different levels
 
 ## Path Patterns
 
@@ -230,6 +410,30 @@ The configuration file supports glob patterns for flexible file and key matching
 ### Key Pattern Examples
 
 ```yaml
+# File-specific instructions with keys
+fileInstructions:
+  - path: "src/i18n/[locale].json"
+    instruction: "Main UI"
+    keyInstructions:
+      - path: "product/title"        # Specific key
+        instruction: "Keep concise, max 60 chars"
+      - path: "product/description/*" # One level deep
+        instruction: "Detailed product info"
+  - path: "src/admin/[locale].json"
+    instruction: "Admin panel"
+    keyInstructions:
+      - path: "dashboard/**"         # All nested keys
+        instruction: "Technical terminology"
+
+# Global key instructions (apply to all files)
+keyInstructions:
+  - path: "checkout/**"          # All nested keys
+    instruction: "Formal tone for payment"
+  - path: "**/cta"               # Any key ending with "cta"
+    instruction: "Call-to-action buttons"
+  - path: "error/**"             # Error messages
+    instruction: "Clear and helpful"
+
 # Locked keys examples
 lockedKeys:
   - "**/id"           # Any key ending with "id"
@@ -260,6 +464,8 @@ files:
     include:
       - "src/i18n/[locale].json"
     exclude: []
+    fileInstructions: []
+    keyInstructions: []
     lockedKeys: []
     ignoredKeys: []
 ```
@@ -269,7 +475,7 @@ files:
 ```yaml
 version: "1.0.0"
 project:
-  context: "E-commerce platform for fashion retail"
+  instruction: "E-commerce platform for fashion retail"
 locales:
   source: en
   target:
@@ -280,11 +486,41 @@ locales:
 files:
   json:
     include:
-      - "src/i18n/[locale]/**/*.json"
-      - "public/locales/[locale].json"
+      - "src/i18n/[locale].json"
+      - "src/admin/[locale].json"
+      - "public/marketing/[locale].json"
     exclude:
       - "**/metadata/**"    # Exclude files contained in any metadata folder
       - "**/config/**"      # Exclude files contained in any config folder
+    fileInstructions:
+      - path: "src/i18n/[locale].json"
+        instruction: "Product catalog and shopping interface for customers"
+        keyInstructions:
+          - path: "product/title"
+            instruction: "Keep concise, maximum 60 characters"
+          - path: "product/description/*"
+            instruction: "Detailed product information, can be longer"
+          - path: "product/specifications/**"
+            instruction: "Technical details, use precise terminology"
+      - path: "src/admin/[locale].json"
+        instruction: "Admin panel for internal users and store managers"
+        keyInstructions:
+          - path: "dashboard/**"
+            instruction: "Analytics and reporting, technical terminology"
+          - path: "settings/**"
+            instruction: "Configuration options, be precise and technical"
+      - path: "public/marketing/[locale].json"
+        instruction: "Marketing and promotional content"
+        keyInstructions:
+          - path: "campaign/**"
+            instruction: "Promotional messaging, enthusiastic and engaging"
+    keyInstructions:
+      - path: "checkout/**"
+        instruction: "Payment and shipping process, use formal and reassuring tone"
+      - path: "**/cta"
+        instruction: "Call-to-action buttons, use action verbs"
+      - path: "error/**"
+        instruction: "Error messages, be clear and helpful"
     lockedKeys:
       - "**/id"
       - "**/path"

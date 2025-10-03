@@ -4,5 +4,5 @@ export interface InitOptions {
   target: string[];
   paths: string[];
   resetCredentials: boolean;
-  context?: string;
+  instruction?: string;
 }

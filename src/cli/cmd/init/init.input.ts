@@ -198,26 +198,69 @@ export async function pathsInput(options: InitOptions) {
   });
 }
 
-export async function contextInput(existingContext?: string, cliContext?: string): Promise<string | undefined> {
-  // Priority 1: Use CLI-provided context
-  if (cliContext) {
-    if (existingContext) {
-      Ora().info('Updating project context from CLI option');
+export async function instructionInput(existingInstruction?: string, cliInstruction?: string): Promise<string | undefined> {
+  // Priority 1: Use CLI-provided instruction
+  if (cliInstruction) {
+    if (existingInstruction) {
+      Ora().info('Updating project instruction from CLI option');
     }
-    return normalizeContext(cliContext);
+    return normalizeContext(cliInstruction);
   }
 
-  // Priority 2: Reuse existing context
-  if (existingContext) {
-    return normalizeContext(existingContext);
+  // Priority 2: Reuse existing instruction
+  if (existingInstruction) {
+    return normalizeContext(existingInstruction);
   }
 
-  // Priority 3: Prompt user for new context
-  Ora().info('Project context helps improve translation quality.');
-  const userContext = await input({
-    message: 'Enter project context (e.g., domain, terminology, tone):',
+  // Priority 3: Prompt user for new instruction
+  Ora().info('Project instructions help improve translation quality.');
+  const userInstruction = await input({
+    message: 'Enter project instruction (e.g., domain, terminology, tone):',
     default: '',
   });
 
-  return normalizeContext(userContext);
+  return normalizeContext(userInstruction);
+}
+
+export async function fileInstructionsInput(paths: string[]): Promise<Array<{ path: string; instruction?: string; keyInstructions: Array<{ path: string; instruction: string; }>; }>> {
+  if (paths.length === 0) {
+    return [];
+  }
+
+  const shouldAddFileInstructions = await confirm({
+    message: 'Do you want to add file-specific instructions? (optional, improves translation quality)',
+    default: false,
+  });
+
+  if (!shouldAddFileInstructions) {
+    Ora().info('Skipped file-specific instructions. You can add them later in lara.yaml');
+    return [];
+  }
+
+  const fileInstructions: Array<{ path: string; instruction?: string; keyInstructions: Array<{ path: string; instruction: string; }>; }> = [];
+
+  for (const path of paths) {
+    const fileInstruction = await input({
+      message: `Enter instruction for "${path}" (leave empty to skip):`,
+      default: '',
+    });
+
+    const normalizedInstruction = normalizeContext(fileInstruction);
+    
+    if (normalizedInstruction) {
+      fileInstructions.push({
+        path,
+        instruction: normalizedInstruction,
+        keyInstructions: [],
+      });
+    }
+  }
+
+  if (fileInstructions.length > 0) {
+    Ora().succeed(`Added instruction for ${fileInstructions.length} ${fileInstructions.length === 1 ? 'file' : 'files'}`);
+  }
+
+  Ora().info('You can also add instructions for specific keys in the lara.yaml file. See documentation for more information.');
+
+  return fileInstructions;
 }
