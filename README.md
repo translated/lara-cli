@@ -44,6 +44,8 @@ LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
 
 Replace the placeholders with your **actual credentials**.
 
+> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
+
 ### Initialize Your Project
 
 In your project directory, run:
@@ -54,7 +56,32 @@ lara-cli init
 
 This will start the interactive initialization process.
 
-The CLI will **automatically detect your localization directories** and guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
+The CLI will **automatically detect your localization directories and target locales** from your existing project files, then guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
+
+**Key features:**
+- 🔍 **Auto-detection**: Scans your project for existing locale files and automatically suggests target locales
+- 📊 **Smart display**: For enterprise projects with many locales, uses formatted tables for better readability
+- ⚙️ **Flexible configuration**: Choose detected locales or manually add/remove as needed
+- 🎯 **Project context**: Optionally provide context about your project to improve translation quality (e.g., domain, terminology, tone)
+
+**Providing project context** (optional but recommended):
+
+During initialization, you can provide context about your project to help improve translation accuracy. This is especially useful for:
+- Domain-specific terminology (medical, legal, technical, etc.)
+- Brand voice and tone preferences
+- Target audience information
+
+You can provide context in two ways:
+
+```bash
+# Interactive mode - you'll be prompted
+lara-cli init
+
+# Non-interactive mode - via CLI option
+lara-cli init --context "This is a medical application for healthcare professionals. Use formal tone and medical terminology."
+```
+
+If you've already initialized your project with context, running `init` again will preserve it unless you explicitly provide a new context via the `--context` option.
 
 ### Translate Your Files!
 
@@ -168,27 +195,64 @@ The codebase follows a modular architecture with clear separation of concerns, m
 
 ## Supported Locales
 
-Lara CLI supports the following locale codes as both source and target languages for translation. You can specify any of these locales in your configuration to translate content between them.
+Lara CLI supports translations using different locale codes, following two main standards:
 
-| Code  | Language            | Code   | Language             |
-|-------|---------------------|--------|----------------------|
-| ar    | Arabic              | nb     | Norwegian Bokmål     |
-| ca    | Catalan             | pl     | Polish               |
-| da    | Danish              | pt     | Portuguese           |
-| de    | German              | pt-BR  | Portuguese (Brazil)  |
-| el    | Greek               | ru     | Russian              |
-| en    | English             | sk     | Slovak               |
-| es    | Spanish             | sv     | Swedish              |
-| fi    | Finnish             | th     | Thai                 |
-| fr    | French              | tr     | Turkish              |
-| he    | Hebrew              | uk     | Ukrainian            |
-| hr    | Croatian            | zh     | Chinese              |
-| hu    | Hungarian           | zh-CN  | Chinese (China)      |
-| id    | Indonesian          | zh-TW  | Chinese (Taiwan)     |
-| it    | Italian             | bg     | Bulgarian            |
-| ja    | Japanese            | cs     | Czech                |
-| ko    | Korean              | ms     | Malay                |
-| nl    | Dutch               |
+### ISO 639-1 Language Codes
+These are basic language identifiers (e.g., `en` for English, `fr` for French) that apply to all regions where the language is spoken.
+
+### BCP 47 Language Tags
+These are standardized language tags defined by BCP 47, combining ISO 639-1 language codes with ISO 3166-1 country codes (e.g., `en-US` for English in the United States, `fr-CA` for French in Canada). They provide more precise regional context and are often called "locale identifiers".
+
+> **Note:** You can use either ISO 639-1 codes or BCP 47 tags as source and target languages. The translation service will automatically handle the appropriate regional variants.
+
+
+### Supported Language Codes
+
+#### ISO 639-1 Language Codes
+
+| Code  | Language            | Code  | Language            |
+|-------|---------------------|-------|---------------------|
+| ar    | Arabic              | de    | German              |
+| bg    | Bulgarian           | el    | Greek               |
+| ca    | Catalan             | en    | English             |
+| cs    | Czech               | es    | Spanish             |
+| da    | Danish              | fi    | Finnish             |
+| fr    | French              | he    | Hebrew              |
+| hr    | Croatian            | hu    | Hungarian           |
+| id    | Indonesian          | it    | Italian             |
+| ja    | Japanese            | ko    | Korean              |
+| ms    | Malay               | nb    | Norwegian Bokmål    |
+| nl    | Dutch               | pl    | Polish              |
+| pt    | Portuguese          | ru    | Russian             |
+| sk    | Slovak              | sv    | Swedish             |
+| th    | Thai                | tr    | Turkish             |
+| uk    | Ukrainian           | zh    | Chinese             |
+
+#### BCP 47 Language Tags / Locale Identifiers
+
+| Code     | Language & Region                    | Code     | Language & Region                    |
+|----------|--------------------------------------|----------|--------------------------------------|
+| ar-SA    | Arabic (Saudi Arabia)                | en-AU    | English (Australia)                  |
+| bg-BG    | Bulgarian (Bulgaria)                 | en-CA    | English (Canada)                     |
+| ca-ES    | Catalan (Spain)                      | en-GB    | English (United Kingdom)             |
+| cs-CZ    | Czech (Czech Republic)               | en-IE    | English (Ireland)                    |
+| da-DK    | Danish (Denmark)                     | en-US    | English (United States)              |
+| de-DE    | German (Germany)                     | es-419   | Spanish (Latin America)              |
+| el-GR    | Greek (Greece)                       | es-AR    | Spanish (Argentina)                  |
+| fi-FI    | Finnish (Finland)                    | es-ES    | Spanish (Spain)                      |
+| fr-CA    | French (Canada)                      | es-MX    | Spanish (Mexico)                     |
+| he-IL    | Hebrew (Israel)                      | fr-FR    | French (France)                      |
+| hr-HR    | Croatian (Croatia)                   | hu-HU    | Hungarian (Hungary)                  |
+| id-ID    | Indonesian (Indonesia)               | it-IT    | Italian (Italy)                      |
+| ja-JP    | Japanese (Japan)                     | ko-KR    | Korean (South Korea)                 |
+| ms-MY    | Malay (Malaysia)                     | nb-NO    | Norwegian Bokmål (Norway)            |
+| nl-BE    | Dutch (Belgium)                      | nl-NL    | Dutch (Netherlands)                  |
+| pl-PL    | Polish (Poland)                      | pt-BR    | Portuguese (Brazil)                  |
+| pt-PT    | Portuguese (Portugal)                | ru-RU    | Russian (Russia)                     |
+| sk-SK    | Slovak (Slovakia)                    | sv-SE    | Swedish (Sweden)                     |
+| th-TH    | Thai (Thailand)                      | tr-TR    | Turkish (Turkey)                     |
+| uk-UA    | Ukrainian (Ukraine)                  | zh-CN    | Chinese (China)                      |
+| zh-HK    | Chinese (Hong Kong)                  | zh-TW    | Chinese (Taiwan)                     |
 
 
 ## Documentation

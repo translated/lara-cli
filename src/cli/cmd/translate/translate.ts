@@ -8,6 +8,9 @@ import { ConfigType } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
 import { searchLocalePathsByPattern } from '#utils/path.js';
 import picomatch from 'picomatch';
+import { handleLaraApiError } from '#utils/error.js';
+import { LaraApiError } from '@translated/lara';
+import { progressWithOra } from '#utils/progressWithOra.js';
 
 type TranslateOptions = {
   target: string[];
@@ -61,9 +64,7 @@ export default new Command()
     Ora().succeed('Localization completed! Happy coding!');
   });
 
-async function handleFileType(fileType: string, options: TranslateOptions, config: ConfigType) {
-  const spinner = Ora({ text: `Translating ${fileType} files...`, color: 'yellow' }).start();
-
+async function handleFileType(fileType: string, options: TranslateOptions, config: ConfigType): Promise<void> {
   const fileConfig = config.files[fileType]!;
   const sourceLocale = config.locales.source;
   const targetLocales = options.target.length > 0
@@ -92,23 +93,37 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
     });
   }
 
-  for(const inputPath of inputPaths) {
-    spinner.text = `Translating ${inputPath}...`;
-    
+  const inputPathsArray = Array.from(inputPaths);
+
+  progressWithOra.startGlobal({ 
+    message: `Translating ${fileType} files...`, 
+    total: inputPathsArray.length 
+  });
+
+  for(const inputPath of inputPathsArray) {
     const translationEngine = new TranslationEngine({
       sourceLocale,
       targetLocales,
-
       inputPath,
       force: options.force,
       lockedKeys: fileConfig.lockedKeys,
       ignoredKeys: fileConfig.ignoredKeys,
-
       context: config.project?.context,
     });
 
-    await translationEngine.translate();
+    try{
+      await translationEngine.translate();
+      progressWithOra.tickGlobal();
+    } catch(error) {
+      if(error instanceof LaraApiError) {
+        handleLaraApiError(error, inputPath, progressWithOra.spinner);
+        progressWithOra.tickGlobal();
+        continue;
+      }
+      
+      progressWithOra.stop(`Error translating ${inputPath}: ${error.message}`, 'fail');
+      return;
+    }
   }
-
-  spinner.succeed(`Translated ${fileType} files!`);
+  progressWithOra.stop(`${fileType} files translated!`);
 }

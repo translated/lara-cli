@@ -5,6 +5,7 @@ import { calculateChecksum } from '#utils/checksum.js';
 import { parseFlattened, unflatten } from '#utils/json.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { writeFile } from 'fs/promises';
+import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
 
 export type TranslationEngineOptions = {
@@ -105,11 +106,20 @@ export class TranslationEngine {
     await this.handleInputPath(this.inputPath);
   }
 
-  private async handleInputPath(inputPath: string) {
+  private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
     const changelog = calculateChecksum(sourcePath);
+    const keysCount = Object.keys(changelog).length;
+    const localTotal = this.targetLocales.length * keysCount;
+
+    progressWithOra.startLocal({ 
+      message: `Translating ${inputPath}...`, 
+      total: localTotal 
+    });
 
     for(const targetLocale of this.targetLocales) {
+      progressWithOra.setText(`Translating ${inputPath} → ${targetLocale} (${keysCount} keys)...`);
+      
       const targetPath = buildLocalePath(inputPath, targetLocale);
       const targetContent = await readSafe(targetPath, '{}');
       const targetJson = parseFlattened(targetContent);
@@ -117,6 +127,8 @@ export class TranslationEngine {
 
       const newContent = Object.fromEntries(await Promise.all(
         Object.entries(changelog).map(async ([key, value]) => {
+          progressWithOra.tickLocal();
+          
           // If the key is ignored, we should NOT include it in the new content
           if(this.isIgnored(key)) {
             return [];
@@ -162,7 +174,7 @@ export class TranslationEngine {
 
       await ensureDirectoryExists(targetPath);
       await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, formatting.indentation) + formatting.trailingNewline);
-    };
+    }
   }
 
   private async translateKey(value: unknown, sourceLocale: string, targetLocale: string) {

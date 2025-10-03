@@ -8,11 +8,12 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import { pathsInput, sourceInput, targetInput } from './init.input.js';
+import { contextInput, pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { appendFileSync } from 'fs';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
+import { getExistingContext, resetCredentials, resolveProjectContext } from './init.utils.js';
 
 
 export default new Command()
@@ -53,7 +54,6 @@ export default new Command()
           return parsed.data;
         })
       })
-      .default(['it-IT', 'es-ES'])
   )
   .addOption(
     new Option('-p --paths <paths>', 'Paths to watch, separated by a comma, a space or a combination of both')
@@ -65,6 +65,13 @@ export default new Command()
         })
       })
       .default(['src/i18n/[locale].json'])
+  )
+  .addOption(
+    new Option('-r --reset-credentials', 'Reset credentials')
+      .default(false)
+  )
+  .addOption(
+    new Option('-c --context <context>', 'Project context to help with translations')
   )
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
@@ -88,8 +95,13 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     return process.exit(1);
   }
 
+  const context = resolveProjectContext(options.context);
+
   return {
     version: '1.0.0',
+    project: {
+      context,
+    },
     locales: {
       source: options.source,
       target: options.target,
@@ -106,19 +118,34 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
 }
 
 async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> {
-  if(ConfigProvider.getInstance().doesConfigExists() && !options.force) {
+  if(options.resetCredentials) {
+    const shouldOverwrite = await confirm({
+      message: 'Do you want to reset the API credentials?',
+    });
+
+    if(shouldOverwrite) {
+      await resetCredentials();
+    }
+  }
+  
+  const configProvider = ConfigProvider.getInstance();
+
+  if(configProvider.doesConfigExists() && !options.force) {
     const shouldOverwrite = await confirm({
       message: 'Config file already exists, do you want to overwrite it?',
     });
 
     if(!shouldOverwrite) {
-      Ora({ text: 'Config file already exists, and the user did not want to overwrite it', color: 'red' }).fail();
+      Ora({ text: 'Config file already exists and the user did not want to overwrite it', color: 'red' }).fail();
       return process.exit(1);
     }
   }
 
+  const existingContext = getExistingContext(options.force);
+  const projectContext = await contextInput(existingContext, options.context);
+  
   const inputSource = await sourceInput(options);
-  const inputTarget = await targetInput(inputSource);
+  const inputTarget = await targetInput(inputSource, options.target);
   const inputPaths = await pathsInput(options);
 
   if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
@@ -130,7 +157,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       const apiKey = await input({ message: 'Insert your API Key:' });
       const apiSecret = await input({ message: 'Insert your API Secret:' });
 
-      const envContent = `LARA_ACCESS_KEY_ID=${apiKey}\nLARA_ACCESS_KEY_SECRET=${apiSecret}\n`;
+      const envContent = `# Lara API credentials\nLARA_ACCESS_KEY_ID=${apiKey}\nLARA_ACCESS_KEY_SECRET=${apiSecret}\n`;
 
       appendFileSync('.env', `\n${envContent}`);
 
@@ -145,6 +172,9 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
 
   return {
     version: '1.0.0',
+    project: {
+      context: projectContext,
+    },
     locales: {
       source: inputSource,
       target: inputTarget,
