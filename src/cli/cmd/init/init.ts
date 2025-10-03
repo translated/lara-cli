@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander';
 import Ora from 'ora';
-import { confirm, input } from '@inquirer/prompts';
+import { confirm } from '@inquirer/prompts';
 
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -12,7 +12,7 @@ import { contextInput, pathsInput, sourceInput, targetInput } from './init.input
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
-import { getExistingContext, resetCredentials, resolveProjectContext } from './init.utils.js';
+import { getExistingContext, setCredentials, resolveProjectContext } from './init.utils.js';
 
 
 export default new Command()
@@ -123,7 +123,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     });
 
     if(shouldOverwrite) {
-      await resetCredentials();
+      await setCredentials();
     }
   }
   
@@ -153,7 +153,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     });
 
     if(shouldInsertCredentials) {
-      await resetCredentials();
+      await setCredentials();
     } else {
       Ora({
         text: NO_API_CREDENTIALS_MESSAGE,

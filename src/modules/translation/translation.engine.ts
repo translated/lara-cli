@@ -120,12 +120,7 @@ export class TranslationEngine {
       const formatting = detectFormatting(targetContent);
 
       const entries = (await Promise.all(
-        Object.entries(changelog).map(async ([key, value]) => {
-          // If the key is ignored, we should NOT include it in the new content
-          if(this.isIgnored(key)) {
-            return null;
-          }
-
+        Object.entries(changelog).filter(([key]) => !this.isIgnored(key)).map(async ([key, value]) => {
           const state = value.state;
           const sourceValue = value.value;
           const targetValue = targetJson[key];
