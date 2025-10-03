@@ -9,6 +9,7 @@ The init command helps you configure your project for translation by creating a 
 - Source and target locales
 - File paths to watch
 - Translation rules and exclusions
+- Project context (optional) for improved translation quality
 
 There are two operating modes available for generating a `lara.yaml` file for your project:
 
@@ -41,7 +42,13 @@ When running `lara-cli init` without the `--non-interactive` flag, the command o
    - If files are found, presents them as selectable options
    - If no files are found, prompts for manual path input with validation
 
-6. **API Credentials Setup** (if not already configured):
+6. **Project Context** (optional):
+   - If a context already exists in your configuration, it will be preserved automatically
+   - If no context exists, you'll be prompted to provide project context to improve translation quality
+   - Context can include information about your domain, terminology, tone, or target audience
+   - Providing context helps the translation service understand your project better
+
+7. **API Credentials Setup** (if not already configured):
    - Prompts to add API credentials to `.env` file
    - Option to skip and configure later
 
@@ -71,6 +78,8 @@ A typical configuration looks like this:
 
 ```yaml
 version: "1.0.0"
+project:
+  context: "Medical application for healthcare professionals. Use formal tone and medical terminology."
 locales:
   source: en
   target:
@@ -85,7 +94,7 @@ files:
     ignoredKeys: []
 ```
 
-By default, only `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data, but there are additional properties you can configure later.
+By default, `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data. The `project.context` property is optional but recommended for better translation quality. There are additional properties you can configure later.
 
 For complete details about the configuration file, see the [Lara.yaml Configuration Reference](lara_yaml.md)
 
@@ -207,6 +216,26 @@ Proceed to the [translate command documentation](translate.md#translate-command)
   - Your credentials were compromised and need updating
 - **example**: `lara-cli init --reset-credentials`
 
+### `-c <context>`, `--context <context>`
+- **Type**: String
+- **Description**: Provides project context to improve translation quality and accuracy
+- **Purpose**: Helps the translation service understand your project's domain, terminology, tone, and target audience
+- **Behavior**:
+  - **If context already exists** in your configuration: The new context provided via this option will replace the existing one
+  - **If no context exists**: The provided context will be saved to the configuration
+  - **In interactive mode without this option**: If no context exists, you'll be prompted to provide one
+  - **In non-interactive mode without this option**: If a context already exists in the configuration, it will be preserved
+- **Recommended for**:
+  - Domain-specific projects (medical, legal, technical, financial, etc.)
+  - Projects requiring specific tone or voice (formal, casual, professional, friendly)
+  - Applications with specialized terminology or brand-specific language
+  - Content targeting specific audiences (B2B, B2C, children, professionals, etc.)
+- **Examples**:
+  - `--context "Medical application for healthcare professionals. Use formal tone and medical terminology."`
+  - `--context "E-commerce platform for luxury fashion. Use elegant and sophisticated language."`
+  - `--context "Educational app for children aged 6-12. Use simple, friendly language."`
+  - `--context "B2B SaaS platform. Use professional business terminology and clear technical language."`
+
 ### `-h`, `--help`
 - **Description**: Shows help information for the command
 
@@ -265,6 +294,32 @@ The command will:
 3. Ask for your new API Secret  
 4. Update the `.env` file (or create it if it doesn't exist)
 5. Preserve all other environment variables
+
+### Providing Project Context
+
+```bash
+# Initialize with project context (interactive mode)
+lara-cli init --context "This is a medical application for healthcare professionals. Use formal tone and medical terminology."
+
+# Initialize with context in non-interactive mode
+lara-cli init --source "en" --target "es, fr" --paths "src/i18n/[locale].json" --context "E-commerce platform for luxury fashion. Use elegant language." --non-interactive
+
+# Update existing context
+lara-cli init --context "Updated context: B2B SaaS platform with technical terminology" --force
+```
+
+**Context handling behavior:**
+- **First initialization**: Context is saved to your `lara.yaml` configuration
+- **Re-initialization without `--context`**: Existing context is automatically preserved
+- **Re-initialization with `--context`**: New context replaces the existing one
+- **Interactive mode without `--context`**: You'll be prompted to provide context if none exists
+
+**Best practices for writing context:**
+- Be specific about your domain (e.g., "medical", "legal", "e-commerce")
+- Mention the target audience (e.g., "professionals", "children", "general public")
+- Specify the desired tone (e.g., "formal", "casual", "friendly", "technical")
+- Include any special terminology requirements
+- Keep it concise but informative (1-3 sentences is usually sufficient)
 
 ### Getting Help
 

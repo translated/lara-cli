@@ -7,6 +7,7 @@ import { FilePath } from '#modules/config/config.types.js';
 import { extractLocaleFromPath } from '#utils/locale.js';
 import { displayLocaleTable, formatLocaleList } from '#utils/display.js';
 import customSearchableSelect from '#utils/prompt.js';
+import { normalizeContext } from './init.utils.js';
 
 export async function sourceInput(options: InitOptions): Promise<string> {
   const choices = AVAILABLE_LOCALES.map((locale) => ({
@@ -194,4 +195,28 @@ export async function pathsInput(options: InitOptions) {
       return value.length > 0 || 'Please select at least one path';
     },
   });
+}
+
+export async function contextInput(existingContext?: string, cliContext?: string): Promise<string | undefined> {
+  // Priority 1: Use CLI-provided context
+  if (cliContext) {
+    if (existingContext) {
+      Ora().info('Updating project context from CLI option');
+    }
+    return normalizeContext(cliContext);
+  }
+
+  // Priority 2: Reuse existing context
+  if (existingContext) {
+    return normalizeContext(existingContext);
+  }
+
+  // Priority 3: Prompt user for new context
+  Ora().info('Project context helps improve translation quality.');
+  const userContext = await input({
+    message: 'Enter project context (e.g., domain, terminology, tone):',
+    default: '',
+  });
+
+  return normalizeContext(userContext);
 }
