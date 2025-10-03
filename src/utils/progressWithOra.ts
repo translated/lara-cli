@@ -88,7 +88,6 @@ class ProgressWithOra {
     const percent = (ratio * 100).toFixed(1);
     const eta = this.calculateETA(state);
     const progress = `${state.done}/${state.total}`;
-    
     return `${label}: |${'█'.repeat(filled)}${'-'.repeat(empty)}| ${percent}% (${progress}) ${eta}`;
   }
 
@@ -103,7 +102,6 @@ class ProgressWithOra {
 
     const seconds = Math.ceil(remaining / 1000);
     if (seconds < 60) return `(~${seconds}s)`;
-    
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `(~${minutes}m ${secs}s)`;
