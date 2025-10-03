@@ -1,5 +1,10 @@
 import { Credentials, TranslateOptions, Translator } from '@translated/lara';
 
+export type TextBlock = {
+  text: string;
+  translatable: boolean;
+};
+
 export class TranslationService {
 
   private static instance: TranslationService;
@@ -25,13 +30,13 @@ export class TranslationService {
     return TranslationService.instance;
   }
 
-  public async translate(text: string, sourceLocale: string, targetLocale: string, options: TranslateOptions): Promise<string> {
+  public async translate(textBlocks: TextBlock[], sourceLocale: string, targetLocale: string, options?: TranslateOptions): Promise<TextBlock[]> {
     const maxRetries = 5;
     let attempt = 0;
 
     while (attempt < maxRetries) {
       try {
-        const response = await this.client.translate(text, sourceLocale, targetLocale, options);
+        const response = await this.client.translate(textBlocks, sourceLocale, targetLocale, options);
         return response.translation;
       } catch (error) {
         attempt++;
