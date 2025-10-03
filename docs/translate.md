@@ -202,3 +202,8 @@ lara-cli translate --force
 ```bash
 lara-cli translate --target "es" --force
 ```
+
+## Need More Help?
+
+- [Init Command](init.md) - Project initialization
+- [Configuration Reference](lara_yaml.md) - Detailed configuration options

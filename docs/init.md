@@ -9,6 +9,7 @@ The init command helps you configure your project for translation by creating a 
 - Source and target locales
 - File paths to watch
 - Translation rules and exclusions
+- Project context (optional) for improved translation quality
 
 There are two operating modes available for generating a `lara.yaml` file for your project:
 
@@ -17,13 +18,39 @@ There are two operating modes available for generating a `lara.yaml` file for yo
 ### Interactive Mode (Default)
 When running `lara-cli init` without the `--non-interactive` flag, the command operates in interactive mode:
 
-1. **Config File Check**: If a `lara.yaml` file already exists and `--force` is not used, prompts for confirmation to overwrite
-2. **Source Locale Input**: Prompts for the source locale with validation
-3. **Target Locales Selection**: Shows a checkbox list of available locales (excluding the source locale)
-4. **Path Discovery**: 
+1. **Credential Reset** (if `--reset-credentials` flag is provided):
+   - Prompts for confirmation to reset API credentials
+   - Asks for new API Key and Secret
+   - Updates the `.env` file while preserving other environment variables
+
+2. **Config File Check**: If a `lara.yaml` file already exists and `--force` is not used, prompts for confirmation to overwrite
+
+3. **Source Locale Input**: Prompts for the source locale with searchable selection
+
+4. **Target Locales Selection**:
+   - **Auto-Detection**: Asks if you want to automatically detect target locales from your existing project files
+   - If auto-detection finds locales:
+     - Displays found locales (shows all for small lists, formatted table for large lists)
+     - Option to add all detected locales or select specific ones
+     - Option to add additional locales beyond the auto-detected ones
+   - If no auto-detection or no locales found:
+     - Shows searchable list of all available locales (excluding source locale)
+   - **Smart Display**: For enterprise projects with many locales (>10), uses formatted tables for better readability
+
+5. **Path Discovery**: 
    - Automatically searches for existing internationalization files in your project
    - If files are found, presents them as selectable options
    - If no files are found, prompts for manual path input with validation
+
+6. **Project Context** (optional):
+   - If a context already exists in your configuration, it will be preserved automatically
+   - If no context exists, you'll be prompted to provide project context to improve translation quality
+   - Context can include information about your domain, terminology, tone, or target audience
+   - Providing context helps the translation service understand your project better
+
+7. **API Credentials Setup** (if not already configured):
+   - Prompts to add API credentials to `.env` file
+   - Option to skip and configure later
 
 ```bash
 # Example of interactive mode
@@ -51,6 +78,8 @@ A typical configuration looks like this:
 
 ```yaml
 version: "1.0.0"
+project:
+  context: "Medical application for healthcare professionals. Use formal tone and medical terminology."
 locales:
   source: en
   target:
@@ -65,10 +94,67 @@ files:
     ignoredKeys: []
 ```
 
-By default, only `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data, but there are additional properties you can configure later.
+By default, `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data. The `project.context` property is optional but recommended for better translation quality. There are additional properties you can configure later.
 
 For complete details about the configuration file, see the [Lara.yaml Configuration Reference](lara_yaml.md)
 
+## Target Locale Auto-Detection
+
+One of the most powerful features of the init command is **automatic target locale detection**. This feature scans your project directory for existing locale files and automatically identifies target locales, saving you time and reducing manual configuration.
+
+### How It Works
+
+1. **Project Scanning**: The CLI searches through your project directories for files that match common internationalization patterns
+2. **Locale Extraction**: Identifies locale codes from:
+   - Directory names (e.g., `/locales/es/`, `/i18n/fr/`)
+   - File names (e.g., `es.json`, `fr-CA.json`)
+3. **Smart Filtering**: Automatically excludes the source locale from detected targets
+4. **User Confirmation**: Presents the detected locales for your review and selection
+
+### Benefits
+
+- **Time Saving**: No need to manually type or select from a long list of locales
+- **Accuracy**: Reduces human error by reading directly from your existing file structure
+- **Flexibility**: You can choose to accept all detected locales or select specific ones
+- **Extensibility**: Option to add additional locales beyond what was auto-detected
+
+### Example Workflow
+
+```bash
+? Automatically detect and add target locales? Yes
+⠙ Searching for target locales...
+✔ Found 3 target locale(s): es, fr, it
+
+? Do you want to add more target locales? (3 locale(s) already added) Yes
+
+? Select additional target locales
+(Type to search, ↑/↓ navigate, Space select, Ctrl+A toggle all)
+  › ◯ de
+    ◉ pt
+    ◯ ja
+
+ℹ Selected additional target locales: ko, nb, pl
+```
+
+### Enterprise-Scale Support
+
+For projects with many locales (>10), the CLI uses **formatted table displays** for better readability:
+
+```bash
+✔ Found 24 target locale(s)
+
+Detected locales:
+  es      fr      it      de      
+  pt      nl      pl      ru      
+  ja      zh      ko      ar      
+  hi      th      vi      id      
+  tr      uk      cs      sk      
+  hr      ro      bg      hu      
+
+? Add all 24 detected locales to the target list? Yes
+```
+
+This ensures that even enterprise projects with extensive localization needs remain manageable and easy to configure.
 
 ## Post-Initialization
 
@@ -130,6 +216,26 @@ Proceed to the [translate command documentation](translate.md#translate-command)
   - Your credentials were compromised and need updating
 - **example**: `lara-cli init --reset-credentials`
 
+### `-c <context>`, `--context <context>`
+- **Type**: String
+- **Description**: Provides project context to improve translation quality and accuracy
+- **Purpose**: Helps the translation service understand your project's domain, terminology, tone, and target audience
+- **Behavior**:
+  - **If context already exists** in your configuration: The new context provided via this option will replace the existing one
+  - **If no context exists**: The provided context will be saved to the configuration
+  - **In interactive mode without this option**: If no context exists, you'll be prompted to provide one
+  - **In non-interactive mode without this option**: If a context already exists in the configuration, it will be preserved
+- **Recommended for**:
+  - Domain-specific projects (medical, legal, technical, financial, etc.)
+  - Projects requiring specific tone or voice (formal, casual, professional, friendly)
+  - Applications with specialized terminology or brand-specific language
+  - Content targeting specific audiences (B2B, B2C, children, professionals, etc.)
+- **Examples**:
+  - `--context "Medical application for healthcare professionals. Use formal tone and medical terminology."`
+  - `--context "E-commerce platform for luxury fashion. Use elegant and sophisticated language."`
+  - `--context "Educational app for children aged 6-12. Use simple, friendly language."`
+  - `--context "B2B SaaS platform. Use professional business terminology and clear technical language."`
+
 ### `-h`, `--help`
 - **Description**: Shows help information for the command
 
@@ -189,9 +295,40 @@ The command will:
 4. Update the `.env` file (or create it if it doesn't exist)
 5. Preserve all other environment variables
 
+### Providing Project Context
+
+```bash
+# Initialize with project context (interactive mode)
+lara-cli init --context "This is a medical application for healthcare professionals. Use formal tone and medical terminology."
+
+# Initialize with context in non-interactive mode
+lara-cli init --source "en" --target "es, fr" --paths "src/i18n/[locale].json" --context "E-commerce platform for luxury fashion. Use elegant language." --non-interactive
+
+# Update existing context
+lara-cli init --context "Updated context: B2B SaaS platform with technical terminology" --force
+```
+
+**Context handling behavior:**
+- **First initialization**: Context is saved to your `lara.yaml` configuration
+- **Re-initialization without `--context`**: Existing context is automatically preserved
+- **Re-initialization with `--context`**: New context replaces the existing one
+- **Interactive mode without `--context`**: You'll be prompted to provide context if none exists
+
+**Best practices for writing context:**
+- Be specific about your domain (e.g., "medical", "legal", "e-commerce")
+- Mention the target audience (e.g., "professionals", "children", "general public")
+- Specify the desired tone (e.g., "formal", "casual", "friendly", "technical")
+- Include any special terminology requirements
+- Keep it concise but informative (1-3 sentences is usually sufficient)
+
 ### Getting Help
 
 ```bash
 # Display help for the init command
 lara-cli init --help
 ```
+
+## Need More Help?
+
+- [Translate Command](translate.md) - Next steps after initialization
+- [Configuration Reference](lara_yaml.md) - Detailed configuration options
