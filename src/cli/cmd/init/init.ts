@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander';
 import Ora from 'ora';
-import { confirm, input } from '@inquirer/prompts';
+import { confirm } from '@inquirer/prompts';
 
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -11,9 +11,8 @@ import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { fileInstructionsInput, instructionInput, pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
-import { appendFileSync } from 'fs';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
-import { getExistingInstruction, resetCredentials, resolveProjectInstruction } from './init.utils.js';
+import { getExistingInstruction, setCredentials, resolveProjectInstruction } from './init.utils.js';
 
 
 export default new Command()
@@ -43,16 +42,16 @@ export default new Command()
       .argParser((value) => {
         const locales = value.split(COMMA_AND_SPACE_REGEX);
 
-        return locales.map((locale) => {
+        for (const locale of locales) {
           const parsed = LocalesEnum.safeParse(locale);
 
           if(!parsed.success) {
             Ora({ text: `Invalid locale: ${locale}`, color: 'red' }).fail();
-            return process.exit(1);
+            process.exit(1);
           }
+        }
 
-          return parsed.data;
-        })
+        return locales.map((locale) => LocalesEnum.parse(locale));
       })
   )
   .addOption(
@@ -126,7 +125,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     });
 
     if(shouldOverwrite) {
-      await resetCredentials();
+      await setCredentials();
     }
   }
   
@@ -157,18 +156,11 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     });
 
     if(shouldInsertCredentials) {
-      const apiKey = await input({ message: 'Insert your API Key:' });
-      const apiSecret = await input({ message: 'Insert your API Secret:' });
-
-      const envContent = `# Lara API credentials\nLARA_ACCESS_KEY_ID=${apiKey}\nLARA_ACCESS_KEY_SECRET=${apiSecret}\n`;
-
-      appendFileSync('.env', `\n${envContent}`);
-
-      Ora({ text: 'API credentials inserted successfully', color: 'green' }).succeed();
+      await setCredentials();
     } else {
-      Ora({ 
-        text: NO_API_CREDENTIALS_MESSAGE, 
-        color: 'yellow' 
+      Ora({
+        text: NO_API_CREDENTIALS_MESSAGE,
+        color: 'yellow'
       }).warn();
     }
   }

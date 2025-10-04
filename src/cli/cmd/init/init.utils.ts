@@ -71,14 +71,14 @@ function validateCredential(credential: string, name: string): string {
 }
 
 /**
- * Resets API credentials by prompting for new values and updating .env file.
+ * Sets API credentials by prompting for new values and updating .env file.
  * Preserves other environment variables in the file.
  * 
  * @returns Promise that resolves when credentials are updated
  */
-export async function resetCredentials(): Promise<void> {
-  const apiKeyRaw = await input({ message: 'Insert your New API Key:' });
-  const apiSecretRaw = await input({ message: 'Insert your New API Secret:' });
+export async function setCredentials(): Promise<void> {
+  const apiKeyRaw = await input({ message: 'Insert your API Key:' });
+  const apiSecretRaw = await input({ message: 'Insert your API Secret:' });
   let apiKey: string, apiSecret: string;
   try {
     apiKey = validateCredential(apiKeyRaw, 'API Key');
@@ -126,7 +126,7 @@ export async function resetCredentials(): Promise<void> {
 
   writeFileSync(envPath, envContent);
 
-  Ora({ text: 'API credentials reset successfully', color: 'green' }).succeed();
+  Ora({ text: 'API credentials set successfully', color: 'green' }).succeed();
 }
 
 /**

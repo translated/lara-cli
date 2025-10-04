@@ -132,13 +132,8 @@ export class TranslationEngine {
       const targetJson = parseFlattened(targetContent);
       const formatting = detectFormatting(targetContent);
 
-      const newContent = Object.fromEntries(await Promise.all(
-        Object.entries(changelog).map(async ([key, value]) => {
-          // If the key is ignored, we should NOT include it in the new content
-          if(this.isIgnored(key)) {
-            return [];
-          }
-
+      const entries = (await Promise.all(
+        Object.entries(changelog).filter(([key]) => !this.isIgnored(key)).map(async ([key, value]) => {
           const state = value.state;
           const sourceValue = value.value;
           const targetValue = targetJson[key];
@@ -175,7 +170,9 @@ export class TranslationEngine {
           const translatedValue = await this.translateKey(key, sourceValue, this.sourceLocale, targetLocale);
           return [key, translatedValue];
         })
-      ));
+      )).filter((entry): entry is [string, unknown] => entry !== null);
+
+      const newContent = Object.fromEntries(entries);
 
       await ensureDirectoryExists(targetPath);
       await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, formatting.indentation) + formatting.trailingNewline);
@@ -199,7 +196,12 @@ export class TranslationEngine {
     
     const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale, { ...(instruction ? { instructions: [instruction] } : {}) });
 
-    return translations.pop()!.text;
+    const lastTranslation = translations.pop();
+    if (!lastTranslation) {
+      throw new Error(`Translation service returned empty result for: ${value}`);
+    }
+
+    return lastTranslation.text;
   }
 
   private isIgnored(key: string): boolean {
