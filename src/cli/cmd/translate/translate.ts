@@ -81,6 +81,8 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
   const inputPathsArray = await getInputPaths(fileType, config);
   
   for(const inputPath of inputPathsArray) {
+    const fileInstructionConfig = fileConfig.fileInstructions.find(fc => fc.path === inputPath);
+    
     const translationEngine = new TranslationEngine({
       sourceLocale,
       targetLocales,
@@ -88,7 +90,10 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
       force: options.force,
       lockedKeys: fileConfig.lockedKeys,
       ignoredKeys: fileConfig.ignoredKeys,
-      context: config.project?.context,
+      projectInstruction: config.project?.instruction,
+      fileInstruction: fileInstructionConfig?.instruction,
+      fileKeyInstructions: fileInstructionConfig?.keyInstructions || [],
+      globalKeyInstructions: fileConfig.keyInstructions,
     });
 
     try{

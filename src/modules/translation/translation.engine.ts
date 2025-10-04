@@ -19,7 +19,10 @@ export type TranslationEngineOptions = {
   lockedKeys: string[];
   ignoredKeys: string[];
 
-  context: string | undefined;
+  projectInstruction: string | undefined;
+  fileInstruction: string | undefined;
+  fileKeyInstructions: Array<{ path: string; instruction: string; }>;
+  globalKeyInstructions: Array<{ path: string; instruction: string; }>;
 };
 
 /**
@@ -80,7 +83,10 @@ export class TranslationEngine {
   private readonly lockedPatterns: Matcher[];
   private readonly ignoredPatterns: Matcher[];
 
-  private readonly context: string | undefined;
+  private readonly projectInstruction: string | undefined;
+  private readonly fileInstruction: string | undefined;
+  private readonly fileKeyInstructionPatterns: Array<{ matcher: Matcher; instruction: string; }>;
+  private readonly globalKeyInstructionPatterns: Array<{ matcher: Matcher; instruction: string; }>;
 
   private readonly translatorService: TranslationService;
 
@@ -95,9 +101,16 @@ export class TranslationEngine {
     this.lockedPatterns = options.lockedKeys.map(pattern => picomatch(pattern));
     this.ignoredPatterns = options.ignoredKeys.map(pattern => picomatch(pattern));
 
-    this.context = options.context ? 
-      `Translate the content taking into account the context of the project: ${options.context}`
-      : undefined;
+    this.projectInstruction = options.projectInstruction;
+    this.fileInstruction = options.fileInstruction;
+    this.fileKeyInstructionPatterns = options.fileKeyInstructions.map(({ path, instruction }) => ({
+      matcher: picomatch(path),
+      instruction,
+    }));
+    this.globalKeyInstructionPatterns = options.globalKeyInstructions.map(({ path, instruction }) => ({
+      matcher: picomatch(path),
+      instruction,
+    }));
 
     this.translatorService = TranslationService.getInstance();
   }
@@ -132,7 +145,7 @@ export class TranslationEngine {
 
           // If the target value does not exists or the force flag is set, we should always translate the source value
           if(!targetValue || this.force) {
-            const translatedValue = await this.translateKey(sourceValue, this.sourceLocale, targetLocale);
+            const translatedValue = await this.translateKey(key, sourceValue, this.sourceLocale, targetLocale);
             return [key, translatedValue];
           }
 
@@ -154,7 +167,7 @@ export class TranslationEngine {
             return [key, sourceValue];
           }
 
-          const translatedValue = await this.translateKey(sourceValue, this.sourceLocale, targetLocale);
+          const translatedValue = await this.translateKey(key, sourceValue, this.sourceLocale, targetLocale);
           return [key, translatedValue];
         })
       )).filter((entry): entry is [string, unknown] => entry !== null);
@@ -167,7 +180,7 @@ export class TranslationEngine {
     }
   }
 
-  private async translateKey(value: unknown, sourceLocale: string, targetLocale: string) {
+  private async translateKey(key: string, value: unknown, sourceLocale: string, targetLocale: string) {
     // If the value is not a string, we return it as is. We take for granted that it cannot be translated
     if(typeof value !== 'string') {
       return value;
@@ -178,13 +191,10 @@ export class TranslationEngine {
       return value;
     }
 
-    const textBlocks: TextBlock[] = [];
-    if(this.context) {
-      textBlocks.push({ text: this.context, translatable: false });
-    }
-    textBlocks.push({ text: value, translatable: true });
-
-    const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale);
+    const textBlocks: TextBlock[] = [{ text: value, translatable: true }];
+    const instruction = this.getInstructionForKey(key);
+    
+    const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale, { ...(instruction ? { instructions: [instruction] } : {}) });
 
     const lastTranslation = translations.pop();
     if (!lastTranslation) {
@@ -200,5 +210,44 @@ export class TranslationEngine {
 
   private isLocked(key: string): boolean {
     return this.lockedPatterns.some(pattern => pattern(key));
+  }
+
+  /**
+   * Retrieves the most specific instruction for a key using override strategy.
+   * Priority (highest to lowest):
+   * 1. File-specific key instruction
+   * 2. Global key instruction
+   * 3. File instruction
+   * 4. Project instruction
+   * 
+   * @param key - The translation key path
+   * @returns Instruction string or undefined
+   */
+  private getInstructionForKey(key: string): string | undefined {
+    // Priority 1: File-specific key instructions (highest)
+    for (const { matcher, instruction } of this.fileKeyInstructionPatterns) {
+      if (matcher(key)) {
+        return instruction;
+      }
+    }
+    
+    // Priority 2: Global key instructions
+    for (const { matcher, instruction } of this.globalKeyInstructionPatterns) {
+      if (matcher(key)) {
+        return instruction;
+      }
+    }
+    
+    // Priority 3: File instruction
+    if (this.fileInstruction) {
+      return this.fileInstruction;
+    }
+    
+    // Priority 4: Project instruction (lowest)
+    if (this.projectInstruction) {
+      return this.projectInstruction;
+    }
+    
+    return undefined;
   }
 }

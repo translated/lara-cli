@@ -30,7 +30,7 @@ export class TranslationService {
     return TranslationService.instance;
   }
 
-  public async translate(textBlocks: TextBlock[], sourceLocale: string, targetLocale: string, options?: TranslateOptions): Promise<TextBlock[]> {
+  public async translate(textBlocks: TextBlock[], sourceLocale: string, targetLocale: string, options: TranslateOptions): Promise<TextBlock[]> {
     const maxRetries = 5;
     let attempt = 0;
 

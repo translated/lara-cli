@@ -8,11 +8,11 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import { contextInput, pathsInput, sourceInput, targetInput } from './init.input.js';
+import { fileInstructionsInput, instructionInput, pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
-import { getExistingContext, setCredentials, resolveProjectContext } from './init.utils.js';
+import { getExistingInstruction, setCredentials, resolveProjectInstruction } from './init.utils.js';
 
 
 export default new Command()
@@ -70,7 +70,7 @@ export default new Command()
       .default(false)
   )
   .addOption(
-    new Option('-c --context <context>', 'Project context to help with translations')
+    new Option('-i --instruction <instruction>', 'Project instruction to help with translations')
   )
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
@@ -94,12 +94,12 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     return process.exit(1);
   }
 
-  const context = resolveProjectContext(options.context);
+  const instruction = resolveProjectInstruction(options.instruction);
 
   return {
     version: '1.0.0',
     project: {
-      context,
+      instruction,
     },
     locales: {
       source: options.source,
@@ -109,6 +109,8 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
       json: {
         include: options.paths,
         exclude: [],
+        fileInstructions: [],
+        keyInstructions: [],
         lockedKeys: [],
         ignoredKeys: [],
       },
@@ -140,12 +142,13 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     }
   }
 
-  const existingContext = getExistingContext(options.force);
-  const projectContext = await contextInput(existingContext, options.context);
+  const existingInstruction = getExistingInstruction(options.force);
+  const projectInstruction = await instructionInput(existingInstruction, options.instruction);
   
   const inputSource = await sourceInput(options);
   const inputTarget = await targetInput(inputSource, options.target);
   const inputPaths = await pathsInput(options);
+  const inputFileInstructions = await fileInstructionsInput(inputPaths);
 
   if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
     const shouldInsertCredentials = await confirm({
@@ -165,7 +168,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
   return {
     version: '1.0.0',
     project: {
-      context: projectContext,
+      instruction: projectInstruction,
     },
     locales: {
       source: inputSource,
@@ -175,6 +178,8 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       json: {
         include: inputPaths,
         exclude: [],
+        fileInstructions: inputFileInstructions,
+        keyInstructions: [],
         lockedKeys: [],
         ignoredKeys: [],
       },

@@ -62,26 +62,26 @@ The CLI will **automatically detect your localization directories and target loc
 - 🔍 **Auto-detection**: Scans your project for existing locale files and automatically suggests target locales
 - 📊 **Smart display**: For enterprise projects with many locales, uses formatted tables for better readability
 - ⚙️ **Flexible configuration**: Choose detected locales or manually add/remove as needed
-- 🎯 **Project context**: Optionally provide context about your project to improve translation quality (e.g., domain, terminology, tone)
+- 🎯 **Project instructions**: Optionally provide instructions to improve translation quality (e.g., tone, style, terminology)
 
-**Providing project context** (optional but recommended):
+**Providing project instructions** (optional but recommended):
 
-During initialization, you can provide context about your project to help improve translation accuracy. This is especially useful for:
+During initialization, you can provide instructions to help improve translation quality. Instructions guide the translation service on tone, style, and terminology. This is especially useful for:
+- Tone requirements (formal, casual, professional, friendly)
 - Domain-specific terminology (medical, legal, technical, etc.)
-- Brand voice and tone preferences
-- Target audience information
+- Style preferences (concise, creative, detailed)
 
-You can provide context in two ways:
+You can provide instructions in two ways:
 
 ```bash
 # Interactive mode - you'll be prompted
 lara-cli init
 
 # Non-interactive mode - via CLI option
-lara-cli init --context "This is a medical application for healthcare professionals. Use formal tone and medical terminology."
+lara-cli init --instruction "Use formal tone and medical terminology."
 ```
 
-If you've already initialized your project with context, running `init` again will preserve it unless you explicitly provide a new context via the `--context` option.
+If you've already initialized your project with instructions, running `init` again will preserve them unless you explicitly provide new instructions via the `--instruction` option.
 
 ### Translate Your Files!
 

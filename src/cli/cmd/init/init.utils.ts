@@ -5,36 +5,36 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 
 /**
- * Resolves the project context based on CLI option or existing config.
- * Priority: CLI context > Existing context > undefined
+ * Resolves the project instruction based on CLI option or existing config.
+ * Priority: CLI instruction > Existing instruction > undefined
  * 
- * @param cliContext - Context provided via CLI option
- * @returns Resolved context or undefined
+ * @param cliInstruction - Instruction provided via CLI option
+ * @returns Resolved instruction or undefined
  */
-export function resolveProjectContext(cliContext?: string): string | undefined {
-  // If context provided via CLI, use it
-  if (cliContext) {
-    return cliContext;
+export function resolveProjectInstruction(cliInstruction?: string): string | undefined {
+  // If instruction provided via CLI, use it
+  if (cliInstruction) {
+    return cliInstruction;
   }
 
-  // Otherwise, try to preserve existing context from config
+  // Otherwise, try to preserve existing instruction from config
   const configProvider = ConfigProvider.getInstance();
   if (configProvider.doesConfigExists()) {
     const config = configProvider.getConfig();
-    return config.project?.context;
+    return config.project?.instruction;
   }
 
   return undefined;
 }
 
 /**
- * Retrieves existing context from config if available.
+ * Retrieves existing instruction from config if available.
  * Returns undefined if config doesn't exist, force flag is set, or error occurs.
  * 
- * @param force - If true, ignores existing context
- * @returns Existing context or undefined
+ * @param force - If true, ignores existing instruction
+ * @returns Existing instruction or undefined
  */
-export function getExistingContext(force: boolean): string | undefined {
+export function getExistingInstruction(force: boolean): string | undefined {
   const configProvider = ConfigProvider.getInstance();
   
   if (!configProvider.doesConfigExists() || force) {
@@ -43,7 +43,7 @@ export function getExistingContext(force: boolean): string | undefined {
 
   try {
     const config = configProvider.getConfig();
-    return config.project?.context;
+    return config.project?.instruction;
   } catch {
     return undefined;
   }

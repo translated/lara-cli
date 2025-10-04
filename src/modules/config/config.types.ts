@@ -41,7 +41,7 @@ const Config = z.object({
   version: z.string(),
 
   project: z.object({
-    context: z.string().optional(),
+    instruction: z.string().optional(),
   }).optional(),
 
   locales: z.object({
@@ -52,6 +52,18 @@ const Config = z.object({
   files: z.record(SupportedFileTypesEnum, z.object({
     include: z.array(IncludeFilePath),
     exclude: z.array(ExcludeFilePath).default([]),
+    fileInstructions: z.array(z.object({
+      path: IncludeFilePath,
+      instruction: z.string().optional(),
+      keyInstructions: z.array(z.object({
+        path: KeyPath,
+        instruction: z.string(),
+      })).default([]),
+    })).default([]),
+    keyInstructions: z.array(z.object({
+      path: KeyPath,
+      instruction: z.string(),
+    })).default([]),
     lockedKeys: z.array(KeyPath).default([]),
     ignoredKeys: z.array(KeyPath).default([]),
   })),
