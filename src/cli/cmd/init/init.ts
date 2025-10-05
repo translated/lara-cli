@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander';
 import Ora from 'ora';
-import { confirm, input } from '@inquirer/prompts';
+import { confirm } from '@inquirer/prompts';
 
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -8,11 +8,11 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import { pathsInput, sourceInput, targetInput } from './init.input.js';
+import { fileInstructionsInput, instructionInput, pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
-import { appendFileSync } from 'fs';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
+import { getExistingInstruction, setCredentials, resolveProjectInstruction } from './init.utils.js';
 
 
 export default new Command()
@@ -42,18 +42,17 @@ export default new Command()
       .argParser((value) => {
         const locales = value.split(COMMA_AND_SPACE_REGEX);
 
-        return locales.map((locale) => {
+        for (const locale of locales) {
           const parsed = LocalesEnum.safeParse(locale);
 
           if(!parsed.success) {
             Ora({ text: `Invalid locale: ${locale}`, color: 'red' }).fail();
-            return process.exit(1);
+            process.exit(1);
           }
+        }
 
-          return parsed.data;
-        })
+        return locales.map((locale) => LocalesEnum.parse(locale));
       })
-      .default(['it-IT', 'es-ES'])
   )
   .addOption(
     new Option('-p --paths <paths>', 'Paths to watch, separated by a comma, a space or a combination of both')
@@ -65,6 +64,13 @@ export default new Command()
         })
       })
       .default(['src/i18n/[locale].json'])
+  )
+  .addOption(
+    new Option('-r --reset-credentials', 'Reset credentials')
+      .default(false)
+  )
+  .addOption(
+    new Option('-i --instruction <instruction>', 'Project instruction to help with translations')
   )
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
@@ -88,8 +94,13 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     return process.exit(1);
   }
 
+  const instruction = resolveProjectInstruction(options.instruction);
+
   return {
     version: '1.0.0',
+    project: {
+      instruction,
+    },
     locales: {
       source: options.source,
       target: options.target,
@@ -98,6 +109,8 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
       json: {
         include: options.paths,
         exclude: [],
+        fileInstructions: [],
+        keyInstructions: [],
         lockedKeys: [],
         ignoredKeys: [],
       },
@@ -106,20 +119,33 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
 }
 
 async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> {
-  if(ConfigProvider.getInstance().doesConfigExists() && !options.force) {
+  if(options.resetCredentials) {
+    const shouldOverwrite = await confirm({
+      message: 'Do you want to reset the API credentials?',
+    });
+
+    if(shouldOverwrite) {
+      await setCredentials();
+    }
+  }
+  
+  const configProvider = ConfigProvider.getInstance();
+
+  if(configProvider.doesConfigExists() && !options.force) {
     const shouldOverwrite = await confirm({
       message: 'Config file already exists, do you want to overwrite it?',
     });
 
     if(!shouldOverwrite) {
-      Ora({ text: 'Config file already exists, and the user did not want to overwrite it', color: 'red' }).fail();
+      Ora({ text: 'Config file already exists and the user did not want to overwrite it', color: 'red' }).fail();
       return process.exit(1);
     }
   }
-
+  
   const inputSource = await sourceInput(options);
-  const inputTarget = await targetInput(inputSource);
+  const inputTarget = await targetInput(inputSource, options.target);
   const inputPaths = await pathsInput(options);
+  const inputFileInstructions = await fileInstructionsInput(inputPaths);
 
   if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
     const shouldInsertCredentials = await confirm({
@@ -127,24 +153,23 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     });
 
     if(shouldInsertCredentials) {
-      const apiKey = await input({ message: 'Insert your API Key:' });
-      const apiSecret = await input({ message: 'Insert your API Secret:' });
-
-      const envContent = `LARA_ACCESS_KEY_ID=${apiKey}\nLARA_ACCESS_KEY_SECRET=${apiSecret}\n`;
-
-      appendFileSync('.env', `\n${envContent}`);
-
-      Ora({ text: 'API credentials inserted successfully', color: 'green' }).succeed();
+      await setCredentials();
     } else {
-      Ora({ 
-        text: NO_API_CREDENTIALS_MESSAGE, 
-        color: 'yellow' 
+      Ora({
+        text: NO_API_CREDENTIALS_MESSAGE,
+        color: 'yellow'
       }).warn();
     }
   }
 
+  const existingInstruction = getExistingInstruction(options.force);
+  const projectInstruction = await instructionInput(existingInstruction, options.instruction);
+
   return {
     version: '1.0.0',
+    project: {
+      instruction: projectInstruction,
+    },
     locales: {
       source: inputSource,
       target: inputTarget,
@@ -153,6 +178,8 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       json: {
         include: inputPaths,
         exclude: [],
+        fileInstructions: inputFileInstructions,
+        keyInstructions: [],
         lockedKeys: [],
         ignoredKeys: [],
       },

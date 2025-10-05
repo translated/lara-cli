@@ -12,6 +12,7 @@
     "lara-cli": "./build/index.js"
   },
   "dependencies": {
+    "@inquirer/core": "^10.2.2",
     "@inquirer/prompts": "^7.8.4",
     "@translated/lara": "^1.6.5",
     "commander": "^14.0.0",

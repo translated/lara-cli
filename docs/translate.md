@@ -4,7 +4,7 @@ The `translate` command processes all internationalization files specified in yo
 
 ## Overview
 
-The translate command is the core functionality of the Lara CLI. It reads your source locale files, detects changes since the last translation run, and translates only new or modified content to preserve manual edits while keeping translations up-to-date. The command uses intelligent change detection and supports advanced features like locked keys, ignored keys, and project context.
+The translate command is the core functionality of the Lara CLI. It reads your source locale files, detects changes since the last translation run, and translates only new or modified content to preserve manual edits while keeping translations up-to-date. The command uses intelligent change detection and supports advanced features like locked keys, ignored keys, and project instructions.
 
 ## Usage
 
@@ -66,7 +66,7 @@ The command loads your `lara.yaml` configuration file to determine:
 - File patterns to process
 - Exclusion patterns
 - Locked and ignored key patterns
-- Project context (if specified)
+- Project instructions (if specified)
 
 For complete details about the configuration file structure, see: [Lara.yaml Configuration Reference](lara_yaml.md)
 
@@ -86,7 +86,7 @@ For each discovered file and target locale:
 - **Key analysis**: Processes each translation key individually
 - **Conditional translation**: Only translates keys that need updating
 - **Key filtering**: Respects locked and ignored key patterns
-- **Context application**: Uses project context to improve translation quality
+- **Instruction application**: Uses project instructions to improve translation quality and apply the desired tone/style
 
 ### 5. Output Generation
 - **File structure preservation**: Maintains the original JSON structure
@@ -202,3 +202,8 @@ lara-cli translate --force
 ```bash
 lara-cli translate --target "es" --force
 ```
+
+## Need More Help?
+
+- [Init Command](init.md) - Project initialization
+- [Configuration Reference](lara_yaml.md) - Detailed configuration options

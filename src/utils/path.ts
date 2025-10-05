@@ -106,15 +106,7 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
    * ]
    */
 async function searchLocalePaths(): Promise<string[]> {
-  // Use simple pattern if only one file type, otherwise use brace expansion
-  const pattern = SUPPORTED_FILE_TYPES.length === 1 
-    ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
-    : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
-    
-  const allJsonPaths = await glob(pattern, {
-    cwd: process.cwd(),
-    ignore: DEFAULT_EXCLUDED_DIRECTORIES.map(dir => `${dir}/**`),
-  });
+  const allJsonPaths = await searchPaths();
 
   const pathsWithLocales: string[] = [];
   
@@ -184,6 +176,34 @@ function normalizePath(filePath: string): string | null {
   return normalizedPath;
 }
 
+/**
+ * Extracts all paths from the current working directory
+ * 
+ * @returns A promise that resolves to an array of paths.
+ * 
+ * Example:
+ * [
+ *  'src/i18n/en.json',
+ *  'src/i18n/it.json',
+ * ]
+ */
+async function searchPaths(): Promise<string[]> {
+
+  if (SUPPORTED_FILE_TYPES.length === 0) {
+    throw new Error('No supported file types configured');
+  }
+
+  // Use simple pattern if only one file type, otherwise use brace expansion
+  const pattern = SUPPORTED_FILE_TYPES.length === 1
+    ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
+    : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
+
+  return glob(pattern, {
+    cwd: process.cwd(),
+    ignore: DEFAULT_EXCLUDED_DIRECTORIES.map(dir => `${dir}/**`),
+  });
+}
+
 export {
   getFileExtension,
   isRelative,
@@ -192,4 +212,5 @@ export {
   buildLocalePath,
   searchLocalePathsByPattern,
   searchLocalePaths,
+  searchPaths
 };

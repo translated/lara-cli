@@ -5,6 +5,8 @@ import { calculateChecksum } from '#utils/checksum.js';
 import { parseFlattened, unflatten } from '#utils/json.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { writeFile } from 'fs/promises';
+import { progressWithOra } from '#utils/progressWithOra.js';
+import { TextBlock } from './translation.service.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -17,7 +19,10 @@ export type TranslationEngineOptions = {
   lockedKeys: string[];
   ignoredKeys: string[];
 
-  context: string | undefined;
+  projectInstruction: string | undefined;
+  fileInstruction: string | undefined;
+  fileKeyInstructions: Array<{ path: string; instruction: string; }>;
+  globalKeyInstructions: Array<{ path: string; instruction: string; }>;
 };
 
 /**
@@ -78,7 +83,10 @@ export class TranslationEngine {
   private readonly lockedPatterns: Matcher[];
   private readonly ignoredPatterns: Matcher[];
 
-  private readonly instructions: string[] | undefined;
+  private readonly projectInstruction: string | undefined;
+  private readonly fileInstruction: string | undefined;
+  private readonly fileKeyInstructionPatterns: Array<{ matcher: Matcher; instruction: string; }>;
+  private readonly globalKeyInstructionPatterns: Array<{ matcher: Matcher; instruction: string; }>;
 
   private readonly translatorService: TranslationService;
 
@@ -93,9 +101,16 @@ export class TranslationEngine {
     this.lockedPatterns = options.lockedKeys.map(pattern => picomatch(pattern));
     this.ignoredPatterns = options.ignoredKeys.map(pattern => picomatch(pattern));
 
-    this.instructions = options.context ? [
-      `Translate the content taking into account the context of the project: ${options.context}`,
-    ] : undefined;
+    this.projectInstruction = options.projectInstruction;
+    this.fileInstruction = options.fileInstruction;
+    this.fileKeyInstructionPatterns = options.fileKeyInstructions.map(({ path, instruction }) => ({
+      matcher: picomatch(path),
+      instruction,
+    }));
+    this.globalKeyInstructionPatterns = options.globalKeyInstructions.map(({ path, instruction }) => ({
+      matcher: picomatch(path),
+      instruction,
+    }));
 
     this.translatorService = TranslationService.getInstance();
   }
@@ -104,23 +119,21 @@ export class TranslationEngine {
     await this.handleInputPath(this.inputPath);
   }
 
-  private async handleInputPath(inputPath: string) {
+  private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
     const changelog = calculateChecksum(sourcePath);
-
+    const keysCount = Object.keys(changelog).length;
+    
     for(const targetLocale of this.targetLocales) {
+      progressWithOra.setText(`Translating ${inputPath} → ${targetLocale} (${keysCount} keys)...`);
+
       const targetPath = buildLocalePath(inputPath, targetLocale);
       const targetContent = await readSafe(targetPath, '{}');
       const targetJson = parseFlattened(targetContent);
       const formatting = detectFormatting(targetContent);
 
-      const newContent = Object.fromEntries(await Promise.all(
-        Object.entries(changelog).map(async ([key, value]) => {
-          // If the key is ignored, we should NOT include it in the new content
-          if(this.isIgnored(key)) {
-            return [];
-          }
-
+      const entries = (await Promise.all(
+        Object.entries(changelog).filter(([key]) => !this.isIgnored(key)).map(async ([key, value]) => {
           const state = value.state;
           const sourceValue = value.value;
           const targetValue = targetJson[key];
@@ -132,7 +145,7 @@ export class TranslationEngine {
 
           // If the target value does not exists or the force flag is set, we should always translate the source value
           if(!targetValue || this.force) {
-            const translatedValue = await this.translateKey(sourceValue, this.sourceLocale, targetLocale);
+            const translatedValue = await this.translateKey(key, sourceValue, this.sourceLocale, targetLocale);
             return [key, translatedValue];
           }
 
@@ -154,17 +167,20 @@ export class TranslationEngine {
             return [key, sourceValue];
           }
 
-          const translatedValue = await this.translateKey(sourceValue, this.sourceLocale, targetLocale);
+          const translatedValue = await this.translateKey(key, sourceValue, this.sourceLocale, targetLocale);
           return [key, translatedValue];
         })
-      ));
+      )).filter((entry): entry is [string, unknown] => entry !== null);
+
+      const newContent = Object.fromEntries(entries);
 
       await ensureDirectoryExists(targetPath);
       await writeFile(targetPath, JSON.stringify(unflatten(newContent), null, formatting.indentation) + formatting.trailingNewline);
-    };
+      progressWithOra.tick(1);
+    }
   }
 
-  private async translateKey(value: unknown, sourceLocale: string, targetLocale: string) {
+  private async translateKey(key: string, value: unknown, sourceLocale: string, targetLocale: string) {
     // If the value is not a string, we return it as is. We take for granted that it cannot be translated
     if(typeof value !== 'string') {
       return value;
@@ -174,10 +190,18 @@ export class TranslationEngine {
     if(value.trim() === '') {
       return value;
     }
+
+    const textBlocks: TextBlock[] = [{ text: value, translatable: true }];
+    const instruction = this.getInstructionForKey(key);
     
-    return await this.translatorService.translate(value, sourceLocale, targetLocale, {
-      instructions: this.instructions,
-    });
+    const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale, { ...(instruction ? { instructions: [instruction] } : {}) });
+
+    const lastTranslation = translations.pop();
+    if (!lastTranslation) {
+      throw new Error(`Translation service returned empty result for: ${value}`);
+    }
+
+    return lastTranslation.text;
   }
 
   private isIgnored(key: string): boolean {
@@ -186,5 +210,44 @@ export class TranslationEngine {
 
   private isLocked(key: string): boolean {
     return this.lockedPatterns.some(pattern => pattern(key));
+  }
+
+  /**
+   * Retrieves the most specific instruction for a key using override strategy.
+   * Priority (highest to lowest):
+   * 1. File-specific key instruction
+   * 2. Global key instruction
+   * 3. File instruction
+   * 4. Project instruction
+   * 
+   * @param key - The translation key path
+   * @returns Instruction string or undefined
+   */
+  private getInstructionForKey(key: string): string | undefined {
+    // Priority 1: File-specific key instructions (highest)
+    for (const { matcher, instruction } of this.fileKeyInstructionPatterns) {
+      if (matcher(key)) {
+        return instruction;
+      }
+    }
+    
+    // Priority 2: Global key instructions
+    for (const { matcher, instruction } of this.globalKeyInstructionPatterns) {
+      if (matcher(key)) {
+        return instruction;
+      }
+    }
+    
+    // Priority 3: File instruction
+    if (this.fileInstruction) {
+      return this.fileInstruction;
+    }
+    
+    // Priority 4: Project instruction (lowest)
+    if (this.projectInstruction) {
+      return this.projectInstruction;
+    }
+    
+    return undefined;
   }
 }

@@ -1,6 +1,6 @@
 export const COMMA_AND_SPACE_REGEX = /[\s,]+/;
 
-export const AVAILABLE_LOCALES = [
+export const ISO_639_1_LOCALES = [
   'ar',
   'ca',
   'da',
@@ -17,7 +17,6 @@ export const AVAILABLE_LOCALES = [
   'sv',
   'tr',
   'zh',
-  'zh-TW',
   'bg',
   'cs',
   'de',
@@ -29,11 +28,59 @@ export const AVAILABLE_LOCALES = [
   'ko',
   'nb',
   'pl',
-  'pt-BR',
   'sk',
   'th',
   'uk',
-  'zh-CN'
+]
+
+export const BCP_47_LOCALES = [
+  'ar-SA',
+  'bg-BG',
+  'ca-ES',
+  'zh-CN',
+  'zh-TW',
+  'zh-HK',
+  'hr-HR',
+  'cs-CZ',
+  'da-DK',
+  'nl-BE',
+  'nl-NL',
+  'en-AU',
+  'en-CA',
+  'en-IE',
+  'en-GB',
+  'en-US',
+  'fi-FI',
+  'fr-CA',
+  'fr-FR',
+  'de-DE',
+  'el-GR',
+  'he-IL',
+  'hu-HU',
+  'id-ID',
+  'it-IT',
+  'ja-JP',
+  'ko-KR',
+  'ms-MY',
+  'nb-NO',
+  'pl-PL',
+  'pt-BR',
+  'pt-PT',
+  'ru-RU',
+  'sk-SK',
+  'es-AR',
+  'es-419',
+  'es-MX',
+  'es-ES',
+  'sv-SE',
+  'th-TH',
+  'tr-TR',
+  'uk-UA'
+]
+
+export const AVAILABLE_LOCALES = [
+  ...ISO_639_1_LOCALES,
+  ...BCP_47_LOCALES,
 ];
 
 export const DEFAULT_EXCLUDED_DIRECTORIES = [
