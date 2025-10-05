@@ -213,9 +213,8 @@ export async function instructionInput(existingInstruction?: string, cliInstruct
   }
 
   // Priority 3: Prompt user for new instruction
-  Ora().info('Project instructions help improve translation quality.');
   const userInstruction = await input({
-    message: 'Enter project instruction (e.g., domain, terminology, tone):',
+    message: 'Enter project instructions (e.g., domain, terminology, tone):',
     default: '',
   });
 

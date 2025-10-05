@@ -141,9 +141,6 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       return process.exit(1);
     }
   }
-
-  const existingInstruction = getExistingInstruction(options.force);
-  const projectInstruction = await instructionInput(existingInstruction, options.instruction);
   
   const inputSource = await sourceInput(options);
   const inputTarget = await targetInput(inputSource, options.target);
@@ -164,6 +161,9 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       }).warn();
     }
   }
+
+  const existingInstruction = getExistingInstruction(options.force);
+  const projectInstruction = await instructionInput(existingInstruction, options.instruction);
 
   return {
     version: '1.0.0',
