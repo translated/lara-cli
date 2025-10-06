@@ -14,19 +14,18 @@ export default new Command()
       Ora({ text: 'No API credentials found. Please run `lara-cli init` to set the API credentials.', color: 'red' }).fail();
       process.exit(1);
     }
-
-    try{
-      await handleMemory();
-    } catch(error) {
-      const message = error instanceof Error ? error.message : String(error);
-      Ora({ text: message, color: 'red' }).fail();
-      process.exit(1);
-    }
+    await handleMemory();
   });
 
 
 async function handleMemory(): Promise<void> {
-  await listMemories();
+  try{
+    await listMemories();
+  } catch(error) {
+    const message = error instanceof Error ? error.message : String(error);
+    Ora({ text: message, color: 'red' }).fail();
+    process.exit(1);
+  }
 }
 
 
@@ -52,8 +51,7 @@ async function listMemories(): Promise<void> {
       handleLaraApiError(error, 'Error getting Translation Memories', spinner);
       return;
     }
-    const message = error instanceof Error ? error.message : String(error);
-    Ora({ text: message, color: 'red' }).fail();
-    process.exit(1);
+
+    throw error;
   } 
 }

@@ -278,7 +278,7 @@ export async function translationMemoriesInput(existingMemories: string[], optio
   });
 
   if(!shouldHandleTranslationMemories) {
-    return existingMemories || [];
+    return existingMemories;
   }
 
   const translationService = TranslationService.getInstance();
