@@ -2,6 +2,8 @@ import { Command } from 'commander';
 import Ora from 'ora';
 import { TranslationService } from '#modules/translation/translation.service.js';
 import { LARA_WEB_URL } from '#modules/common/common.const.js';
+import { handleLaraApiError } from '#utils/error.js';
+import { LaraApiError } from '@translated/lara';
 
 export default new Command()
   .command('memory')
@@ -29,18 +31,29 @@ async function handleMemory(): Promise<void> {
 
 
 async function listMemories(): Promise<void> {
-  const translationService = TranslationService.getInstance();
-  const clientTranslationMemories = await translationService.getTranslationMemories();
+  const spinner = Ora().start('Fetching Translation Memories...');
+  try{
+    const translationService = TranslationService.getInstance();
+    const clientTranslationMemories = await translationService.getTranslationMemories();
 
-  if (clientTranslationMemories.length === 0) {
-    Ora().warn(`No Translation Memories linked. Visit ${LARA_WEB_URL} to learn more.`);
-    return;
-  }
+    if (clientTranslationMemories.length === 0) {
+      spinner.warn(`No Translation Memories linked. Visit ${LARA_WEB_URL} to learn more.`);
+      return;
+    }
 
-  Ora().succeed(`Found ${clientTranslationMemories.length} Translation ${clientTranslationMemories.length === 1 ? 'Memory' : 'Memories'}:\n`);
+    spinner.succeed(`Found ${clientTranslationMemories.length} Translation ${clientTranslationMemories.length === 1 ? 'Memory' : 'Memories'}:\n`);
 
-  for(const memory of clientTranslationMemories) {
-    console.log(`  ID: ${memory.id}`);
-    console.log(`  Name: ${memory.name}\n`);
+    for(const memory of clientTranslationMemories) {
+      console.log(`  ID: ${memory.id}`);
+      console.log(`  Name: ${memory.name}\n`);
+    } 
+  } catch(error) {
+    if(error instanceof LaraApiError) {
+      handleLaraApiError(error, 'Error getting Translation Memories', spinner);
+      return;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    Ora({ text: message, color: 'red' }).fail();
+    process.exit(1);
   } 
 }

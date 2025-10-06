@@ -101,7 +101,7 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
       await translationEngine.translate();
     } catch(error) {
       if(error instanceof LaraApiError) {
-        handleLaraApiError(error, inputPath, progressWithOra.spinner);
+        handleLaraApiError(error, `Error translating ${inputPath}`, progressWithOra.spinner);
         continue;
       }
 
