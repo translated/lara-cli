@@ -49,6 +49,8 @@ const Config = z.object({
     target: z.array(LocalesEnum),
   }),
 
+  memories: z.array(z.string()).default([]),
+
   files: z.record(SupportedFileTypesEnum, z.object({
     include: z.array(IncludeFilePath),
     exclude: z.array(ExcludeFilePath).default([]),

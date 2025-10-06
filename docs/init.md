@@ -48,7 +48,15 @@ When running `lara-cli init` without the `--non-interactive` flag, the command o
    - Instructions can specify tone (formal, casual), domain-specific terminology, or style requirements
    - Providing instructions helps the translation service deliver better, more appropriate translations
 
-7. **API Credentials Setup** (if not already configured):
+7. **Translation Memories** (optional):
+   - If Translation Memories are already configured, you'll be asked if you want to update them
+   - If none are configured, you'll be asked if you want to use Translation Memories
+   - Shows a searchable list of all available Translation Memories from your account
+   - Allows selection of multiple Translation Memories to personalize translations
+   - Translation Memories enable Lara to adapt to your style and terminology using past translation examples
+   - Available for Team and Enterprise subscriptions only
+
+8. **API Credentials Setup** (if not already configured):
    - Prompts to add API credentials to `.env` file
    - Option to skip and configure later
 
@@ -85,6 +93,9 @@ locales:
   target:
     - es
     - it
+memories:
+  - mem_abc123
+  - mem_def456
 files:
   json:
     include:
@@ -94,7 +105,7 @@ files:
     ignoredKeys: []
 ```
 
-By default, `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data. The `project.instruction` property is optional but recommended for better translation quality. There are additional properties you can configure later.
+By default, `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data. The `project.instruction` property is optional but recommended for better translation quality. The `memories` property allows you to specify Translation Memories for domain adaptation. There are additional properties you can configure later.
 
 For complete details about the configuration file, see the [Lara.yaml Configuration Reference](lara_yaml.md)
 
@@ -236,6 +247,36 @@ Proceed to the [translate command documentation](translate.md#translate-command)
   - `--instruction "Use simple, friendly language for children."`
   - `--instruction "Use professional business terminology and be concise."`
 
+### `-m <translation-memories>`, `--translation-memories <translation-memories>`
+- **Type**: String (comma/space-separated Translation Memory IDs)
+- **Description**: Specifies Translation Memory IDs to use for domain adaptation during translations
+- **Purpose**: Enables Lara to adapt translations to your specific style and terminology using past translation examples
+- **Format**: Memory IDs can be separated by commas, spaces, or both (e.g., `"mem_abc123, mem_def456"` or `"mem_abc123 mem_def456"`)
+- **Behavior**:
+  - **In interactive mode**: You'll be prompted to select Translation Memories from your account if this option is not provided
+  - **In non-interactive mode**: Memories specified via this option will be saved to the configuration
+  - **If memories already exist** in your configuration: Providing new memory IDs will replace the existing ones
+- **Requirements**:
+  - Available for **Team and Enterprise subscriptions only**
+  - Memory IDs must belong to your Lara account
+  - Memory IDs typically start with `mem_`
+- **How to find Memory IDs**:
+  - Run `lara-cli memory` to list available Translation Memories
+  - Check the Lara platform dashboard
+  - Contact Lara support for assistance
+- **Use Cases**:
+  - Maintain consistency with past translations
+  - Preserve domain-specific terminology (legal, medical, technical)
+  - Apply brand voice and style consistently
+  - Fix recurring translation errors instantly
+- **Examples**:
+  - `--translation-memories "mem_abc123, mem_def456"`
+  - `--translation-memories "mem_legal_en_es"`
+  - `-m "mem_123 mem_456 mem_789"`
+- **Related Commands**:
+  - Run `lara-cli memory` to view all available Translation Memories
+  - See [Memory Command Documentation](memory.md) for details
+
 ### `-h`, `--help`
 - **Description**: Shows help information for the command
 
@@ -321,6 +362,50 @@ lara-cli init --instruction "Use professional business terminology and be concis
 - Consider your target audience (e.g., "for professionals", "for children")
 - Keep it clear and focused (1-2 sentences is usually sufficient)
 
+### Using Translation Memories
+
+```bash
+# List available Translation Memories first
+lara-cli memory
+
+# Initialize with specific Translation Memories (interactive mode)
+lara-cli init --translation-memories "mem_abc123, mem_def456"
+
+# Initialize with Translation Memories in non-interactive mode
+lara-cli init --source "en" --target "es, fr" \
+  --paths "src/i18n/[locale].json" \
+  --translation-memories "mem_legal_123, mem_medical_456" \
+  --non-interactive
+
+# Update Translation Memories in existing configuration
+lara-cli init --translation-memories "mem_new_123" --force
+```
+
+**Translation Memory behavior:**
+- **First initialization**: Selected memories are saved to your `lara.yaml` configuration
+- **Re-initialization without `--translation-memories`**: Existing memories are automatically preserved
+- **Re-initialization with `--translation-memories`**: New memory IDs replace the existing ones
+- **Interactive mode without `--translation-memories`**: You'll be prompted to select memories if none exist
+
+**Best practices for using Translation Memories:**
+- Use separate memories for different domains (legal, medical, technical)
+- Combine multiple memories for comprehensive terminology coverage
+- Keep memories updated with quality-vetted translation examples
+- Use complete locale codes (e.g., `pt-PT` not `pt`) when populating memories
+- Run `lara-cli memory` regularly to verify available memories
+- Contact Lara support for professional domain adaptation services
+
+**Translation Memories vs. Instructions:**
+- **Translation Memories**: Adapt using concrete past translation examples (sentence pairs)
+- **Instructions**: Guide translation with natural language directives (tone, style, requirements)
+- **Best approach**: Use both together for optimal translation quality
+  - Instructions define the general style and requirements
+  - Translation Memories provide specific terminology and phrasing examples
+
+For more information about Translation Memories, see:
+- [Memory Command Documentation](memory.md)
+- [Official Translation Memory Documentation](https://developers.laratranslate.com/docs/adapt-to-translation-memories)
+
 ### Getting Help
 
 ```bash
@@ -330,5 +415,6 @@ lara-cli init --help
 
 ## Need More Help?
 
+- [Memory Command](memory.md) - Manage Translation Memories
 - [Translate Command](translate.md) - Next steps after initialization
 - [Configuration Reference](lara_yaml.md) - Detailed configuration options

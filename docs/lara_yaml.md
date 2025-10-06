@@ -13,6 +13,7 @@ locales:
   target:
     - es
     - fr
+memories: []
 files:
   json:
     include:
@@ -50,6 +51,85 @@ The `locales` section defines the source and target languages for translation:
 - **target**: An array of target locale codes to which content will be translated
 
 For a full list of supported locales, see the [Supported Locales](../README.md#supported-locales) section in the main README.
+
+### Translation Memories
+
+```yaml
+memories:
+  - mem_abc123
+  - mem_def456
+```
+
+The `memories` section is an optional array of Translation Memory IDs that Lara will use to adapt translations to your specific style and terminology.
+
+**What are Translation Memories?**
+
+Translation Memories are repositories of quality-vetted sentence translation examples that help Lara adapt in real-time to your organization's style, terminology, and domain-specific language. They enable:
+
+- **Domain adaptation** using past translation examples
+- **Consistent terminology** across all translations
+- **Brand voice preservation** in all locales
+- **Instant error correction** by adding new examples
+- **Continuous quality improvement** without model retraining
+
+**Configuration:**
+
+- **Type**: Array of strings (Translation Memory IDs)
+- **Default**: `[]` (empty array, no Translation Memories used)
+- **Format**: Memory IDs typically start with `mem_` (e.g., `mem_abc123`)
+- **Behavior**: When empty or not specified, no Translation Memories are used
+
+**How to find Translation Memory IDs:**
+
+1. Run `lara-cli memory` to list all available Translation Memories
+2. Check the Lara platform dashboard
+3. Contact Lara support for assistance
+
+**Example configurations:**
+
+```yaml
+# No Translation Memories (default)
+memories: []
+
+# Single Translation Memory
+memories:
+  - mem_legal_en_es_123
+
+# Multiple Translation Memories for comprehensive coverage
+memories:
+  - mem_legal_terminology_456
+  - mem_medical_terms_789
+  - mem_brand_voice_abc
+```
+
+**Best practices:**
+
+- Use separate memories for different domains (legal, medical, technical, marketing)
+- Combine multiple memories for comprehensive terminology coverage
+- Keep memories updated with quality-vetted translation examples
+- Use complete locale codes (e.g., `pt-PT` not `pt`) when populating memories
+
+**Requirements:**
+
+- Available for **Team and Enterprise subscriptions only**
+- Memory IDs must belong to your Lara account
+- Memories must be created and populated through the Lara platform or SDK
+
+**Related documentation:**
+
+- [Memory Command](memory.md) - List and manage Translation Memories
+- [Init Command](init.md#using-translation-memories) - Configure memories during initialization
+- [Official Translation Memory Documentation](https://developers.laratranslate.com/docs/adapt-to-translation-memories)
+
+**Translation Memories vs. Instructions:**
+
+Translation Memories and Instructions work together but serve different purposes:
+
+- **Translation Memories**: Provide concrete past translation examples (sentence pairs) for adaptation
+- **Instructions**: Provide natural language directives about tone, style, and requirements
+- **Best approach**: Use both together for optimal translation quality
+  - Instructions define the general style and domain context
+  - Translation Memories provide specific terminology and phrasing examples
 
 ### Files
 
@@ -459,6 +539,7 @@ locales:
   target:
     - es
     - fr
+memories: []
 files:
   json:
     include:
@@ -483,6 +564,9 @@ locales:
     - fr
     - de
     - it
+memories:
+  - mem_abcr13s
+  - mem_vex24fv
 files:
   json:
     include:

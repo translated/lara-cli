@@ -5,4 +5,5 @@ export interface InitOptions {
   paths: string[];
   resetCredentials: boolean;
   instruction?: string;
+  translationMemories: string[];
 }

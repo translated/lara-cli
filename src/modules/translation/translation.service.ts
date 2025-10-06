@@ -1,4 +1,4 @@
-import { Credentials, TranslateOptions, Translator } from '@translated/lara';
+import { Credentials, TranslateOptions, Translator, Memory } from '@translated/lara';
 
 export type TextBlock = {
   text: string;
@@ -53,4 +53,9 @@ export class TranslationService {
     // This should never be reached, but TypeScript requires it
     throw new Error('Max retries exceeded');
   }
+
+  public async getTranslationMemories(): Promise<Memory[]> {
+    return await this.client.memories.list();
+  }
+  
 }

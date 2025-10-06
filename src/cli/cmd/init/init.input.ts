@@ -1,13 +1,14 @@
 import { confirm, input } from '@inquirer/prompts';
 import Ora from 'ora';
 import { searchLocalePaths } from '#utils/path.js';
-import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
+import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX, LARA_WEB_URL } from '#modules/common/common.const.js';
 import { InitOptions } from './init.types.js';
 import { FilePath } from '#modules/config/config.types.js';
 import { extractLocaleFromPath } from '#utils/locale.js';
 import { displayLocaleTable, formatLocaleList } from '#utils/display.js';
 import customSearchableSelect from '#utils/prompt.js';
 import { normalizeContext } from './init.utils.js';
+import { TranslationService } from '#modules/translation/translation.service.js';
 
 export async function sourceInput(options: InitOptions): Promise<string> {
   const choices = AVAILABLE_LOCALES.map((locale) => ({
@@ -262,4 +263,44 @@ export async function fileInstructionsInput(paths: string[]): Promise<Array<{ pa
   Ora().info('You can also add instructions for specific keys in the lara.yaml file. See documentation for more information.');
 
   return fileInstructions;
+}
+
+export async function translationMemoriesInput(existingMemories: string[], options: InitOptions): Promise<string[]> {
+  
+  if(options.translationMemories.length > 0) {
+    return options.translationMemories
+  }
+
+  const shouldHandleTranslationMessage = existingMemories.length > 0 ? 'Do you want to update the selected Translation Memories?' : 'Do you want to use translation memories?';
+  const shouldHandleTranslationMemories = await confirm({
+    message: shouldHandleTranslationMessage,
+    default: false,
+  });
+
+  if(!shouldHandleTranslationMemories) {
+    return existingMemories || [];
+  }
+
+  const translationService = TranslationService.getInstance();
+  const clientTranslationMemories = await translationService.getTranslationMemories();
+
+  if (clientTranslationMemories.length === 0) {
+    Ora().warn(`No Translation Memories linked. Visit ${LARA_WEB_URL} to learn more.`);
+    return [];
+  }
+
+  const choices = clientTranslationMemories.map((translationMemory) => ({
+    value: translationMemory.id,
+    label: translationMemory.name,
+    checked: existingMemories.includes(translationMemory.id),
+  }));
+
+  const translationMemories = await customSearchableSelect({
+    message: 'Select the memories Lara will use to personalize your translations',
+    choices: choices,
+    multiple: true,
+    default: options.translationMemories,
+  });
+
+  return translationMemories;
 }
