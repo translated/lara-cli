@@ -55,7 +55,7 @@ export class TranslationService {
   }
 
   public async getTranslationMemories(): Promise<Memory[]> {
-    return await this.client.memories.list();
+    return this.client.memories.list();
   }
   
 }

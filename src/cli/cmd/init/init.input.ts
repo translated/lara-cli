@@ -268,7 +268,7 @@ export async function fileInstructionsInput(paths: string[]): Promise<Array<{ pa
 export async function translationMemoriesInput(existingMemories: string[], options: InitOptions): Promise<string[]> {
   
   if(options.translationMemories.length > 0) {
-    return options.translationMemories
+    return options.translationMemories;
   }
 
   const shouldHandleTranslationMessage = existingMemories.length > 0 ? 'Do you want to update the selected Translation Memories?' : 'Do you want to use translation memories?';

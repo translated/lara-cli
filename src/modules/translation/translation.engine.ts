@@ -203,7 +203,7 @@ export class TranslationEngine {
 
     const options: TranslateOptions = {
       instructions: instruction ? [instruction] : undefined,
-      adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Use an empty array instead of undefined to prevent Lara from using translation memories when none are explicitly selected
+      adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
     };
     
     const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale, options);
