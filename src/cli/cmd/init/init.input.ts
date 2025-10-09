@@ -274,7 +274,7 @@ export async function translationMemoriesInput(existingMemories: string[], optio
   const shouldHandleTranslationMessage = existingMemories.length > 0 ? 'Do you want to update the selected Translation Memories?' : 'Do you want to use translation memories?';
   const shouldHandleTranslationMemories = await confirm({
     message: shouldHandleTranslationMessage,
-    default: false,
+    default: existingMemories.length === 0,
   });
 
   if(!shouldHandleTranslationMemories) {
@@ -292,14 +292,13 @@ export async function translationMemoriesInput(existingMemories: string[], optio
   const choices = clientTranslationMemories.map((translationMemory) => ({
     value: translationMemory.id,
     label: translationMemory.name,
-    checked: existingMemories.includes(translationMemory.id),
   }));
 
   const translationMemories = await customSearchableSelect({
     message: 'Select the memories Lara will use to personalize your translations',
     choices: choices,
     multiple: true,
-    default: options.translationMemories,
+    default: existingMemories,
   });
 
   return translationMemories;
