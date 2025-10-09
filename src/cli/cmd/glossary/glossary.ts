@@ -40,7 +40,7 @@ async function listGlossaries(): Promise<void> {
       return;
     }
 
-    spinner.succeed(`Found ${clientGlossaries.length} Glossary ${clientGlossaries.length === 1 ? 'Glossary' : 'Glossaries'}:\n`);
+    spinner.succeed(`Found ${clientGlossaries.length} ${clientGlossaries.length === 1 ? 'Glossary' : 'Glossaries'}:\n`);
 
     for(const glossary of clientGlossaries) {
       console.log(`  ID: ${glossary.id}`);
