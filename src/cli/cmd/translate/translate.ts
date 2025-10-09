@@ -95,6 +95,7 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
       fileKeyInstructions: fileInstructionConfig?.keyInstructions || [],
       globalKeyInstructions: fileConfig.keyInstructions,
       translationMemoryIds: config.memories,
+      glossaryIds: config.glossaries,
     });
 
     try{

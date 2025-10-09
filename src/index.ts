@@ -7,6 +7,7 @@ dotenv.config({ debug: false, quiet: true });
 import initCommand from './cli/cmd/init/init.js';
 import translateCommand from './cli/cmd/translate/translate.js';
 import memoryCommand from './cli/cmd/memory/memory.js';
+import glossaryCommand from './cli/cmd/glossary/glossary.js';
 
 const program = new Command()
   .name('lara-cli')
@@ -19,7 +20,8 @@ const program = new Command()
   )
   .addCommand(initCommand)
   .addCommand(translateCommand)
-  .addCommand(memoryCommand);
+  .addCommand(memoryCommand)
+  .addCommand(glossaryCommand);
 
 // Parse command line arguments
 program.parse();

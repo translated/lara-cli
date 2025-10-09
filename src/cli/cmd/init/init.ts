@@ -8,11 +8,11 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import { fileInstructionsInput, instructionInput, pathsInput, sourceInput, targetInput, translationMemoriesInput } from './init.input.js';
+import { fileInstructionsInput, instructionInput, pathsInput, sourceInput, targetInput, translationMemoriesInput, glossariesInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
-import { getExistingInstruction, setCredentials, resolveProjectInstruction, getExistingMemories } from './init.utils.js';
+import { getExistingInstruction, setCredentials, resolveProjectInstruction, getExistingMemories, getExistingGlossaries } from './init.utils.js';
 
 
 export default new Command()
@@ -79,6 +79,13 @@ export default new Command()
       })
       .default([])
   )
+  .addOption(
+    new Option('-g --glossaries <glossaries>', 'Glossaries to use for translations')
+      .argParser((value) => {
+        return value.split(COMMA_AND_SPACE_REGEX);
+      })
+      .default([])
+  )
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
       ? await handleInteractiveMode(options)
@@ -113,6 +120,7 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
       target: options.target,
     },
     memories: options.translationMemories,
+    glossaries: options.glossaries,
     files: {
       json: {
         include: options.paths,
@@ -176,6 +184,9 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
   const existingMemories = getExistingMemories(options.force);
   const inputTranslationMemories = await translationMemoriesInput(existingMemories, options);
 
+  const existingGlossaries = getExistingGlossaries(options.force);
+  const inputGlossaries = await glossariesInput(existingGlossaries, options);
+
   return {
     version: '1.0.0',
     project: {
@@ -186,6 +197,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       target: inputTarget,
     },
     memories: inputTranslationMemories,
+    glossaries: inputGlossaries,
     files: {
       json: {
         include: inputPaths,

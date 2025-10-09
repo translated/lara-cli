@@ -57,5 +57,8 @@ export class TranslationService {
   public async getTranslationMemories(): Promise<Memory[]> {
     return this.client.memories.list();
   }
-  
+
+  public async getGlossaries() {
+    return this.client.glossaries.list();
+  }
 }
