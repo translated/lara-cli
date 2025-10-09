@@ -56,7 +56,15 @@ When running `lara-cli init` without the `--non-interactive` flag, the command o
    - Translation Memories enable Lara to adapt to your style and terminology using past translation examples
    - Available for Team and Enterprise subscriptions only
 
-8. **API Credentials Setup** (if not already configured):
+8. **Glossaries** (optional):
+   - If Glossaries are already configured, you'll be asked if you want to update them
+   - If none are configured, you'll be asked if you want to use Glossaries
+   - Shows a searchable list of all available Glossaries from your account
+   - Allows selection of multiple Glossaries to control domain-specific terminology
+   - Glossaries ensure precise and consistent translation of technical terms, brand names, and industry-specific vocabulary
+   - Available for Pro and Team subscriptions only
+
+9. **API Credentials Setup** (if not already configured):
    - Prompts to add API credentials to `.env` file
    - Option to skip and configure later
 
@@ -96,6 +104,9 @@ locales:
 memories:
   - mem_abc123
   - mem_def456
+glossaries:
+  - gls_xyz789
+  - gls_uvw012
 files:
   json:
     include:
@@ -105,7 +116,7 @@ files:
     ignoredKeys: []
 ```
 
-By default, `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data. The `project.instruction` property is optional but recommended for better translation quality. The `memories` property allows you to specify Translation Memories for domain adaptation. There are additional properties you can configure later.
+By default, `locales.source`, `locales.target` and `files.json.include` properties will be populated with your selected data. The `project.instruction` property is optional but recommended for better translation quality. The `memories` property allows you to specify Translation Memories for domain adaptation. The `glossaries` property allows you to specify Glossaries for terminology control. There are additional properties you can configure later.
 
 For complete details about the configuration file, see the [Lara.yaml Configuration Reference](lara_yaml.md)
 
@@ -277,6 +288,36 @@ Proceed to the [translate command documentation](translate.md#translate-command)
   - Run `lara-cli memory` to view all available Translation Memories
   - See [Memory Command Documentation](memory.md) for details
 
+### `-g <glossaries>`, `--glossaries <glossaries>`
+- **Type**: String (comma/space-separated Glossary IDs)
+- **Description**: Specifies Glossary IDs to use for precise terminology control during translations
+- **Purpose**: Ensures consistent and accurate translation of domain-specific terms, brand names, and technical vocabulary
+- **Format**: Glossary IDs can be separated by commas, spaces, or both (e.g., `"gls_abc123, gls_def456"` or `"gls_abc123 gls_def456"`)
+- **Behavior**:
+  - **In interactive mode**: You'll be prompted to select Glossaries from your account if this option is not provided
+  - **In non-interactive mode**: Glossaries specified via this option will be saved to the configuration
+  - **If glossaries already exist** in your configuration: Providing new glossary IDs will replace the existing ones
+- **Requirements**:
+  - Available for **Pro and Team subscriptions only**
+  - Glossary IDs must belong to your Lara account
+  - Glossary IDs typically start with `gls_`
+- **How to find Glossary IDs**:
+  - Run `lara-cli glossary` to list available Glossaries
+  - Check the Lara platform dashboard
+  - Contact Lara support for assistance
+- **Use Cases**:
+  - Ensure precise translation of technical terms
+  - Maintain consistency for product names and brand terminology
+  - Control legal and medical terminology
+  - Preserve industry-specific vocabulary
+- **Examples**:
+  - `--glossaries "gls_abc123, gls_def456"`
+  - `--glossaries "gls_legal_terms"`
+  - `-g "gls_123 gls_456 gls_789"`
+- **Related Commands**:
+  - Run `lara-cli glossary` to view all available Glossaries
+  - See [Glossary Command Documentation](glossary.md) for details
+
 ### `-h`, `--help`
 - **Description**: Shows help information for the command
 
@@ -406,6 +447,52 @@ For more information about Translation Memories, see:
 - [Memory Command Documentation](memory.md)
 - [Official Translation Memory Documentation](https://developers.laratranslate.com/docs/adapt-to-translation-memories)
 
+### Using Glossaries
+
+```bash
+# List available Glossaries first
+lara-cli glossary
+
+# Initialize with specific Glossaries (interactive mode)
+lara-cli init --glossaries "gls_abc123, gls_def456"
+
+# Initialize with Glossaries in non-interactive mode
+lara-cli init --source "en" --target "es, fr" \
+  --paths "src/i18n/[locale].json" \
+  --glossaries "gls_legal_123, gls_medical_456" \
+  --non-interactive
+
+# Update Glossaries in existing configuration
+lara-cli init --glossaries "gls_new_123" --force
+```
+
+**Glossary behavior:**
+- **First initialization**: Selected glossaries are saved to your `lara.yaml` configuration
+- **Re-initialization without `--glossaries`**: Existing glossaries are automatically preserved
+- **Re-initialization with `--glossaries`**: New glossary IDs replace the existing ones
+- **Interactive mode without `--glossaries`**: You'll be prompted to select glossaries if none exist
+
+**Best practices for using Glossaries:**
+- Use separate glossaries for different domains (legal, medical, technical)
+- Combine multiple glossaries for comprehensive terminology coverage
+- Keep glossaries updated with accurate term translations
+- Use complete locale codes (e.g., `en-US` not `en`) when populating glossaries
+- Run `lara-cli glossary` regularly to verify available glossaries
+- Use the Lara platform or SDK for full glossary management
+
+**Glossaries vs. Translation Memories vs. Instructions:**
+- **Glossaries**: Exact term-to-term translations (e.g., "API" → "API", "Database" → "Base de datos")
+- **Translation Memories**: Sentence-level adaptation using past translation examples
+- **Instructions**: Natural language directives about tone, style, and domain context
+- **Best approach**: Use all three together for optimal translation quality
+  - Glossaries ensure critical terms are always translated correctly
+  - Translation Memories adapt overall style and phrasing
+  - Instructions guide tone, formality, and context
+
+For more information about Glossaries, see:
+- [Glossary Command Documentation](glossary.md)
+- [Official Glossary Documentation](https://developers.laratranslate.com/docs/manage-glossaries)
+
 ### Getting Help
 
 ```bash
@@ -416,5 +503,6 @@ lara-cli init --help
 ## Need More Help?
 
 - [Memory Command](memory.md) - Manage Translation Memories
+- [Glossary Command](glossary.md) - Manage Glossaries
 - [Translate Command](translate.md) - Next steps after initialization
 - [Configuration Reference](lara_yaml.md) - Detailed configuration options

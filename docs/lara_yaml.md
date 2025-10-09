@@ -14,6 +14,7 @@ locales:
     - es
     - fr
 memories: []
+glossaries: []
 files:
   json:
     include:
@@ -130,6 +131,92 @@ Translation Memories and Instructions work together but serve different purposes
 - **Best approach**: Use both together for optimal translation quality
   - Instructions define the general style and domain context
   - Translation Memories provide specific terminology and phrasing examples
+
+### Glossaries
+
+```yaml
+glossaries:
+  - gls_abc123
+  - gls_def456
+```
+
+The `glossaries` section is an optional array of Glossary IDs that Lara will use to ensure precise and consistent translation of domain-specific terminology.
+
+**What are Glossaries?**
+
+Glossaries are structured terminology databases containing exact term-to-term translations. They give you full control over how specific terms, phrases, brand names, and technical vocabulary are translated. Glossaries provide:
+
+- **Precise terminology control** for domain-specific terms
+- **Exact term translations** that override general translation rules
+- **Consistent brand names** and product terminology
+- **Technical vocabulary** preservation across all translations
+- **Industry-specific terms** with defined translations
+
+**Configuration:**
+
+- **Type**: Array of strings (Glossary IDs)
+- **Default**: `[]` (empty array, no Glossaries used)
+- **Format**: Glossary IDs typically start with `gls_` (e.g., `gls_abc123`)
+- **Behavior**: When empty or not specified, no Glossaries are used
+
+**How to find Glossary IDs:**
+
+1. Run `lara-cli glossary` to list all available Glossaries
+2. Check the Lara platform dashboard
+3. Contact Lara support for assistance
+
+**Example configurations:**
+
+```yaml
+# No Glossaries (default)
+glossaries: []
+
+# Single Glossary
+glossaries:
+  - gls_legal_en_es_123
+
+# Multiple Glossaries for comprehensive coverage
+glossaries:
+  - gls_legal_terminology_456
+  - gls_medical_terms_789
+  - gls_brand_names_abc
+  - gls_product_features_def
+```
+
+**Best practices:**
+
+- Use separate glossaries for different domains (legal, medical, technical, marketing)
+- Combine multiple glossaries for comprehensive terminology coverage
+- Keep glossaries updated with accurate term translations
+- Use complete locale codes (e.g., `en-US` not `en`) when populating glossaries
+- Organize glossaries by language pair for better management
+
+**Requirements:**
+
+- Available for **Pro and Team subscriptions only**
+- Glossary IDs must belong to your Lara account
+- Glossaries must be created and populated through the Lara platform or SDK
+
+**Related documentation:**
+
+- [Glossary Command](glossary.md) - List and manage Glossaries
+- [Init Command](init.md#using-glossaries) - Configure glossaries during initialization
+- [Official Glossary Documentation](https://developers.laratranslate.com/docs/manage-glossaries)
+
+**Glossaries vs. Translation Memories vs. Instructions:**
+
+These three features work together but serve different purposes:
+
+| Feature | Scope | Use Case | Best For |
+|---------|-------|----------|----------|
+| **Glossaries** | Individual terms | Exact term-to-term mapping | Technical terms, brand names, industry vocabulary |
+| **Translation Memories** | Full sentences | Sentence-level adaptation | Style, tone, phrasing patterns |
+| **Instructions** | Project/file/key level | Natural language directives | Domain context, formality, audience |
+
+**Best approach**: Use all three together for optimal translation quality:
+- **Glossaries** ensure critical terms are always translated correctly
+- **Translation Memories** adapt overall style and phrasing to your brand voice
+- **Instructions** guide tone, formality, and domain context
 
 ### Files
 
@@ -540,6 +627,7 @@ locales:
     - es
     - fr
 memories: []
+glossaries: []
 files:
   json:
     include:
@@ -565,8 +653,11 @@ locales:
     - de
     - it
 memories:
-  - mem_abcr13s
-  - mem_vex24fv
+  - mem_fashion_terminology_123
+  - mem_brand_voice_456
+glossaries:
+  - gls_product_names_789
+  - gls_technical_terms_abc
 files:
   json:
     include:
