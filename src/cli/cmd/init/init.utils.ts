@@ -160,3 +160,26 @@ export function getExistingMemories(force: boolean): string[] {
     return [];
   }
 }
+
+
+/**
+ * Retrieves existing glossaries from config if available.
+ * Returns an empty array if config doesn't exist, force flag is set, or error occurs.
+ * 
+ * @param force - If true, ignores existing glossaries
+ * @returns Existing glossaries or an empty array
+ */
+export function getExistingGlossaries(force: boolean): string[] {
+  const configProvider = ConfigProvider.getInstance();
+  
+  if (!configProvider.doesConfigExists() || force) {
+    return [];
+  }
+
+  try {
+    const config = configProvider.getConfig();
+    return config.glossaries || [];
+  } catch {
+    return [];
+  }
+}

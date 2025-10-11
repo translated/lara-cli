@@ -6,4 +6,5 @@ export interface InitOptions {
   resetCredentials: boolean;
   instruction?: string;
   translationMemories: string[];
+  glossaries: string[];
 }

@@ -26,6 +26,7 @@ export type TranslationEngineOptions = {
   globalKeyInstructions: Array<{ path: string; instruction: string; }>;
 
   translationMemoryIds: Memory['id'][];
+  glossaryIds: string[];
 };
 
 /**
@@ -92,6 +93,7 @@ export class TranslationEngine {
   private readonly globalKeyInstructionPatterns: Array<{ matcher: Matcher; instruction: string; }>;
 
   private readonly translationMemoryIds: Memory['id'][];
+  private readonly glossaryIds: string[];
 
   private readonly translatorService: TranslationService;
 
@@ -118,6 +120,7 @@ export class TranslationEngine {
     }));
 
     this.translationMemoryIds = options.translationMemoryIds;
+    this.glossaryIds = options.glossaryIds;
 
     this.translatorService = TranslationService.getInstance();
   }
@@ -204,6 +207,7 @@ export class TranslationEngine {
     const options: TranslateOptions = {
       instructions: instruction ? [instruction] : undefined,
       adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
+      glossaries: this.glossaryIds.length > 0 ? this.glossaryIds : undefined,
     };
     
     const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale, options);

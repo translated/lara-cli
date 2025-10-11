@@ -303,3 +303,41 @@ export async function translationMemoriesInput(existingMemories: string[], optio
 
   return translationMemories;
 }
+
+export async function glossariesInput(existingGlossaries: string[], options: InitOptions): Promise<string[]> {
+  if(options.glossaries.length > 0) {
+    return options.glossaries;
+  }
+
+  const shouldHandleGlossariesMessage = existingGlossaries.length > 0 ? 'Do you want to update the selected Glossaries?' : 'Do you want to use glossaries?';
+  const shouldHandleGlossaries = await confirm({
+    message: shouldHandleGlossariesMessage,
+    default: existingGlossaries.length === 0,
+  });
+
+  if(!shouldHandleGlossaries) {
+    return existingGlossaries;
+  }
+
+  const translationService = TranslationService.getInstance();
+  const clientGlossaries = await translationService.getGlossaries();
+  
+  if (clientGlossaries.length === 0) {
+    Ora().warn(`No Glossaries linked. Visit ${LARA_WEB_URL} to learn more.`);
+    return [];
+  }
+  
+  const choices = clientGlossaries.map((glossary) => ({
+    value: glossary.id,
+    label: glossary.name,
+  }));
+  
+  const glossaries = await customSearchableSelect({
+    message: 'Select the glossaries Lara will use to personalize your translations',
+    choices: choices,
+    multiple: true,
+    default: existingGlossaries,
+  });
+
+  return glossaries;
+}
