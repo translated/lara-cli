@@ -24,7 +24,7 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 - Node.js v18 or higher
 - pnpm v8 or higher
 
-## 🖥️ Local Development Setup
+## Local Development Setup
 
 1. **Clone the repository**
 
@@ -100,7 +100,7 @@ lara-cli translate --help
 
 **Note:** After making changes to the source code, run `pnpm run build` to update the global command.
 
-## 📝 Setting Up Your Project
+## Setting Up Your Project
 
 ### Add Your Credentials to `.env`
 
@@ -164,7 +164,7 @@ That's it – you're ready to go!
 > **📖 Documentation:** For detailed information about commands, see [Init Command](docs/commands/init.md) and [Translate Command](docs/commands/translate.md).
 
 
-## 💻 Technology Stack
+## Technology Stack
 
 Lara CLI is built with modern technologies to ensure reliability, performance, and maintainability:
 
