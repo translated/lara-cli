@@ -8,95 +8,23 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 
 </div>
 
-> **⚠️ Development Mode Only:** This tool is currently in active development. A full release is coming soon! 🚀
-
+> **⚠️ Development Mode Only:** This tool is currently available in development mode. The full release is coming soon! 🚀
 
 ## 📑 Table of Contents
 
 - [Requirements](#requirements)
-- [Setting Up Your Project](#setting-up-your-project)
 - [Local Development Setup](#local-development-setup)
-- [How Lara CLI Works Under the Hood](#how-lara-cli-works-under-the-hood)
+- [Setting Up Your Project](#setting-up-your-project)
 - [Technology Stack](#technology-stack)
 - [Supported Locales](#supported-locales)
 - [Documentation](#documentation)
-
 
 ## Requirements
 
 - Node.js v18 or higher
 - pnpm v8 or higher
 
-
-## 📝 Setting Up Your Project
-
-### Add Your Credentials to `.env`
-
-Create a `.env` file (or add the following lines to an existing `.env`) in the project where you want to run translations.
-
-💡 **Tip:** If you don't have API keys yet, visit [Lara's API key documentation](https://support.laratranslate.com/en/api-key-for-laras-api).
-
-
-```bash
-LARA_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
-LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
-```
-
-Replace the placeholders with your **actual credentials**.
-
-> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
-
-### Initialize Your Project
-
-In your project directory, run:
-
-```bash
-lara-cli init
-```
-
-This will start the interactive initialization process.
-
-The CLI will **automatically detect your localization directories and target locales** from your existing project files, then guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
-
-**Key features:**
-- 🔍 **Auto-detection**: Scans your project for existing locale files and automatically suggests target locales
-- 📊 **Smart display**: For enterprise projects with many locales, uses formatted tables for better readability
-- ⚙️ **Flexible configuration**: Choose detected locales or manually add/remove as needed
-- 🎯 **Project instructions**: Optionally provide instructions to improve translation quality (e.g., tone, style, terminology)
-
-**Providing project instructions** (optional but recommended):
-
-During initialization, you can provide instructions to help improve translation quality. Instructions guide the translation service on tone, style, and terminology. This is especially useful for:
-- Tone requirements (formal, casual, professional, friendly)
-- Domain-specific terminology (medical, legal, technical, etc.)
-- Style preferences (concise, creative, detailed)
-
-You can provide instructions in two ways:
-
-```bash
-# Interactive mode - you'll be prompted
-lara-cli init
-
-# Non-interactive mode - via CLI option
-lara-cli init --instruction "Use formal tone and medical terminology."
-```
-
-If you've already initialized your project with instructions, running `init` again will preserve them unless you explicitly provide new instructions via the `--instruction` option.
-
-### Translate Your Files!
-
-To translate your files into the target locales, run:
-
-```bash
-lara-cli translate
-```
-
-That's it – you're ready to go!
-
-> **📖 Documentation:** For detailed information about commands, see [Init Command](docs/init.md) and [Translate Command](docs/translate.md).
-
-
-## 🖥️ Local Development Setup
+## Local Development Setup
 
 1. **Clone the repository**
 
@@ -172,15 +100,71 @@ lara-cli translate --help
 
 **Note:** After making changes to the source code, run `pnpm run build` to update the global command.
 
+## Setting Up Your Project
 
-## 🧠 How Lara CLI Works Under the Hood
+### Add Your Credentials to `.env`
 
-When you run Lara for the first time, it translates your project while leaving existing translations untouched — unless it detects inconsistencies between the files.
+Create a `.env` file (or add the following lines to an existing `.env`) in the project where you want to run translations.
 
-After the initial translation, a `.lara.lock` file is generated to keep track of changes. From that point on, whenever you modify your source locale file and request a new translation, **only the updated keys will be translated**.
+💡 **Tip:** If you don't have API keys yet, visit [Lara's API key documentation](https://support.laratranslate.com/en/api-key-for-laras-api).
 
 
-## 💻 Technology Stack
+```bash
+LARA_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
+LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
+```
+
+Replace the placeholders with your **actual credentials**.
+
+> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
+
+### Initialize Your Project
+
+In your project directory, run:
+
+```bash
+lara-cli init
+```
+
+This will start the interactive initialization process.
+
+The CLI will **automatically detect your localization directories and target locales** from your existing project files, then guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
+
+**Key features:**
+
+- 🔍 **Auto-detection**: Scans your project for existing locale files and automatically suggests target locales
+- 📊 **Smart display**: For enterprise projects with many locales, uses formatted tables for better readability
+- ⚙️ **Flexible configuration**: Choose detected locales or manually add/remove as needed
+- 🎯 **Project instructions**: Optionally provide instructions to improve translation quality (e.g., tone, style, terminology)
+
+**Providing project instructions** (optional but recommended):
+
+During initialization, you can provide instructions to help improve translation quality. Instructions guide the translation service on tone, style, and terminology. This is especially useful for:
+
+- Tone requirements (formal, casual, professional, friendly)
+- Domain-specific terminology (medical, legal, technical, etc.)
+- Style preferences (concise, creative, detailed)
+
+**Providing glossaries** (optional but recommended):
+
+Lara's glossary system lets you define exactly how specific terms should be translated, across any text or document. Whether you work with technical terms, product names, or recurring brand phrases, glossaries are your best tool to ensure consistency and precision.
+
+💡 **Tip:** For more information about glossaries, visit [Lara's Glossary documentation](https://support.laratranslate.com/en/how-glossaries-work-in-lara).
+
+### Translate Your Files!
+
+To translate your files into the target locales, run:
+
+```bash
+lara-cli translate
+```
+
+That's it – you're ready to go!
+
+> **📖 Documentation:** For detailed information about commands, see [Init Command](docs/commands/init.md) and [Translate Command](docs/commands/translate.md).
+
+
+## Technology Stack
 
 Lara CLI is built with modern technologies to ensure reliability, performance, and maintainability:
 
@@ -192,73 +176,26 @@ Lara CLI is built with modern technologies to ensure reliability, performance, a
 
 The codebase follows a modular architecture with clear separation of concerns, making it easy to extend and maintain.
 
-
 ## Supported Locales
 
 Lara CLI supports translations using different locale codes, following two main standards:
 
-### ISO 639-1 Language Codes
-These are basic language identifiers (e.g., `en` for English, `fr` for French) that apply to all regions where the language is spoken.
-
-### BCP 47 Language Tags
-These are standardized language tags defined by BCP 47, combining ISO 639-1 language codes with ISO 3166-1 country codes (e.g., `en-US` for English in the United States, `fr-CA` for French in Canada). They provide more precise regional context and are often called "locale identifiers".
-
-> **Note:** You can use either ISO 639-1 codes or BCP 47 tags as source and target languages. The translation service will automatically handle the appropriate regional variants.
-
-
-### Supported Language Codes
-
-#### ISO 639-1 Language Codes
-
-| Code  | Language            | Code  | Language            |
-|-------|---------------------|-------|---------------------|
-| ar    | Arabic              | de    | German              |
-| bg    | Bulgarian           | el    | Greek               |
-| ca    | Catalan             | en    | English             |
-| cs    | Czech               | es    | Spanish             |
-| da    | Danish              | fi    | Finnish             |
-| fr    | French              | he    | Hebrew              |
-| hr    | Croatian            | hu    | Hungarian           |
-| id    | Indonesian          | it    | Italian             |
-| ja    | Japanese            | ko    | Korean              |
-| ms    | Malay               | nb    | Norwegian Bokmål    |
-| nl    | Dutch               | pl    | Polish              |
-| pt    | Portuguese          | ru    | Russian             |
-| sk    | Slovak              | sv    | Swedish             |
-| th    | Thai                | tr    | Turkish             |
-| uk    | Ukrainian           | zh    | Chinese             |
-
-#### BCP 47 Language Tags / Locale Identifiers
-
-| Code     | Language & Region                    | Code     | Language & Region                    |
-|----------|--------------------------------------|----------|--------------------------------------|
-| ar-SA    | Arabic (Saudi Arabia)                | en-AU    | English (Australia)                  |
-| bg-BG    | Bulgarian (Bulgaria)                 | en-CA    | English (Canada)                     |
-| ca-ES    | Catalan (Spain)                      | en-GB    | English (United Kingdom)             |
-| cs-CZ    | Czech (Czech Republic)               | en-IE    | English (Ireland)                    |
-| da-DK    | Danish (Denmark)                     | en-US    | English (United States)              |
-| de-DE    | German (Germany)                     | es-419   | Spanish (Latin America)              |
-| el-GR    | Greek (Greece)                       | es-AR    | Spanish (Argentina)                  |
-| fi-FI    | Finnish (Finland)                    | es-ES    | Spanish (Spain)                      |
-| fr-CA    | French (Canada)                      | es-MX    | Spanish (Mexico)                     |
-| he-IL    | Hebrew (Israel)                      | fr-FR    | French (France)                      |
-| hr-HR    | Croatian (Croatia)                   | hu-HU    | Hungarian (Hungary)                  |
-| id-ID    | Indonesian (Indonesia)               | it-IT    | Italian (Italy)                      |
-| ja-JP    | Japanese (Japan)                     | ko-KR    | Korean (South Korea)                 |
-| ms-MY    | Malay (Malaysia)                     | nb-NO    | Norwegian Bokmål (Norway)            |
-| nl-BE    | Dutch (Belgium)                      | nl-NL    | Dutch (Netherlands)                  |
-| pl-PL    | Polish (Poland)                      | pt-BR    | Portuguese (Brazil)                  |
-| pt-PT    | Portuguese (Portugal)                | ru-RU    | Russian (Russia)                     |
-| sk-SK    | Slovak (Slovakia)                    | sv-SE    | Swedish (Sweden)                     |
-| th-TH    | Thai (Thailand)                      | tr-TR    | Turkish (Turkey)                     |
-| uk-UA    | Ukrainian (Ukraine)                  | zh-CN    | Chinese (China)                      |
-| zh-HK    | Chinese (Hong Kong)                  | zh-TW    | Chinese (Taiwan)                     |
-
+See the [full list of supported locales](docs/config/locales.md#supported-locales).
 
 ## Documentation
 
 For detailed documentation on using Lara CLI:
 
-- [Init Command](docs/init.md) - How to initialize your project
-- [Translate Command](docs/translate.md) - How to translate your files
-- [Lara.yaml Configuration](docs/lara_yaml.md) - Complete configuration reference
+### Commands
+- [Init Command](docs/commands/init.md) - Initialize your project
+- [Translate Command](docs/commands/translate.md) - Translate your files
+- [Memory Command](docs/commands/memory.md) - List available Translation Memories
+- [Glossary Command](docs/commands/glossary.md) - List available Glossaries
+
+### Configuration
+- [Configuration Overview](docs/config/README.md) - Configuration system overview
+- [Locales Configuration](docs/config/locales.md) - Configure source and target languages
+- [Files Configuration](docs/config/files.md) - Configure file paths and patterns
+- [Instructions](docs/config/instructions.md) - Configure translation instructions
+- [Translation Memories](docs/config/memories.md) - Configure Translation Memories
+- [Glossaries](docs/config/glossaries.md) - Configure Glossaries
