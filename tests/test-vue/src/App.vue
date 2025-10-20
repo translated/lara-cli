@@ -4,22 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { availableLanguages } from './i18n.js'
 
 const { t, locale } = useI18n()
-const currentTime = ref(new Date().toLocaleString())
-const showLanguageDropdown = ref(false)
-
-// Update time every second
-setInterval(() => {
-  currentTime.value = new Date().toLocaleString()
-}, 1000)
 
 // Language switcher
 const setLanguage = (lang) => {
   locale.value = lang
-  showLanguageDropdown.value = false
-}
-
-const toggleLanguageDropdown = () => {
-  showLanguageDropdown.value = !showLanguageDropdown.value
 }
 
 // Get current language info
@@ -30,371 +18,195 @@ const getCurrentLanguageInfo = () => {
 
 <template>
   <div class="container">
-    <header class="header">
-      <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="80" height="80" />
+    <div class="content-wrapper">
+      <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="60" height="60" />
       <h1 class="title">{{ t('welcome') }}</h1>
+      <p class="subtitle">Test page for Lara CLI translations</p>
       
-      <!-- Language Selector -->
       <div class="language-selector">
-        <button class="lang-btn" @click="toggleLanguageDropdown">
-          {{ getCurrentLanguageInfo().flag }} {{ getCurrentLanguageInfo().name }}
-          <span class="dropdown-arrow">{{ showLanguageDropdown ? '▲' : '▼' }}</span>
-        </button>
-        
-        <div v-if="showLanguageDropdown" class="language-dropdown">
-          <div class="dropdown-header">{{ t('language_selector') }}</div>
-          <div class="language-list">
-            <button 
-              v-for="(langInfo, langCode) in availableLanguages" 
-              :key="langCode"
-              class="language-option"
-              :class="{ active: locale === langCode }"
-              @click="setLanguage(langCode)"
-            >
-              <span class="flag">{{ langInfo.flag }}</span>
-              <span class="name">{{ langInfo.name }}</span>
-              <span v-if="locale === langCode" class="checkmark">✓</span>
-            </button>
-          </div>
+        <label for="lang-select" class="selector-label">Select Language:</label>
+        <select 
+          id="lang-select"
+          v-model="locale" 
+          @change="setLanguage(locale)"
+          class="language-select"
+        >
+          <option 
+            v-for="(langInfo, langCode) in availableLanguages" 
+            :key="langCode"
+            :value="langCode"
+          >
+            {{ langInfo.flag }} {{ langInfo.name }}
+          </option>
+        </select>
+        <div class="current-language">
+          Current: {{ getCurrentLanguageInfo().flag }} {{ getCurrentLanguageInfo().name }}
         </div>
       </div>
-    </header>
-
-    <main class="main-content">
-      <div class="welcome-card">
-        <h2>{{ t('simple_page') }}</h2>
-        <p class="description">
-          {{ t('description') }} 
-          <code>http://localhost:5176/</code>
-        </p>
-        
-        <div class="info-section">
-          <div class="info-item">
-            <strong>{{ t('framework') }}:</strong> Vue 3
-          </div>
-          <div class="info-item">
-            <strong>{{ t('build_tool') }}:</strong> Vite
-          </div>
-          <div class="info-item">
-            <strong>{{ t('current_time') }}:</strong> {{ currentTime }}
-          </div>
-        </div>
-
-        <div class="features">
-          <h3>{{ t('features') }}:</h3>
-          <ul>
-            <li>{{ t('responsive_design') }}</li>
-            <li>{{ t('real_time_clock') }}</li>
-            <li>{{ t('modern_styles') }}</li>
-            <li>{{ t('i18n_support') }}</li>
-          </ul>
-        </div>
-
-        <div class="actions">
-          <button class="btn primary" @click="alert(locale === 'it' ? 'Ciao da Vue!' : 'Hello from Vue!')">
-            {{ t('click_here') }}
-          </button>
-        </div>
-      </div>
-    </main>
-
-    <footer class="footer">
-      <p>{{ t('footer_text') }}</p>
-    </footer>
+    </div>
   </div>
 </template>
 
 <style scoped>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 .container {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.header {
-  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   padding: 2rem;
-  color: white;
-  position: relative;
 }
 
-.language-selector {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-}
-
-.lang-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: 25px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 180px;
-  justify-content: space-between;
-}
-
-.lang-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-.dropdown-arrow {
-  font-size: 0.8rem;
-  transition: transform 0.3s ease;
-}
-
-.language-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 0.5rem;
+.content-wrapper {
   background: white;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  min-width: 280px;
-  max-height: 400px;
-  overflow: hidden;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
-}
-
-.dropdown-header {
-  padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-weight: bold;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.language-list {
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.language-option {
+  border-radius: 24px;
+  padding: 4rem 3rem;
+  max-width: 600px;
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  transition: all 0.2s ease;
-  color: #333;
-  font-size: 0.9rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: fadeIn 0.5s ease-in;
 }
 
-.language-option:hover {
-  background: #f8f9fa;
-}
-
-.language-option.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.language-option .flag {
-  font-size: 1.2rem;
-  min-width: 24px;
-}
-
-.language-option .name {
-  flex: 1;
-  text-align: left;
-}
-
-.language-option .checkmark {
-  font-weight: bold;
-  color: #4CAF50;
-}
-
-.language-option.active .checkmark {
-  color: white;
-}
-
-/* Scrollbar styling for language list */
-.language-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.language-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-.language-list::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.language-list::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .logo {
-  margin-bottom: 1rem;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  margin-bottom: 2rem;
+  filter: drop-shadow(0 4px 12px rgba(102, 126, 234, 0.3));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .title {
-  font-size: 2.5rem;
-  margin: 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 2rem;
-}
-
-.welcome-card {
-  background: white;
-  border-radius: 20px;
-  padding: 3rem;
-  max-width: 600px;
-  width: 100%;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.welcome-card h2 {
-  color: #333;
+  font-size: 3rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 1rem;
-  font-size: 2rem;
+  line-height: 1.2;
 }
 
-.description {
-  color: #666;
-  font-size: 1.1rem;
-  line-height: 1.6;
-  margin-bottom: 2rem;
+.subtitle {
+  font-size: 1.125rem;
+  color: #64748b;
+  margin-bottom: 3rem;
+  font-weight: 500;
 }
 
-.description code {
-  background: #f0f0f0;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  color: #e91e63;
-}
-
-.info-section {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 1.5rem;
-  margin: 2rem 0;
-}
-
-.info-item {
-  margin: 0.5rem 0;
-  font-size: 1rem;
-}
-
-.info-item strong {
-  color: #333;
-}
-
-.features {
-  text-align: left;
-  margin: 2rem 0;
-}
-
-.features h3 {
-  color: #333;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.features ul {
-  list-style: none;
-  padding: 0;
-}
-
-.features li {
-  padding: 0.5rem 0;
-  font-size: 1rem;
-  color: #555;
-}
-
-.actions {
+.language-selector {
   margin-top: 2rem;
 }
 
-.btn {
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 50px;
-  font-size: 1.1rem;
-  font-weight: bold;
+.selector-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+
+.language-select {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background-color: white;
+  color: #1e293b;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-family: inherit;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 3rem;
 }
 
-.btn.primary {
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  color: white;
+.language-select:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+.language-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
 }
 
-.footer {
-  text-align: center;
-  padding: 1rem;
-  color: white;
-  background: rgba(0, 0, 0, 0.1);
+.language-select option {
+  padding: 0.75rem;
+  font-size: 1rem;
+}
+
+.current-language {
+  margin-top: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #475569;
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .content-wrapper {
+    padding: 3rem 2rem;
+  }
+
   .title {
-    font-size: 2rem;
+    font-size: 2.25rem;
   }
-  
-  .welcome-card {
-    padding: 2rem;
-    margin: 1rem;
+
+  .subtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
   }
-  
-  .welcome-card h2 {
-    font-size: 1.5rem;
+
+  .logo {
+    width: 50px;
+    height: 50px;
   }
-  
-  .language-selector {
-    position: static;
-    margin-top: 1rem;
-    display: flex;
-    justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.875rem;
   }
-  
-  .lang-btn {
-    min-width: 160px;
-  }
-  
-  .language-dropdown {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    right: auto;
-    margin-top: 0;
-    max-width: 90vw;
-    max-height: 80vh;
+
+  .content-wrapper {
+    padding: 2.5rem 1.5rem;
   }
 }
 </style>
