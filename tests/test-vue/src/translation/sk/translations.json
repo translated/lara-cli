@@ -1,0 +1,23 @@
+{
+  "welcome": "Vitajte",
+  "documentation": "Dokumentácia",
+  "tooling": "Nástroje",
+  "ecosystem": "Ekosystém",
+  "community": "Komunita",
+  "support": "Podpora Vue",
+  "language_selector": "Vyberte jazyk",
+  "vue_official_docs": "Oficiálna dokumentácia Vue vám poskytuje všetky informácie, ktoré potrebujete na začiatok.",
+  "project_served_with": "Tento projekt je doručený a spojený s",
+  "recommended_ide": "Odporúčané nastavenie IDE je",
+  "test_components": "Ak potrebujete otestovať svoje komponenty a webové stránky, pozrite si",
+  "more_instructions": "Ďalšie pokyny sú k dispozícii v",
+  "get_official_tools": "Získajte oficiálne nástroje a knižnice pre svoj projekt:",
+  "need_more_resources": "Ak potrebujete viac zdrojov, odporúčame vám zaplatiť",
+  "got_stuck": "Zasekli ste sa? Opýtajte sa na",
+  "official_discord": "(náš oficiálny server Discord) alebo",
+  "follow_official": "Mali by ste tiež dodržiavať oficiálne",
+  "bluesky_account": "účtu Bluesky alebo",
+  "x_account": "X účet pre najnovšie správy vo svete Vue.",
+  "independent_project": "Ako nezávislý projekt sa Vue spolieha na podporu komunity pre svoju udržateľnosť. Môžete nám pomôcť",
+  "becoming_sponsor": "stať sa sponzorom"
+}

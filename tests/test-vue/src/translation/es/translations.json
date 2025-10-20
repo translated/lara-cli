@@ -1,0 +1,21 @@
+{
+    "welcome": "¡Bienvenido a mi App Vue!",
+    "simple_page": "🎉 Página Simple",
+    "description": "Esta es una página simple de Vue.js creada para ser mostrada en",
+    "framework": "Framework",
+    "build_tool": "Herramienta de construcción",
+    "current_time": "Hora actual",
+    "features": "Características",
+    "responsive_design": "✅ Diseño responsivo",
+    "real_time_clock": "✅ Actualizaciones de reloj en tiempo real",
+    "modern_styles": "✅ Estilos modernos",
+    "i18n_support": "✅ Soporte i18n integrado",
+    "click_here": "¡Haz clic aquí!",
+    "footer_text": "© 2025 - Creado con ❤️ usando Vue.js",
+    "language_selector": "Seleccionar idioma",
+    "documentation": "Documentación",
+    "tooling": "Herramientas",
+    "ecosystem": "Ecosistema",
+    "community": "Comunidad",
+    "support": "Apoyar Vue"
+}

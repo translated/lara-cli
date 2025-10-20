@@ -1,0 +1,23 @@
+{
+  "welcome": "Hoş geldiniz",
+  "documentation": "Belgeler",
+  "tooling": "Araçlar",
+  "ecosystem": "Ekosistem",
+  "community": "Topluluk",
+  "support": "Vue'yi destekleyin",
+  "language_selector": "Dil Seçin",
+  "vue_official_docs": "Vue'nun resmi belgeleri, başlamak için ihtiyacınız olan tüm bilgileri sağlar.",
+  "project_served_with": "Bu proje şunlarla birlikte sunulur ve paketlenir:",
+  "recommended_ide": "Önerilen IDE kurulumu",
+  "test_components": "Bileşenlerinizi ve web sayfalarınızı test etmeniz gerekiyorsa şu bölüme göz atın:",
+  "more_instructions": "Daha fazla talimat şurada mevcuttur:",
+  "get_official_tools": "Projeniz için resmi araçlar ve kütüphaneler edinin:",
+  "need_more_resources": "Daha fazla kaynağa ihtiyacınız varsa ödeme yapmanızı öneririz",
+  "got_stuck": "Takıldınız mı? Sorunuzu şurada sorun:",
+  "official_discord": "(resmî Discord sunucumuz) veya",
+  "follow_official": "Ayrıca, resmi olarak yayınlanan",
+  "bluesky_account": "Bluesky hesabı veya",
+  "x_account": "Vue dünyasındaki en son haberler için X hesabı.",
+  "independent_project": "Bağımsız bir proje olarak Vue, sürdürülebilirliği için topluluk desteğine güvenmektedir. Bize şu şekilde yardımcı olabilirsiniz:",
+  "becoming_sponsor": "sponsor olmak"
+}

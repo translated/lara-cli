@@ -1,0 +1,23 @@
+{
+  "welcome": "Benvenuto",
+  "documentation": "Documentazione",
+  "tooling": "Attrezzaggio",
+  "ecosystem": "Ecosistema",
+  "community": "Community",
+  "support": "Support Vue",
+  "language_selector": "Seleziona lingua",
+  "vue_official_docs": "La documentazione ufficiale di Vue fornisce tutte le informazioni necessarie per iniziare.",
+  "project_served_with": "Questo progetto è servito e fornito con",
+  "recommended_ide": "La configurazione IDE consigliata è",
+  "test_components": "Se hai bisogno di testare i tuoi componenti e le tue pagine web, dai un'occhiata a",
+  "more_instructions": "Ulteriori istruzioni sono disponibili in",
+  "get_official_tools": "Ottieni strumenti e librerie ufficiali per il tuo progetto:",
+  "need_more_resources": "Se hai bisogno di più risorse, ti consigliamo di pagare",
+  "got_stuck": "Hai bisogno di aiuto? Fai la tua domanda su",
+  "official_discord": "(il nostro server Discord ufficiale), oppure",
+  "follow_official": "Dovresti anche seguire le linee guida ufficiali",
+  "bluesky_account": "account Bluesky o",
+  "x_account": "X account per le ultime notizie nel mondo Vue.",
+  "independent_project": "In quanto progetto indipendente, Vue si affida al sostegno della community per la sua sostenibilità. Puoi aiutarci",
+  "becoming_sponsor": "diventare sponsor"
+}

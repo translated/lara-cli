@@ -1,0 +1,23 @@
+{
+  "welcome": "Selamat datang",
+  "documentation": "Dokumentasi",
+  "tooling": "Peralatan",
+  "ecosystem": "Ekosistem",
+  "community": "Komunitas",
+  "support": "Dukungan Vue",
+  "language_selector": "Pilih Bahasa",
+  "vue_official_docs": "Dokumentasi resmi Vue memberi Anda semua informasi yang Anda butuhkan untuk memulai.",
+  "project_served_with": "Proyek ini dilayani dan digabungkan dengan",
+  "recommended_ide": "Pengaturan IDE yang disarankan adalah",
+  "test_components": "Jika Anda perlu menguji komponen dan halaman web Anda, lihat",
+  "more_instructions": "Petunjuk lebih lanjut tersedia di",
+  "get_official_tools": "Dapatkan alat dan pustaka resmi untuk proyek Anda:",
+  "need_more_resources": "Jika Anda membutuhkan lebih banyak sumber daya, kami sarankan Anda membayar",
+  "got_stuck": "Buntu? Ajukan pertanyaan Anda di",
+  "official_discord": "(server Discord resmi kami), atau",
+  "follow_official": "Anda juga harus mengikuti",
+  "bluesky_account": "Akun Bluesky atau",
+  "x_account": "Akun X untuk berita terbaru di dunia Vue.",
+  "independent_project": "Sebagai proyek independen, Vue mengandalkan dukungan komunitas untuk keberlanjutannya. Anda dapat membantu kami dengan",
+  "becoming_sponsor": "menjadi sponsor"
+}

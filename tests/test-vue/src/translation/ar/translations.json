@@ -1,0 +1,23 @@
+{
+  "welcome": "مرحبًا",
+  "documentation": "التوثيق",
+  "tooling": "الأدوات",
+  "ecosystem": "النظام البيئي",
+  "community": "المجتمع",
+  "support": "دعم Vue",
+  "language_selector": "تحديد اللغة",
+  "vue_official_docs": "توفر لك وثائق Vue الرسمية جميع المعلومات التي تحتاجها للبدء.",
+  "project_served_with": "يتم تقديم هذا المشروع وتجميعه مع",
+  "recommended_ide": "إعداد IDE الموصى به هو",
+  "test_components": "إذا كنت بحاجة إلى اختبار مكوناتك وصفحات الويب، فراجع",
+  "more_instructions": "تتوفر المزيد من التعليمات في",
+  "get_official_tools": "احصل على الأدوات والمكتبات الرسمية لمشروعك:",
+  "need_more_resources": "إذا كنت بحاجة إلى المزيد من الموارد، فنقترح الدفع",
+  "got_stuck": "هل واجهت مشكلة؟ اطرح سؤالك على",
+  "official_discord": "(خادم ديسكورد الرسمي لدينا)، أو",
+  "follow_official": "يجب عليك أيضًا اتباع",
+  "bluesky_account": "حساب بلو سكاي أو",
+  "x_account": "حساب X لأحدث الأخبار في عالم Vue.",
+  "independent_project": "كمشروع مستقل، يعتمد Vue على دعم المجتمع لاستدامته. يمكنك مساعدتنا من خلال",
+  "becoming_sponsor": "أن تصبح راعيًا"
+}

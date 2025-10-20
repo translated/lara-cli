@@ -1,0 +1,23 @@
+{
+  "welcome": "Et donem la benvinguda",
+  "documentation": "Documentació",
+  "tooling": "Eines",
+  "ecosystem": "Ecosistema",
+  "community": "Comunitat",
+  "support": "Ajuda de Vue",
+  "language_selector": "Selecciona l'idioma",
+  "vue_official_docs": "La documentació oficial de Vue t’ofereix tota la informació que necessites per començar.",
+  "project_served_with": "Aquest projecte s'ofereix i s'inclou amb",
+  "recommended_ide": "La configuració recomanada de l'IDE és",
+  "test_components": "Si necessites provar els components i les pàgines web, consulta",
+  "more_instructions": "Hi ha més instruccions disponibles a",
+  "get_official_tools": "Obteniu eines i biblioteques oficials per al vostre projecte:",
+  "need_more_resources": "Si necessites més recursos, et suggerim que paguis",
+  "got_stuck": "T'has quedat encallat? Fes la teva pregunta a",
+  "official_discord": "(el nostre servidor oficial de Discord), o",
+  "follow_official": "També has de seguir les directrius",
+  "bluesky_account": "Compte Bluesky o el",
+  "x_account": "X per a les últimes notícies del món Vue.",
+  "independent_project": "Com a projecte independent, Vue depèn del suport de la comunitat per a la seva sostenibilitat. Pots ajudar-nos",
+  "becoming_sponsor": "convertir-se en patrocinador"
+}

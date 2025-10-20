@@ -1,0 +1,23 @@
+{
+  "welcome": "Dobro došli",
+  "documentation": "Dokumentacija",
+  "tooling": "Alat",
+  "ecosystem": "Ekosustav",
+  "community": "Zajednica",
+  "support": "Podrška za Vue",
+  "language_selector": "Odaberite jezik",
+  "vue_official_docs": "Sve informacije koje su vam potrebne za početak nalaze se u službenoj dokumentaciji za Vue.",
+  "project_served_with": "Ovaj projekt je poslužen i povezan s",
+  "recommended_ide": "Preporučena postavka IDE-a je",
+  "test_components": "Ako trebate testirati svoje komponente i web-stranice, pogledajte",
+  "more_instructions": "Više uputa dostupno je u",
+  "get_official_tools": "Preuzmite službene alate i biblioteke za svoj projekt:",
+  "need_more_resources": "Ako vam je potrebno više sredstava, predlažemo da platite",
+  "got_stuck": "Zapeli ste? Postavite pitanje na",
+  "official_discord": "(naš službeni poslužitelj na Discordu) ili",
+  "follow_official": "Također biste trebali slijediti službene",
+  "bluesky_account": "Bluesky račun ili",
+  "x_account": "X račun za najnovije vijesti u svijetu Vue.",
+  "independent_project": "Kao neovisni projekt, Vue se oslanja na podršku zajednice za svoju održivost. Možete nam pomoći",
+  "becoming_sponsor": "postati sponzor"
+}

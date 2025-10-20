@@ -1,0 +1,23 @@
+{
+  "welcome": "ברוכים הבאים",
+  "documentation": "תיעוד",
+  "tooling": "כלי עבודה",
+  "ecosystem": "מערכת אקולוגית",
+  "community": "קהילה",
+  "support": "תמיכה ב-Vue",
+  "language_selector": "בחירת שפה",
+  "vue_official_docs": "התיעוד הרשמי של Vue מספק לכם את כל המידע שאתם צריכים כדי להתחיל.",
+  "project_served_with": "פרויקט זה מוגש ומחובר עם",
+  "recommended_ide": "ההגדרה המומלצת ל-IDE היא",
+  "test_components": "אם אתם צריכים לבדוק את הרכיבים ואת דפי האינטרנט שלכם, כדאי לעיין ב",
+  "more_instructions": "הוראות נוספות זמינות ב",
+  "get_official_tools": "קבלו כלים וספריות רשמיים עבור הפרויקט שלכם:",
+  "need_more_resources": "אם אתם זקוקים למשאבים נוספים, אנו מציעים לשלם",
+  "got_stuck": "נתקעתם? שאלו את השאלה שלכם ב",
+  "official_discord": "(שרת ה-Discord הרשמי שלנו), או",
+  "follow_official": "עליך גם לפעול לפי ההנחיות הרשמיות",
+  "bluesky_account": "חשבון Bluesky או",
+  "x_account": "חשבון X לחדשות האחרונות בעולם Vue.",
+  "independent_project": "כפרויקט עצמאי, Vue מסתמכת על תמיכת הקהילה לקיומה. אתה יכול לעזור לנו על ידי",
+  "becoming_sponsor": "להפוך לנותן חסות"
+}

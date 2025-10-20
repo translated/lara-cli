@@ -1,0 +1,23 @@
+{
+  "welcome": "Tervetuloa",
+  "documentation": "Dokumentaatio",
+  "tooling": "Työkalut",
+  "ecosystem": "Ekosysteemi",
+  "community": "Yhteisö",
+  "support": "Tue Vuea",
+  "language_selector": "Valitse kieli",
+  "vue_official_docs": "Vueta koskevista virallisista asiakirjoista löydät kaikki tarvittavat tiedot päästäksesi alkuun.",
+  "project_served_with": "Tämä projekti on palveltu ja niputettu seuraavien kanssa:",
+  "recommended_ide": "Suositeltu IDE-asetus on",
+  "test_components": "Jos haluat testata komponentteja ja verkkosivuja, tutustu seuraaviin:",
+  "more_instructions": "Lisää ohjeita on saatavilla kohteessa",
+  "get_official_tools": "Hanki viralliset työkalut ja kirjastot projektiisi:",
+  "need_more_resources": "Jos tarvitset lisää resursseja, suosittelemme maksamaan",
+  "got_stuck": "Jäitkö jumiin? Kysy",
+  "official_discord": "(virallinen Discord-palvelimemme) tai",
+  "follow_official": "Sinun tulee myös noudattaa virallisia",
+  "bluesky_account": "Bluesky-tili tai",
+  "x_account": "X-tililtä löydät uusimmat uutiset Vue-maailmasta.",
+  "independent_project": "Riippumattomana projektina Vue luottaa yhteisön tukeen kestävyytensä osalta. Voit auttaa meitä",
+  "becoming_sponsor": "sponsoriksi ryhtyminen"
+}

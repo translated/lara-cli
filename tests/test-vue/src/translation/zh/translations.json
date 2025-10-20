@@ -1,0 +1,21 @@
+{
+    "welcome": "欢迎使用我的 Vue 应用！",
+    "simple_page": "🎉 简单页面",
+    "description": "这是一个简单的 Vue.js 页面，创建用于显示在",
+    "framework": "框架",
+    "build_tool": "构建工具",
+    "current_time": "当前时间",
+    "features": "特性",
+    "responsive_design": "✅ 响应式设计",
+    "real_time_clock": "✅ 实时时钟更新",
+    "modern_styles": "✅ 现代样式",
+    "i18n_support": "✅ 集成 i18n 支持",
+    "click_here": "点击这里！",
+    "footer_text": "© 2025 - 用 ❤️ 和 Vue.js 创建",
+    "language_selector": "选择语言",
+    "documentation": "文档",
+    "tooling": "工具",
+    "ecosystem": "生态系统",
+    "community": "社区",
+    "support": "支持 Vue"
+}

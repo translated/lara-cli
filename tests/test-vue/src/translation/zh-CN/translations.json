@@ -1,0 +1,23 @@
+{
+  "welcome": "欢迎",
+  "documentation": "文档",
+  "tooling": "工具",
+  "ecosystem": "生态系统",
+  "community": "社区",
+  "support": "支持 Vue",
+  "language_selector": "选择语言",
+  "vue_official_docs": "Vue 的官方文档为您提供了入门所需的所有信息。",
+  "project_served_with": "此项目提供并捆绑了",
+  "recommended_ide": "推荐的 IDE 设置是",
+  "test_components": "如果您需要测试组件和网页，请查看",
+  "more_instructions": "更多说明请参阅",
+  "get_official_tools": "获取项目的官方工具和库：",
+  "need_more_resources": "如果您需要更多资源，我们建议您付费",
+  "got_stuck": "遇到问题？请在以下位置提问：",
+  "official_discord": "（我们的官方Discord服务器），或",
+  "follow_official": "您还应该关注官方",
+  "bluesky_account": "Bluesky账户或",
+  "x_account": "X 账户，了解 Vue 世界的最新消息。",
+  "independent_project": "作为一个独立项目，Vue 依靠社区支持来实现可持续发展。您可以通过以下方式帮助我们",
+  "becoming_sponsor": "成为赞助商"
+}

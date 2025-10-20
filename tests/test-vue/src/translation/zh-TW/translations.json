@@ -1,0 +1,23 @@
+{
+  "welcome": "歡迎",
+  "documentation": "文件",
+  "tooling": "工具",
+  "ecosystem": "生態系統",
+  "community": "社群",
+  "support": "支援 Vue",
+  "language_selector": "選擇語言",
+  "vue_official_docs": "Vue 的官方文件提供您開始使用所需的所有資訊。",
+  "project_served_with": "此專案已提供並與以下項目綁定",
+  "recommended_ide": "建議的 IDE 設定是",
+  "test_components": "如果您需要測試您的元件和網頁，請查看",
+  "more_instructions": "更多說明請見",
+  "get_official_tools": "為您的專案取得官方工具和程式庫：",
+  "need_more_resources": "如果您需要更多資源，我們建議您付費",
+  "got_stuck": "遇到問題？請在以下位置提出您的問題",
+  "official_discord": "（我們的官方 Discord 伺服器），或",
+  "follow_official": "您也應該遵循官方",
+  "bluesky_account": "Bluesky 帳戶或",
+  "x_account": "X 帳戶，以獲取 Vue 世界的最新消息。",
+  "independent_project": "作為獨立項目，Vue 依靠社群支持來維持其可持續性。您可以透過以下方式協助我們",
+  "becoming_sponsor": "成為贊助商"
+}

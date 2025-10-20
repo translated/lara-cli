@@ -1,0 +1,23 @@
+{
+  "welcome": "Välkommen",
+  "documentation": "Dokumentation",
+  "tooling": "Verktyg",
+  "ecosystem": "Ekosystem",
+  "community": "Community",
+  "support": "Support Vue",
+  "language_selector": "Välj språk",
+  "vue_official_docs": "Vues officiella dokumentation ger dig all information du behöver för att komma igång.",
+  "project_served_with": "Detta projekt serveras och buntas med",
+  "recommended_ide": "Den rekommenderade IDE-inställningen är",
+  "test_components": "Om du behöver testa dina komponenter och webbsidor, kolla in",
+  "more_instructions": "Fler instruktioner finns i",
+  "get_official_tools": "Skaffa officiella verktyg och bibliotek för ditt projekt:",
+  "need_more_resources": "Om du behöver mer resurser föreslår vi att du betalar",
+  "got_stuck": "Fastnat? Ställ din fråga på",
+  "official_discord": "(vår officiella Discord-server), eller",
+  "follow_official": "Du bör också följa de officiella",
+  "bluesky_account": "Bluesky-konto eller",
+  "x_account": "X-konto för de senaste nyheterna i Vue-världen.",
+  "independent_project": "Som ett oberoende projekt är Vue beroende av gemenskapens stöd för sin hållbarhet. Du kan hjälpa oss genom att",
+  "becoming_sponsor": "bli sponsor"
+}

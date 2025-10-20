@@ -1,0 +1,23 @@
+{
+  "welcome": "Bienvenue",
+  "documentation": "Documentation",
+  "tooling": "Outils",
+  "ecosystem": "Écosystème",
+  "community": "Communauté",
+  "support": "Vue de soutien",
+  "language_selector": "Sélectionner la langue",
+  "vue_official_docs": "La documentation officielle de Vue vous fournit toutes les informations dont vous avez besoin pour commencer.",
+  "project_served_with": "Ce projet est servi et regroupé avec",
+  "recommended_ide": "La configuration IDE recommandée est",
+  "test_components": "Si vous avez besoin de tester vos composants et vos pages Web, consultez",
+  "more_instructions": "Plus d'instructions sont disponibles dans",
+  "get_official_tools": "Obtenez des outils et des bibliothèques officiels pour votre projet :",
+  "need_more_resources": "Si vous avez besoin de plus de ressources, nous vous suggérons de payer",
+  "got_stuck": "Vous êtes coincé? Posez votre question sur",
+  "official_discord": "(notre serveur Discord officiel), ou",
+  "follow_official": "Vous devriez également suivre les directives officielles",
+  "bluesky_account": "Compte Bluesky ou le",
+  "x_account": "X compte pour les dernières nouvelles dans le monde Vue.",
+  "independent_project": "En tant que projet indépendant, Vue compte sur le soutien de la communauté pour sa durabilité. Vous pouvez nous aider en",
+  "becoming_sponsor": "devenir un sponsor"
+}

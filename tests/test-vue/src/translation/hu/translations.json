@@ -1,0 +1,23 @@
+{
+  "welcome": "Üdvözöljük",
+  "documentation": "Dokumentáció",
+  "tooling": "Szerszámok",
+  "ecosystem": "Ökoszisztéma",
+  "community": "Közösség",
+  "support": "Vue támogatás",
+  "language_selector": "Nyelv kiválasztása",
+  "vue_official_docs": "A Vue hivatalos dokumentációja minden szükséges információt tartalmaz a kezdéshez.",
+  "project_served_with": "Ezt a projektet a következővel szolgáljuk ki és kötegeljük:",
+  "recommended_ide": "Az ajánlott IDE-beállítás:",
+  "test_components": "Ha tesztelnie kell az összetevőket és a weboldalakat, nézze meg a következőt:",
+  "more_instructions": "További utasítások itt érhetők el:",
+  "get_official_tools": "Szerezzen be hivatalos eszközöket és könyvtárakat a projektjéhez:",
+  "need_more_resources": "Ha több forrásra van szüksége, javasoljuk, hogy fizessen",
+  "got_stuck": "Elakadtál? Tedd fel a kérdésedet itt:",
+  "official_discord": "(a hivatalos Discord-szerverünk), vagy",
+  "follow_official": "Emellett kövesse a hivatalos",
+  "bluesky_account": "Bluesky-fiók vagy a",
+  "x_account": "X fiók a Vue világának legfrissebb híreiért.",
+  "independent_project": "Független projektként a Vue a közösség támogatására támaszkodik a fenntarthatósága érdekében. Segíthetsz nekünk",
+  "becoming_sponsor": "szponzorrá válás"
+}

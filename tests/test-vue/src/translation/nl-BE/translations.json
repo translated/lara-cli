@@ -1,0 +1,23 @@
+{
+  "welcome": "Welkom",
+  "documentation": "Documentatie",
+  "tooling": "Gereedschap",
+  "ecosystem": "Ecosysteem",
+  "community": "Community",
+  "support": "Vue ondersteunen",
+  "language_selector": "Taal selecteren",
+  "vue_official_docs": "De officiële documentatie van Vue biedt je alle informatie die je nodig hebt om aan de slag te gaan.",
+  "project_served_with": "Dit project wordt aangeboden en gebundeld met",
+  "recommended_ide": "De aanbevolen IDE-instelling is",
+  "test_components": "Als je je componenten en webpagina's moet testen, bekijk dan",
+  "more_instructions": "Meer instructies zijn beschikbaar in",
+  "get_official_tools": "Download officiële tools en bibliotheken voor je project:",
+  "need_more_resources": "Als je meer middelen nodig hebt, raden we je aan om te betalen",
+  "got_stuck": "Kom je er niet uit? Stel je vraag op",
+  "official_discord": "(onze officiële Discord-server), of",
+  "follow_official": "Volg ook de officiële",
+  "bluesky_account": "Bluesky-account of de",
+  "x_account": "Volg X voor het laatste nieuws uit de Vue-wereld.",
+  "independent_project": "Als een onafhankelijk project vertrouwt Vue op de steun van de gemeenschap voor zijn duurzaamheid. Je kunt ons helpen door",
+  "becoming_sponsor": "sponsor worden"
+}
