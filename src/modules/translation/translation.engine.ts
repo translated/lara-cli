@@ -7,6 +7,7 @@ import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
+import { Memory, TranslateOptions } from '@translated/lara';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -23,6 +24,9 @@ export type TranslationEngineOptions = {
   fileInstruction: string | undefined;
   fileKeyInstructions: Array<{ path: string; instruction: string; }>;
   globalKeyInstructions: Array<{ path: string; instruction: string; }>;
+
+  translationMemoryIds: Memory['id'][];
+  glossaryIds: string[];
 };
 
 /**
@@ -88,6 +92,9 @@ export class TranslationEngine {
   private readonly fileKeyInstructionPatterns: Array<{ matcher: Matcher; instruction: string; }>;
   private readonly globalKeyInstructionPatterns: Array<{ matcher: Matcher; instruction: string; }>;
 
+  private readonly translationMemoryIds: Memory['id'][];
+  private readonly glossaryIds: string[];
+
   private readonly translatorService: TranslationService;
 
   constructor(options: TranslationEngineOptions) {
@@ -111,6 +118,9 @@ export class TranslationEngine {
       matcher: picomatch(path),
       instruction,
     }));
+
+    this.translationMemoryIds = options.translationMemoryIds;
+    this.glossaryIds = options.glossaryIds;
 
     this.translatorService = TranslationService.getInstance();
   }
@@ -193,8 +203,14 @@ export class TranslationEngine {
 
     const textBlocks: TextBlock[] = [{ text: value, translatable: true }];
     const instruction = this.getInstructionForKey(key);
+
+    const options: TranslateOptions = {
+      instructions: instruction ? [instruction] : undefined,
+      adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
+      glossaries: this.glossaryIds.length > 0 ? this.glossaryIds : undefined,
+    };
     
-    const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale, { ...(instruction ? { instructions: [instruction] } : {}) });
+    const translations = await this.translatorService.translate(textBlocks, sourceLocale, targetLocale, options);
 
     const lastTranslation = translations.pop();
     if (!lastTranslation) {

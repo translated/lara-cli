@@ -95,3 +95,5 @@ export const DEFAULT_EXCLUDED_DIRECTORIES = [
 ];
 
 export const SUPPORTED_FILE_TYPES = ['json'];
+
+export const LARA_WEB_URL = 'https://app.laratranslate.com';

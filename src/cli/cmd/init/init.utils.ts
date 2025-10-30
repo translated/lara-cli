@@ -138,3 +138,48 @@ export async function setCredentials(): Promise<void> {
 export function normalizeContext(context: string): string | undefined {
   return context.trim() || undefined;
 }
+
+/**
+ * Retrieves existing memories from config if available.
+ * Returns an empty array if config doesn't exist, force flag is set, or error occurs.
+ * 
+ * @param force - If true, ignores existing memories
+ * @returns Existing memories or an empty array
+ */
+export function getExistingMemories(force: boolean): string[] {
+  const configProvider = ConfigProvider.getInstance();
+  
+  if (!configProvider.doesConfigExists() || force) {
+    return [];
+  }
+
+  try {
+    const config = configProvider.getConfig();
+    return config.memories || [];
+  } catch {
+    return [];
+  }
+}
+
+
+/**
+ * Retrieves existing glossaries from config if available.
+ * Returns an empty array if config doesn't exist, force flag is set, or error occurs.
+ * 
+ * @param force - If true, ignores existing glossaries
+ * @returns Existing glossaries or an empty array
+ */
+export function getExistingGlossaries(force: boolean): string[] {
+  const configProvider = ConfigProvider.getInstance();
+  
+  if (!configProvider.doesConfigExists() || force) {
+    return [];
+  }
+
+  try {
+    const config = configProvider.getConfig();
+    return config.glossaries || [];
+  } catch {
+    return [];
+  }
+}

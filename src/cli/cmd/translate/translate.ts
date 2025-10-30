@@ -94,13 +94,15 @@ async function handleFileType(fileType: string, options: TranslateOptions, confi
       fileInstruction: fileInstructionConfig?.instruction,
       fileKeyInstructions: fileInstructionConfig?.keyInstructions || [],
       globalKeyInstructions: fileConfig.keyInstructions,
+      translationMemoryIds: config.memories,
+      glossaryIds: config.glossaries,
     });
 
     try{
       await translationEngine.translate();
     } catch(error) {
       if(error instanceof LaraApiError) {
-        handleLaraApiError(error, inputPath, progressWithOra.spinner);
+        handleLaraApiError(error, `Error translating ${inputPath}`, progressWithOra.spinner);
         continue;
       }
 
