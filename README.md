@@ -208,51 +208,124 @@ These are standardized language tags defined by BCP 47, combining ISO 639-1 lang
 
 ### Supported Language Codes
 
-#### ISO 639-1 Language Codes
+#### ISO 639-1 Language Codes (124 languages)
 
-| Code  | Language            | Code  | Language            |
-|-------|---------------------|-------|---------------------|
-| ar    | Arabic              | de    | German              |
-| bg    | Bulgarian           | el    | Greek               |
-| ca    | Catalan             | en    | English             |
-| cs    | Czech               | es    | Spanish             |
-| da    | Danish              | fi    | Finnish             |
-| fr    | French              | he    | Hebrew              |
-| hr    | Croatian            | hu    | Hungarian           |
-| id    | Indonesian          | it    | Italian             |
-| ja    | Japanese            | ko    | Korean              |
-| ms    | Malay               | nb    | Norwegian Bokmål    |
-| nl    | Dutch               | pl    | Polish              |
-| pt    | Portuguese          | ru    | Russian             |
-| sk    | Slovak              | sv    | Swedish             |
-| th    | Thai                | tr    | Turkish             |
-| uk    | Ukrainian           | zh    | Chinese             |
+| Code | Language            | Code | Language            |
+|------|---------------------|------|---------------------|
+| af   | Afrikaans           | mg   | Malagasy            |
+| ak   | Akan                | mi   | Māori               |
+| am   | Amharic             | mk   | Macedonian          |
+| ar   | Arabic              | ml   | Malayalam           |
+| as   | Assamese            | mn   | Mongolian           |
+| az   | Azerbaijani         | mr   | Marathi             |
+| ba   | Bashkir             | ms   | Malay               |
+| be   | Belarusian          | mt   | Maltese             |
+| bg   | Bulgarian           | my   | Burmese             |
+| bm   | Bambara             | nb   | Norwegian Bokmål    |
+| bn   | Bengali             | ne   | Nepali              |
+| bo   | Tibetan             | nl   | Dutch               |
+| bs   | Bosnian             | ny   | Chichewa            |
+| ca   | Catalan             | oc   | Occitan             |
+| cs   | Czech               | or   | Odia                |
+| cy   | Welsh               | pa   | Punjabi             |
+| da   | Danish              | pl   | Polish              |
+| de   | German              | ps   | Pashto              |
+| dz   | Dzongkha            | rn   | Kirundi             |
+| ee   | Ewe                 | ro   | Romanian            |
+| el   | Greek               | ru   | Russian             |
+| eo   | Esperanto           | rw   | Kinyarwanda         |
+| es   | Spanish             | sa   | Sanskrit            |
+| et   | Estonian            | sc   | Sardinian           |
+| eu   | Basque              | sd   | Sindhi              |
+| fa   | Persian             | sg   | Sango               |
+| fi   | Finnish             | si   | Sinhala             |
+| fj   | Fijian              | sk   | Slovak              |
+| fo   | Faroese             | sl   | Slovenian           |
+| fr   | French              | sm   | Samoan              |
+| ga   | Irish               | sn   | Shona               |
+| gd   | Scottish Gaelic     | so   | Somali              |
+| gl   | Galician            | sq   | Albanian            |
+| gn   | Guarani             | sr   | Serbian             |
+| gu   | Gujarati            | ss   | Swati               |
+| ha   | Hausa               | st   | Southern Sotho      |
+| he   | Hebrew              | su   | Sundanese           |
+| hi   | Hindi               | sv   | Swedish             |
+| hr   | Croatian            | sw   | Swahili             |
+| ht   | Haitian Creole      | ta   | Tamil               |
+| hu   | Hungarian           | te   | Telugu              |
+| hy   | Armenian            | tg   | Tajik               |
+| id   | Indonesian          | th   | Thai                |
+| ig   | Igbo                | ti   | Tigrinya            |
+| is   | Icelandic           | tk   | Turkmen             |
+| it   | Italian             | tl   | Tagalog             |
+| ja   | Japanese            | tn   | Tswana              |
+| jv   | Javanese            | tr   | Turkish             |
+| ka   | Georgian            | ts   | Tsonga              |
+| kg   | Kongo               | tt   | Tatar               |
+| ki   | Kikuyu              | tw   | Twi                 |
+| kk   | Kazakh              | ug   | Uyghur              |
+| km   | Khmer               | uk   | Ukrainian           |
+| kn   | Kannada             | ur   | Urdu                |
+| ko   | Korean              | vi   | Vietnamese          |
+| ks   | Kashmiri            | wo   | Wolof               |
+| ky   | Kyrgyz              | xh   | Xhosa               |
+| la   | Latin               | yo   | Yoruba              |
+| lb   | Luxembourgish       | zu   | Zulu                |
+| lg   | Luganda             | lo   | Lao                 |
+| li   | Limburgish          | lt   | Lithuanian          |
+| ln   | Lingala             | lv   | Latvian             |
 
-#### BCP 47 Language Tags / Locale Identifiers
 
-| Code     | Language & Region                    | Code     | Language & Region                    |
-|----------|--------------------------------------|----------|--------------------------------------|
-| ar-SA    | Arabic (Saudi Arabia)                | en-AU    | English (Australia)                  |
-| bg-BG    | Bulgarian (Bulgaria)                 | en-CA    | English (Canada)                     |
-| ca-ES    | Catalan (Spain)                      | en-GB    | English (United Kingdom)             |
-| cs-CZ    | Czech (Czech Republic)               | en-IE    | English (Ireland)                    |
-| da-DK    | Danish (Denmark)                     | en-US    | English (United States)              |
-| de-DE    | German (Germany)                     | es-419   | Spanish (Latin America)              |
-| el-GR    | Greek (Greece)                       | es-AR    | Spanish (Argentina)                  |
-| fi-FI    | Finnish (Finland)                    | es-ES    | Spanish (Spain)                      |
-| fr-CA    | French (Canada)                      | es-MX    | Spanish (Mexico)                     |
-| he-IL    | Hebrew (Israel)                      | fr-FR    | French (France)                      |
-| hr-HR    | Croatian (Croatia)                   | hu-HU    | Hungarian (Hungary)                  |
-| id-ID    | Indonesian (Indonesia)               | it-IT    | Italian (Italy)                      |
-| ja-JP    | Japanese (Japan)                     | ko-KR    | Korean (South Korea)                 |
-| ms-MY    | Malay (Malaysia)                     | nb-NO    | Norwegian Bokmål (Norway)            |
-| nl-BE    | Dutch (Belgium)                      | nl-NL    | Dutch (Netherlands)                  |
-| pl-PL    | Polish (Poland)                      | pt-BR    | Portuguese (Brazil)                  |
-| pt-PT    | Portuguese (Portugal)                | ru-RU    | Russian (Russia)                     |
-| sk-SK    | Slovak (Slovakia)                    | sv-SE    | Swedish (Sweden)                     |
-| th-TH    | Thai (Thailand)                      | tr-TR    | Turkish (Turkey)                     |
-| uk-UA    | Ukrainian (Ukraine)                  | zh-CN    | Chinese (China)                      |
-| zh-HK    | Chinese (Hong Kong)                  | zh-TW    | Chinese (Taiwan)                     |
+
+#### ISO 639-3 Language Codes (68 languages)
+
+| Code  | Language                        | Code  | Language                        |
+|-------|---------------------------------|-------|---------------------------------|
+| ace   | Acehnese                        | knc   | Kanuri                          |
+| als   | Tosk Albanian                   | lij   | Ligurian                        |
+| ast   | Asturian                        | lmo   | Lombard                         |
+| awa   | Awadhi                          | ltg   | Latgalian                       |
+| ayr   | Central Aymara                  | lua   | Luba-Lulua                      |
+| azb   | South Azerbaijani               | luo   | Luo                             |
+| ban   | Balinese                        | lus   | Mizo                            |
+| bem   | Bemba                           | mag   | Magahi                          |
+| bho   | Bhojpuri                        | mai   | Maithili                        |
+| bjn   | Banjar                          | min   | Minangkabau                     |
+| bug   | Buginese                        | mni   | Manipuri                        |
+| ceb   | Cebuano                         | mos   | Mooré                           |
+| cjk   | Chokwe                          | nso   | Northern Sotho                  |
+| ckb   | Central Kurdish (Sorani)        | nus   | Nuer                            |
+| crh   | Crimean Tatar                   | pag   | Pangasinan                      |
+| dik   | Dinka                           | pap   | Papiamento                      |
+| diq   | Zaza                            | pbt   | Southern Pashto                 |
+| dyu   | Dyula                           | plt   | Plateau Malagasy                |
+| fil   | Filipino                        | prs   | Dari                            |
+| fon   | Fon                             | quy   | Quechua                         |
+| fur   | Friulian                        | sat   | Santali                         |
+| fuv   | Nigerian Fulfulde               | scn   | Sicilian                        |
+| gaz   | Oromo                           | shn   | Shan                            |
+| hne   | Chhattisgarhi                   | szl   | Silesian                        |
+| ilo   | Ilocano                         | taq   | Tamasheq                        |
+| kab   | Kabyle                          | tpi   | Tok Pisin                       |
+| kac   | Jingpho (Kachin)                | tum   | Tumbuka                         |
+| kam   | Kamba                           | tzm   | Central Atlas Tamazight         |
+| kas   | Kashmiri                        | umb   | Umbundu                         |
+| kbp   | Kabiyé                          | uzn   | Northern Uzbek                  |
+| kea   | Kabuverdianu (Cape Verdean)     | vec   | Venetian                        |
+| khk   | Halh Mongolian                  | vls   | West Flemish                    |
+| kmb   | Kimbundu                        | war   | Waray                           |
+| kmr   | Northern Kurdish (Kurmanji)     | ydd   | Eastern Yiddish                 |
+
+#### BCP 47 Language Tags / Locale Identifiers (6 languages)
+
+| Code     | Language & Region                    |
+|----------|--------------------------------------|
+| en-GB    | English (United Kingdom)             |
+| en-US    | English (United States)              |
+| pt-BR    | Portuguese (Brazil)                  |
+| pt-PT    | Portuguese (Portugal)                |
+| zh-CN    | Chinese (Simplified)                 |
+| zh-TW    | Chinese (Traditional)                |
 
 
 ## Documentation
