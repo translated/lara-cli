@@ -22,6 +22,7 @@ export const ISO_639_1_LOCALES = [
   'dz',
   'ee',
   'el',
+  'en',
   'eo',
   'es',
   'et',
@@ -83,6 +84,7 @@ export const ISO_639_1_LOCALES = [
   'or',
   'pa',
   'pl',
+  'pt',
   'ps',
   'rn',
   'ro',
@@ -125,6 +127,7 @@ export const ISO_639_1_LOCALES = [
   'xh',
   'yo',
   'zu',
+  'zh',
 ];
 
 export const ISO_639_3_LOCALES = [
