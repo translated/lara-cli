@@ -12,7 +12,7 @@ import { Ora } from 'ora';
  * @returns Never returns - always exits the process
  */
 export function handleLaraApiError(error: LaraApiError, context: string, spinner: Ora): void {
-  const baseMessage = `Error translating ${context}:`;
+  const baseMessage = `${context}:`;
 
   // Authentication error - early return
   if (error.statusCode === 401) {

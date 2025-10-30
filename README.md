@@ -8,95 +8,23 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 
 </div>
 
-> **⚠️ Development Mode Only:** This tool is currently in active development. A full release is coming soon! 🚀
-
+> **⚠️ Development Mode Only:** This tool is currently available in development mode. The full release is coming soon! 🚀
 
 ## 📑 Table of Contents
 
 - [Requirements](#requirements)
-- [Setting Up Your Project](#setting-up-your-project)
 - [Local Development Setup](#local-development-setup)
-- [How Lara CLI Works Under the Hood](#how-lara-cli-works-under-the-hood)
+- [Setting Up Your Project](#setting-up-your-project)
 - [Technology Stack](#technology-stack)
 - [Supported Locales](#supported-locales)
 - [Documentation](#documentation)
-
 
 ## Requirements
 
 - Node.js v18 or higher
 - pnpm v8 or higher
 
-
-## 📝 Setting Up Your Project
-
-### Add Your Credentials to `.env`
-
-Create a `.env` file (or add the following lines to an existing `.env`) in the project where you want to run translations.
-
-💡 **Tip:** If you don't have API keys yet, visit [Lara's API key documentation](https://support.laratranslate.com/en/api-key-for-laras-api).
-
-
-```bash
-LARA_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
-LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
-```
-
-Replace the placeholders with your **actual credentials**.
-
-> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
-
-### Initialize Your Project
-
-In your project directory, run:
-
-```bash
-lara-cli init
-```
-
-This will start the interactive initialization process.
-
-The CLI will **automatically detect your localization directories and target locales** from your existing project files, then guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
-
-**Key features:**
-- 🔍 **Auto-detection**: Scans your project for existing locale files and automatically suggests target locales
-- 📊 **Smart display**: For enterprise projects with many locales, uses formatted tables for better readability
-- ⚙️ **Flexible configuration**: Choose detected locales or manually add/remove as needed
-- 🎯 **Project instructions**: Optionally provide instructions to improve translation quality (e.g., tone, style, terminology)
-
-**Providing project instructions** (optional but recommended):
-
-During initialization, you can provide instructions to help improve translation quality. Instructions guide the translation service on tone, style, and terminology. This is especially useful for:
-- Tone requirements (formal, casual, professional, friendly)
-- Domain-specific terminology (medical, legal, technical, etc.)
-- Style preferences (concise, creative, detailed)
-
-You can provide instructions in two ways:
-
-```bash
-# Interactive mode - you'll be prompted
-lara-cli init
-
-# Non-interactive mode - via CLI option
-lara-cli init --instruction "Use formal tone and medical terminology."
-```
-
-If you've already initialized your project with instructions, running `init` again will preserve them unless you explicitly provide new instructions via the `--instruction` option.
-
-### Translate Your Files!
-
-To translate your files into the target locales, run:
-
-```bash
-lara-cli translate
-```
-
-That's it – you're ready to go!
-
-> **📖 Documentation:** For detailed information about commands, see [Init Command](docs/init.md) and [Translate Command](docs/translate.md).
-
-
-## 🖥️ Local Development Setup
+## Local Development Setup
 
 1. **Clone the repository**
 
@@ -172,15 +100,71 @@ lara-cli translate --help
 
 **Note:** After making changes to the source code, run `pnpm run build` to update the global command.
 
+## Setting Up Your Project
 
-## 🧠 How Lara CLI Works Under the Hood
+### Add Your Credentials to `.env`
 
-When you run Lara for the first time, it translates your project while leaving existing translations untouched — unless it detects inconsistencies between the files.
+Create a `.env` file (or add the following lines to an existing `.env`) in the project where you want to run translations.
 
-After the initial translation, a `.lara.lock` file is generated to keep track of changes. From that point on, whenever you modify your source locale file and request a new translation, **only the updated keys will be translated**.
+💡 **Tip:** If you don't have API keys yet, visit [Lara's API key documentation](https://support.laratranslate.com/en/api-key-for-laras-api).
 
 
-## 💻 Technology Stack
+```bash
+LARA_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
+LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
+```
+
+Replace the placeholders with your **actual credentials**.
+
+> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
+
+### Initialize Your Project
+
+In your project directory, run:
+
+```bash
+lara-cli init
+```
+
+This will start the interactive initialization process.
+
+The CLI will **automatically detect your localization directories and target locales** from your existing project files, then guide you through a few questions. These will be used to generate the configuration file: `lara.yaml`.
+
+**Key features:**
+
+- 🔍 **Auto-detection**: Scans your project for existing locale files and automatically suggests target locales
+- 📊 **Smart display**: For enterprise projects with many locales, uses formatted tables for better readability
+- ⚙️ **Flexible configuration**: Choose detected locales or manually add/remove as needed
+- 🎯 **Project instructions**: Optionally provide instructions to improve translation quality (e.g., tone, style, terminology)
+
+**Providing project instructions** (optional but recommended):
+
+During initialization, you can provide instructions to help improve translation quality. Instructions guide the translation service on tone, style, and terminology. This is especially useful for:
+
+- Tone requirements (formal, casual, professional, friendly)
+- Domain-specific terminology (medical, legal, technical, etc.)
+- Style preferences (concise, creative, detailed)
+
+**Providing glossaries** (optional but recommended):
+
+Lara's glossary system lets you define exactly how specific terms should be translated, across any text or document. Whether you work with technical terms, product names, or recurring brand phrases, glossaries are your best tool to ensure consistency and precision.
+
+💡 **Tip:** For more information about glossaries, visit [Lara's Glossary documentation](https://support.laratranslate.com/en/how-glossaries-work-in-lara).
+
+### Translate Your Files!
+
+To translate your files into the target locales, run:
+
+```bash
+lara-cli translate
+```
+
+That's it – you're ready to go!
+
+> **📖 Documentation:** For detailed information about commands, see [Init Command](docs/commands/init.md) and [Translate Command](docs/commands/translate.md).
+
+
+## Technology Stack
 
 Lara CLI is built with modern technologies to ensure reliability, performance, and maintainability:
 
@@ -192,146 +176,26 @@ Lara CLI is built with modern technologies to ensure reliability, performance, a
 
 The codebase follows a modular architecture with clear separation of concerns, making it easy to extend and maintain.
 
-
 ## Supported Locales
 
 Lara CLI supports translations using different locale codes, following two main standards:
 
-### ISO 639-1 Language Codes
-These are basic language identifiers (e.g., `en` for English, `fr` for French) that apply to all regions where the language is spoken.
-
-### BCP 47 Language Tags
-These are standardized language tags defined by BCP 47, combining ISO 639-1 language codes with ISO 3166-1 country codes (e.g., `en-US` for English in the United States, `fr-CA` for French in Canada). They provide more precise regional context and are often called "locale identifiers".
-
-> **Note:** You can use either ISO 639-1 codes or BCP 47 tags as source and target languages. The translation service will automatically handle the appropriate regional variants.
-
-
-### Supported Language Codes
-
-#### ISO 639-1 Language Codes (124 languages)
-
-| Code | Language            | Code | Language            |
-|------|---------------------|------|---------------------|
-| af   | Afrikaans           | mg   | Malagasy            |
-| ak   | Akan                | mi   | Māori               |
-| am   | Amharic             | mk   | Macedonian          |
-| ar   | Arabic              | ml   | Malayalam           |
-| as   | Assamese            | mn   | Mongolian           |
-| az   | Azerbaijani         | mr   | Marathi             |
-| ba   | Bashkir             | ms   | Malay               |
-| be   | Belarusian          | mt   | Maltese             |
-| bg   | Bulgarian           | my   | Burmese             |
-| bm   | Bambara             | nb   | Norwegian Bokmål    |
-| bn   | Bengali             | ne   | Nepali              |
-| bo   | Tibetan             | nl   | Dutch               |
-| bs   | Bosnian             | ny   | Chichewa            |
-| ca   | Catalan             | oc   | Occitan             |
-| cs   | Czech               | or   | Odia                |
-| cy   | Welsh               | pa   | Punjabi             |
-| da   | Danish              | pl   | Polish              |
-| de   | German              | ps   | Pashto              |
-| dz   | Dzongkha            | rn   | Kirundi             |
-| ee   | Ewe                 | ro   | Romanian            |
-| el   | Greek               | ru   | Russian             |
-| eo   | Esperanto           | rw   | Kinyarwanda         |
-| es   | Spanish             | sa   | Sanskrit            |
-| et   | Estonian            | sc   | Sardinian           |
-| eu   | Basque              | sd   | Sindhi              |
-| fa   | Persian             | sg   | Sango               |
-| fi   | Finnish             | si   | Sinhala             |
-| fj   | Fijian              | sk   | Slovak              |
-| fo   | Faroese             | sl   | Slovenian           |
-| fr   | French              | sm   | Samoan              |
-| ga   | Irish               | sn   | Shona               |
-| gd   | Scottish Gaelic     | so   | Somali              |
-| gl   | Galician            | sq   | Albanian            |
-| gn   | Guarani             | sr   | Serbian             |
-| gu   | Gujarati            | ss   | Swati               |
-| ha   | Hausa               | st   | Southern Sotho      |
-| he   | Hebrew              | su   | Sundanese           |
-| hi   | Hindi               | sv   | Swedish             |
-| hr   | Croatian            | sw   | Swahili             |
-| ht   | Haitian Creole      | ta   | Tamil               |
-| hu   | Hungarian           | te   | Telugu              |
-| hy   | Armenian            | tg   | Tajik               |
-| id   | Indonesian          | th   | Thai                |
-| ig   | Igbo                | ti   | Tigrinya            |
-| is   | Icelandic           | tk   | Turkmen             |
-| it   | Italian             | tl   | Tagalog             |
-| ja   | Japanese            | tn   | Tswana              |
-| jv   | Javanese            | tr   | Turkish             |
-| ka   | Georgian            | ts   | Tsonga              |
-| kg   | Kongo               | tt   | Tatar               |
-| ki   | Kikuyu              | tw   | Twi                 |
-| kk   | Kazakh              | ug   | Uyghur              |
-| km   | Khmer               | uk   | Ukrainian           |
-| kn   | Kannada             | ur   | Urdu                |
-| ko   | Korean              | vi   | Vietnamese          |
-| ks   | Kashmiri            | wo   | Wolof               |
-| ky   | Kyrgyz              | xh   | Xhosa               |
-| la   | Latin               | yo   | Yoruba              |
-| lb   | Luxembourgish       | zu   | Zulu                |
-| lg   | Luganda             | lo   | Lao                 |
-| li   | Limburgish          | lt   | Lithuanian          |
-| ln   | Lingala             | lv   | Latvian             |
-
-
-
-#### ISO 639-3 Language Codes (68 languages)
-
-| Code  | Language                        | Code  | Language                        |
-|-------|---------------------------------|-------|---------------------------------|
-| ace   | Acehnese                        | knc   | Kanuri                          |
-| als   | Tosk Albanian                   | lij   | Ligurian                        |
-| ast   | Asturian                        | lmo   | Lombard                         |
-| awa   | Awadhi                          | ltg   | Latgalian                       |
-| ayr   | Central Aymara                  | lua   | Luba-Lulua                      |
-| azb   | South Azerbaijani               | luo   | Luo                             |
-| ban   | Balinese                        | lus   | Mizo                            |
-| bem   | Bemba                           | mag   | Magahi                          |
-| bho   | Bhojpuri                        | mai   | Maithili                        |
-| bjn   | Banjar                          | min   | Minangkabau                     |
-| bug   | Buginese                        | mni   | Manipuri                        |
-| ceb   | Cebuano                         | mos   | Mooré                           |
-| cjk   | Chokwe                          | nso   | Northern Sotho                  |
-| ckb   | Central Kurdish (Sorani)        | nus   | Nuer                            |
-| crh   | Crimean Tatar                   | pag   | Pangasinan                      |
-| dik   | Dinka                           | pap   | Papiamento                      |
-| diq   | Zaza                            | pbt   | Southern Pashto                 |
-| dyu   | Dyula                           | plt   | Plateau Malagasy                |
-| fil   | Filipino                        | prs   | Dari                            |
-| fon   | Fon                             | quy   | Quechua                         |
-| fur   | Friulian                        | sat   | Santali                         |
-| fuv   | Nigerian Fulfulde               | scn   | Sicilian                        |
-| gaz   | Oromo                           | shn   | Shan                            |
-| hne   | Chhattisgarhi                   | szl   | Silesian                        |
-| ilo   | Ilocano                         | taq   | Tamasheq                        |
-| kab   | Kabyle                          | tpi   | Tok Pisin                       |
-| kac   | Jingpho (Kachin)                | tum   | Tumbuka                         |
-| kam   | Kamba                           | tzm   | Central Atlas Tamazight         |
-| kas   | Kashmiri                        | umb   | Umbundu                         |
-| kbp   | Kabiyé                          | uzn   | Northern Uzbek                  |
-| kea   | Kabuverdianu (Cape Verdean)     | vec   | Venetian                        |
-| khk   | Halh Mongolian                  | vls   | West Flemish                    |
-| kmb   | Kimbundu                        | war   | Waray                           |
-| kmr   | Northern Kurdish (Kurmanji)     | ydd   | Eastern Yiddish                 |
-
-#### BCP 47 Language Tags / Locale Identifiers (6 languages)
-
-| Code     | Language & Region                    |
-|----------|--------------------------------------|
-| en-GB    | English (United Kingdom)             |
-| en-US    | English (United States)              |
-| pt-BR    | Portuguese (Brazil)                  |
-| pt-PT    | Portuguese (Portugal)                |
-| zh-CN    | Chinese (Simplified)                 |
-| zh-TW    | Chinese (Traditional)                |
-
+See the [full list of supported locales](docs/config/locales.md#supported-locales).
 
 ## Documentation
 
 For detailed documentation on using Lara CLI:
 
-- [Init Command](docs/init.md) - How to initialize your project
-- [Translate Command](docs/translate.md) - How to translate your files
-- [Lara.yaml Configuration](docs/lara_yaml.md) - Complete configuration reference
+### Commands
+- [Init Command](docs/commands/init.md) - Initialize your project
+- [Translate Command](docs/commands/translate.md) - Translate your files
+- [Memory Command](docs/commands/memory.md) - List available Translation Memories
+- [Glossary Command](docs/commands/glossary.md) - List available Glossaries
+
+### Configuration
+- [Configuration Overview](docs/config/README.md) - Configuration system overview
+- [Locales Configuration](docs/config/locales.md) - Configure source and target languages
+- [Files Configuration](docs/config/files.md) - Configure file paths and patterns
+- [Instructions](docs/config/instructions.md) - Configure translation instructions
+- [Translation Memories](docs/config/memories.md) - Configure Translation Memories
+- [Glossaries](docs/config/glossaries.md) - Configure Glossaries
