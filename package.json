@@ -1,15 +1,23 @@
 {
-  "name": "lara-cli",
+  "name": "lara-dev",
   "type": "module",
   "version": "0.0.2",
-  "description": "Lara CLI",
+  "description": "Lara Dev",
   "main": "index.js",
-  "keywords": [],
+  "keywords": [
+    "laratranslate",
+    "lara",
+    "localization",
+    "translation",
+    "ai",
+    "translate",
+    "translated"
+  ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.11.1",
   "bin": {
-    "lara-cli": "./build/index.js"
+    "lara-dev": "./build/index.js"
   },
   "dependencies": {
     "@inquirer/core": "^10.2.2",

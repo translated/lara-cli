@@ -10,7 +10,7 @@ The `translate` command processes internationalization files specified in your `
 ## Usage
 
 ```bash
-lara-cli translate [options]
+lara-dev translate [options]
 ```
 
 ## Options
@@ -26,32 +26,32 @@ lara-cli translate [options]
 ### Translate All Configured Locales
 
 ```bash
-lara-cli translate
+lara-dev translate
 ```
 
 ### Translate Specific Locales
 
 ```bash
-lara-cli translate --target "es, fr"
+lara-dev translate --target "es, fr"
 ```
 
 ### Force Retranslation of All Content
 
 ```bash
-lara-cli translate --force
+lara-dev translate --force
 ```
 
 ### Force Translation of a Specific Locale
 
 ```bash
-lara-cli translate --target "es" --force
+lara-dev translate --target "es" --force
 ```
 
 ## Prerequisites
 
 Before using the translate command:
 
-1. Initialize your project with `lara-cli init`
+1. Initialize your project with `lara-dev init`
 2. Configure API credentials in a `.env` file:
    ```
    LARA_ACCESS_KEY_ID=your_access_key_id

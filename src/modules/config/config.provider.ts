@@ -34,7 +34,7 @@ export class ConfigProvider {
     }
 
     if(!this.doesConfigExists()) {
-      throw new Error('Config file not found. Please run `lara-cli init` to create a config file.');
+      throw new Error('Config file not found. Please run `lara-dev init` to create a config file.');
     }
 
     const config = fs.readFileSync(this.configPath, 'utf8');

@@ -17,7 +17,7 @@ export function handleLaraApiError(error: LaraApiError, context: string, spinner
   // Authentication error - early return
   if (error.statusCode === 401) {
     displayErrorAndExit(
-      `${baseMessage} Authentication failed: Your API key is invalid or expired. Update your API keys in the .env file or run 'lara-cli init --reset-credentials' to reset your API keys.`
+      `${baseMessage} Authentication failed: Your API key is invalid or expired. Update your API keys in the .env file or run 'lara-dev init --reset-credentials' to reset your API keys.`
       , spinner);
   }
 

@@ -10,7 +10,7 @@ The `memory` command lists all Translation Memories available in your Lara accou
 ## Usage
 
 ```bash
-lara-cli memory [options]
+lara-dev memory [options]
 ```
 
 ## Options
@@ -43,15 +43,15 @@ Before using the memory command:
 
 After identifying available Translation Memories, you can:
 
-1. **During initialization**: Add memories when running `lara-cli init`
+1. **During initialization**: Add memories when running `lara-dev init`
    ```bash
-   lara-cli init
+   lara-dev init
    # You'll be prompted to select Translation Memories
    ```
 
 2. **Non-interactive initialization**: Specify memories directly
    ```bash
-   lara-cli init --translation-memories "mem_123abc, mem_456def" --non-interactive
+   lara-dev init --translation-memories "mem_123abc, mem_456def" --non-interactive
    ```
 
 3. **Manual configuration**: Add to your `lara.yaml` file

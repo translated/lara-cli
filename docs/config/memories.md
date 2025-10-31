@@ -50,9 +50,9 @@ memories:
 
 To use Translation Memories:
 
-1. **Find available memories**: Run `lara-cli memory` to list available memories
+1. **Find available memories**: Run `lara-dev memory` to list available memories
 2. **Add to configuration**: Add memory IDs to the `memories` section of `lara.yaml`
-3. **Translate**: When you run `lara-cli translate`, these memories will be used automatically
+3. **Translate**: When you run `lara-dev translate`, these memories will be used automatically
 
 ## Best Practices
 
@@ -63,6 +63,6 @@ To use Translation Memories:
 
 ## Finding Memory IDs
 
-- Run `lara-cli memory` to list available Translation Memories
+- Run `lara-dev memory` to list available Translation Memories
 - Check the Lara platform dashboard
 - Contact Lara support for assistance

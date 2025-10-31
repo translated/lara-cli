@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🚀 Lara CLI – A Powerful CLI Tool for Instant i18n Localization
+# 🚀 Lara Dev – A Powerful CLI Tool for Instant i18n Localization
 
-Lara CLI automates translation of your i18n JSON files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n JSON files.
+Lara Dev automates translation of your i18n JSON files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n JSON files.
 
-[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/translated/lara-cli)
+[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/translated/lara-dev)
 
 </div>
 
@@ -29,13 +29,13 @@ Lara CLI automates translation of your i18n JSON files with a single command, pr
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/translated/lara-cli.git
+git clone https://github.com/translated/lara-dev.git
 ```
 
 2. **Navigate to the cloned repository**
 
 ```bash
-cd lara-cli
+cd lara-dev
 ```
 
 3. **Install dependencies and build**
@@ -80,22 +80,22 @@ After running this command, the project will be successfully linked to the pnpm 
 
 ```bash
 /Users/username/Library/pnpm/global/5:
-+ lara-cli version <- ../../../../Projects/translated/lara-cli
++ lara-dev version <- ../../../../Projects/translated/lara-dev
 ```
 
 6. **Installation Complete - Use anywhere**
 
-Now that Lara CLI is installed globally, you can use it from any directory on your system:
+Now that Lara Dev is installed globally, you can use it from any directory on your system:
 
 ```bash
 # Get help with available commands
-lara-cli --help
+lara-dev --help
 
 # Initialize a new Lara project
-lara-cli init --help
+lara-dev init --help
 
 # Translate your localization files
-lara-cli translate --help
+lara-dev translate --help
 ```
 
 **Note:** After making changes to the source code, run `pnpm run build` to update the global command.
@@ -116,14 +116,14 @@ LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
 
 Replace the placeholders with your **actual credentials**.
 
-> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
+> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-dev init --reset-credentials` to safely update them in your `.env` file.
 
 ### Initialize Your Project
 
 In your project directory, run:
 
 ```bash
-lara-cli init
+lara-dev init
 ```
 
 This will start the interactive initialization process.
@@ -156,7 +156,7 @@ Lara's glossary system lets you define exactly how specific terms should be tran
 To translate your files into the target locales, run:
 
 ```bash
-lara-cli translate
+lara-dev translate
 ```
 
 That's it – you're ready to go!
@@ -166,7 +166,7 @@ That's it – you're ready to go!
 
 ## Technology Stack
 
-Lara CLI is built with modern technologies to ensure reliability, performance, and maintainability:
+Lara Dev is built with modern technologies to ensure reliability, performance, and maintainability:
 
 - **TypeScript** - For type safety and developer experience
 - **Commander.js** - For CLI argument parsing and command structure
@@ -178,13 +178,13 @@ The codebase follows a modular architecture with clear separation of concerns, m
 
 ## Supported Locales
 
-Lara CLI supports translations using different locale codes, following two main standards:
+Lara Dev supports translations using different locale codes, following two main standards:
 
 See the [full list of supported locales](docs/config/locales.md#supported-locales).
 
 ## Documentation
 
-For detailed documentation on using Lara CLI:
+For detailed documentation on using Lara Dev:
 
 ### Commands
 - [Init Command](docs/commands/init.md) - Initialize your project

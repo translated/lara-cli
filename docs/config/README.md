@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Lara Configuration Overview
 
-The Lara CLI uses a configuration file (`lara.yaml`) to define your internationalization settings. This file is created when you run `lara-cli init` and defines how translations are handled in your project.
+The Lara Dev uses a configuration file (`lara.yaml`) to define your internationalization settings. This file is created when you run `lara-dev init` and defines how translations are handled in your project.
 
 ## Configuration File Location
 
@@ -51,7 +51,7 @@ The configuration is divided into several sections:
 The simplest way to create a `lara.yaml` file is to run the [init command](../commands/init.md):
 
 ```bash
-lara-cli init
+lara-dev init
 ```
 
 This will guide you through creating your configuration interactively, or you can use command-line options for a non-interactive setup.

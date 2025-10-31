@@ -10,7 +10,7 @@ The `init` command initializes a new Lara project by creating a configuration fi
 ## Usage
 
 ```bash
-lara-cli init [options]
+lara-dev init [options]
 ```
 
 ## Options
@@ -35,7 +35,7 @@ lara-cli init [options]
 Running without `--non-interactive` prompts for information:
 
 ```bash
-lara-cli init
+lara-dev init
 ```
 
 The command guides you through:
@@ -52,7 +52,7 @@ The command guides you through:
 Generates configuration file using provided options:
 
 ```bash
-lara-cli init --source "en" --target "es, fr" --paths "./src/i18n/[locale].json" --force --non-interactive
+lara-dev init --source "en" --target "es, fr" --paths "./src/i18n/[locale].json" --force --non-interactive
 ```
 
 ## Examples
@@ -60,31 +60,31 @@ lara-cli init --source "en" --target "es, fr" --paths "./src/i18n/[locale].json"
 ### Basic Interactive Initialization
 
 ```bash
-lara-cli init
+lara-dev init
 ```
 
 ### Force Overwrite Existing Configuration
 
 ```bash
-lara-cli init --force
+lara-dev init --force
 ```
 
 ### Specify Source and Target Languages
 
 ```bash
-lara-cli init --source "es" --target "en, fr"
+lara-dev init --source "es" --target "en, fr"
 ```
 
 ### Custom Path Configuration
 
 ```bash
-lara-cli init --paths "src/locales/[locale]/messages.json, public/i18n/[locale].json"
+lara-dev init --paths "src/locales/[locale]/messages.json, public/i18n/[locale].json"
 ```
 
 ### Complete Non-Interactive Setup
 
 ```bash
-lara-cli init --source "en" --target "de, fr, it" \
+lara-dev init --source "en" --target "de, fr, it" \
   --paths "src/i18n/[locale]/common.json" \
   --instruction "E-commerce app, formal tone" \
   --force --non-interactive
@@ -93,7 +93,7 @@ lara-cli init --source "en" --target "de, fr, it" \
 ### Reset API Credentials
 
 ```bash
-lara-cli init --reset-credentials
+lara-dev init --reset-credentials
 ```
 
 ## Related

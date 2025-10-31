@@ -11,7 +11,7 @@ export default new Command()
   .helpOption('-h, --help', 'Show help')
   .action(async () => {
     if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
-      Ora({ text: 'No API credentials found. Please run `lara-cli init` to set the API credentials.', color: 'red' }).fail();
+      Ora({ text: 'No API credentials found. Please run `lara-dev init` to set the API credentials.', color: 'red' }).fail();
       process.exit(1);
     }
     await handleMemory();

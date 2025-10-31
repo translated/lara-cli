@@ -76,7 +76,7 @@ locales:
 
 ## Supported Locales
 
-Lara CLI supports translations using different locale codes, following three main standards:
+Lara Dev supports translations using different locale codes, following three main standards:
 
 ### ISO 639-1 Language Codes
 These are two-letter language identifiers (e.g., `en` for English, `fr` for French) that apply to all regions where the language is spoken.
