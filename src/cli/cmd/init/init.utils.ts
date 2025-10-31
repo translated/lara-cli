@@ -103,11 +103,8 @@ export async function setCredentials(): Promise<void> {
   try {
     envContent = readFileSync(envPath, 'utf-8');
   } catch (err: unknown) {
-    if(err instanceof Error) {
-      Ora({ text: `Failed to read .env file: ${err.message}. Please check file permissions.`, color: 'red' }).fail();
-    } else {
-      Ora({ text: 'An unknown error occurred', color: 'red' }).fail();
-    }
+    // Sanitize error message to avoid exposing sensitive information
+    Ora({ text: 'Failed to read .env file. Please check file permissions and ensure the file exists.', color: 'red' }).fail();
     throw err;
   }
 

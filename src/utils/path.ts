@@ -12,13 +12,37 @@ import {
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
 /**
- * Checks if the path is relative
+ * Checks if the path is relative and safe (prevents path traversal attacks).
+ * Ensures the resolved path stays within the current working directory.
  * 
- * @param path - The path to check.
- * @returns True if the path is relative, false otherwise.
+ * @param filePath - The path to check.
+ * @returns True if the path is relative and safe, false otherwise.
  */
-function isRelative(path: string): boolean {
-  return !path.startsWith('/') && !path.startsWith('./') && !path.startsWith('../');
+function isRelative(filePath: string): boolean {
+  try {
+    // Normalize the path to handle edge cases (e.g., '..//', '..\\', etc.)
+    const normalized = path.normalize(filePath);
+    
+    // Check basic relative path patterns
+    if (normalized.startsWith('/') || normalized.startsWith('./') || normalized.startsWith('../')) {
+      return false;
+    }
+    
+    // Resolve the path relative to current working directory
+    const resolved = path.resolve(process.cwd(), normalized);
+    const cwd = path.resolve(process.cwd());
+    
+    // Ensure resolved path is within cwd (prevents path traversal)
+    // Use startsWith to check if resolved path is inside cwd
+    if (!resolved.startsWith(cwd + path.sep) && resolved !== cwd) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    // If any error occurs during path resolution, reject the path
+    return false;
+  }
 }
 
 /**

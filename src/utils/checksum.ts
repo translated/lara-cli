@@ -119,14 +119,14 @@ function getChecksumFile(): ChecksumFile {
 }
 
 /**
- * Returns the MD5 hash of a string or an object.
+ * Returns the SHA-256 hash of a string or an object.
  * 
  * @param s - The string or object to hash.
- * @returns The MD5 hash of the string or object.
+ * @returns The SHA-256 hash of the string or object.
  */
 function getHash(s: unknown) {
   const data: string = typeof s === 'string' ? s : JSON.stringify(s);
-  return crypto.createHash('md5').update(data).digest('hex');
+  return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 export {
