@@ -4,14 +4,28 @@ import { searchLocalePaths } from '#utils/path.js';
 import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX, LARA_WEB_URL } from '#modules/common/common.const.js';
 import { InitOptions } from './init.types.js';
 import { FilePath } from '#modules/config/config.types.js';
-import { extractLocaleFromPath } from '#utils/locale.js';
+import { extractLocaleFromPath, extractAllLocalesFromProject } from '#utils/locale.js';
 import { displayLocaleTable, formatLocaleList } from '#utils/display.js';
 import customSearchableSelect from '#utils/prompt.js';
-import { normalizeContext } from './init.utils.js';
 import { TranslationService } from '#modules/translation/translation.service.js';
 
 export async function sourceInput(options: InitOptions): Promise<string> {
-  const choices = AVAILABLE_LOCALES.map((locale) => ({
+  const spinner = Ora({ text: 'Searching for locales in project...', color: 'yellow' }).start();
+  
+  const foundLocales = await extractAllLocalesFromProject();
+  
+  if (foundLocales.length === 0) {
+    spinner.fail('No locales found in the project');
+    Ora({ 
+      text: 'Please ensure your project contains locale files (e.g., src/i18n/[locale].json or src/i18n/[locale]/...)', 
+      color: 'red' 
+    }).fail();
+    process.exit(1);
+  }
+
+  spinner.succeed(`Found ${foundLocales.length} ${foundLocales.length === 1 ? 'locale' : 'locales'} in project`);
+
+  const choices = foundLocales.map((locale) => ({
     label: locale,
     value: locale,
   }));
@@ -19,7 +33,7 @@ export async function sourceInput(options: InitOptions): Promise<string> {
   const result = await customSearchableSelect({
     message: 'What is the source locale?',
     multiple: false,
-    default: options.source,
+    default: options.source && foundLocales.includes(options.source) ? options.source : undefined,
     choices: choices,
   });
 
@@ -197,72 +211,6 @@ export async function pathsInput(options: InitOptions) {
       return value.length > 0 || 'Please select at least one path';
     },
   });
-}
-
-export async function instructionInput(existingInstruction?: string, cliInstruction?: string): Promise<string | undefined> {
-  // Priority 1: Use CLI-provided instruction
-  if (cliInstruction) {
-    if (existingInstruction) {
-      Ora().info('Updating project instruction from CLI option');
-    }
-    return normalizeContext(cliInstruction);
-  }
-
-  // Priority 2: Reuse existing instruction
-  if (existingInstruction) {
-    return normalizeContext(existingInstruction);
-  }
-
-  // Priority 3: Prompt user for new instruction
-  const userInstruction = await input({
-    message: 'Enter project instructions (e.g., domain, terminology, tone):',
-    default: '',
-  });
-
-  return normalizeContext(userInstruction);
-}
-
-export async function fileInstructionsInput(paths: string[]): Promise<Array<{ path: string; instruction?: string; keyInstructions: Array<{ path: string; instruction: string; }>; }>> {
-  if (paths.length === 0) {
-    return [];
-  }
-
-  const shouldAddFileInstructions = await confirm({
-    message: 'Do you want to add file-specific instructions? (optional, improves translation quality)',
-    default: false,
-  });
-
-  if (!shouldAddFileInstructions) {
-    Ora().info('Skipped file-specific instructions. You can add them later in lara.yaml');
-    return [];
-  }
-
-  const fileInstructions: Array<{ path: string; instruction?: string; keyInstructions: Array<{ path: string; instruction: string; }>; }> = [];
-
-  for (const path of paths) {
-    const fileInstruction = await input({
-      message: `Enter instruction for "${path}" (leave empty to skip):`,
-      default: '',
-    });
-
-    const normalizedInstruction = normalizeContext(fileInstruction);
-    
-    if (normalizedInstruction) {
-      fileInstructions.push({
-        path,
-        instruction: normalizedInstruction,
-        keyInstructions: [],
-      });
-    }
-  }
-
-  if (fileInstructions.length > 0) {
-    Ora().succeed(`Added instruction for ${fileInstructions.length} ${fileInstructions.length === 1 ? 'file' : 'files'}`);
-  }
-
-  Ora().info('You can also add instructions for specific keys in the lara.yaml file. See documentation for more information.');
-
-  return fileInstructions;
 }
 
 export async function translationMemoriesInput(existingMemories: string[], options: InitOptions): Promise<string[]> {

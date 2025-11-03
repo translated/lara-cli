@@ -8,11 +8,11 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import { fileInstructionsInput, instructionInput, pathsInput, sourceInput, targetInput, translationMemoriesInput, glossariesInput } from './init.input.js';
+import { pathsInput, sourceInput, targetInput, translationMemoriesInput, glossariesInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
-import { getExistingInstruction, setCredentials, resolveProjectInstruction, getExistingMemories, getExistingGlossaries } from './init.utils.js';
+import { setCredentials, resolveProjectInstruction, getExistingMemories, getExistingGlossaries } from './init.utils.js';
 
 
 export default new Command()
@@ -161,7 +161,6 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
   const inputSource = await sourceInput(options);
   const inputTarget = await targetInput(inputSource, options.target);
   const inputPaths = await pathsInput(options);
-  const inputFileInstructions = await fileInstructionsInput(inputPaths);
 
   if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
     const shouldInsertCredentials = await confirm({
@@ -178,8 +177,6 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     }
   }
 
-  const existingInstruction = getExistingInstruction(options.force);
-  const projectInstruction = await instructionInput(existingInstruction, options.instruction);
 
   const existingMemories = getExistingMemories(options.force);
   const inputTranslationMemories = await translationMemoriesInput(existingMemories, options);
@@ -189,9 +186,6 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
 
   return {
     version: '1.0.0',
-    project: {
-      instruction: projectInstruction,
-    },
     locales: {
       source: inputSource,
       target: inputTarget,
@@ -202,7 +196,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
       json: {
         include: inputPaths,
         exclude: [],
-        fileInstructions: inputFileInstructions,
+        fileInstructions: [],
         keyInstructions: [],
         lockedKeys: [],
         ignoredKeys: [],

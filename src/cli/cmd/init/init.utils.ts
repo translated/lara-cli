@@ -28,28 +28,6 @@ export function resolveProjectInstruction(cliInstruction?: string): string | und
 }
 
 /**
- * Retrieves existing instruction from config if available.
- * Returns undefined if config doesn't exist, force flag is set, or error occurs.
- * 
- * @param force - If true, ignores existing instruction
- * @returns Existing instruction or undefined
- */
-export function getExistingInstruction(force: boolean): string | undefined {
-  const configProvider = ConfigProvider.getInstance();
-  
-  if (!configProvider.doesConfigExists() || force) {
-    return undefined;
-  }
-
-  try {
-    const config = configProvider.getConfig();
-    return config.project?.instruction;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
  * Validates and sanitizes API credentials.
  * Only allows non-empty strings with alphanumeric characters, dashes, and underscores.
  * Trims whitespace and removes newlines.
@@ -127,16 +105,6 @@ export async function setCredentials(): Promise<void> {
   writeFileSync(envPath, envContent);
 
   Ora({ text: 'API credentials set successfully', color: 'green' }).succeed();
-}
-
-/**
- * Normalizes the context by trimming the string and returning undefined if it's empty.
- * 
- * @param context - Context
- * @returns Normalized context
- */
-export function normalizeContext(context: string): string | undefined {
-  return context.trim() || undefined;
 }
 
 /**
