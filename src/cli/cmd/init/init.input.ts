@@ -12,24 +12,23 @@ import { extractLocaleFromPath, extractAllLocalesFromProject } from '#utils/loca
 import { displayLocaleTable, formatLocaleList } from '#utils/display.js';
 import customSearchableSelect from '#utils/prompt.js';
 import { TranslationService } from '#modules/translation/translation.service.js';
+import { Messages } from '#messages/messages.js';
 
 export async function sourceInput(options: InitOptions): Promise<string> {
-  const spinner = Ora({ text: 'Searching for locales in project...', color: 'yellow' }).start();
+  const spinner = Ora({ text: Messages.info.searchingLocales, color: 'yellow' }).start();
 
   const foundLocales = await extractAllLocalesFromProject();
 
   if (foundLocales.length === 0) {
-    spinner.fail('No locales found in the project');
+    spinner.fail(Messages.errors.noLocalesFound);
     Ora({
-      text: 'Please ensure your project contains locale files (e.g., src/i18n/[locale].json or src/i18n/[locale]/...)',
+      text: Messages.errors.noLocalesFoundHint,
       color: 'red',
     }).fail();
     process.exit(1);
   }
 
-  spinner.succeed(
-    `Found ${foundLocales.length} ${foundLocales.length === 1 ? 'locale' : 'locales'} in project`
-  );
+  spinner.succeed(Messages.success.foundLocales(foundLocales.length));
 
   const choices = foundLocales.map((locale) => ({
     label: locale,
@@ -37,14 +36,14 @@ export async function sourceInput(options: InitOptions): Promise<string> {
   }));
 
   const result = await customSearchableSelect({
-    message: 'What is the source locale?',
+    message: Messages.prompts.sourceLocale,
     multiple: false,
     default: options.source && foundLocales.includes(options.source) ? options.source : undefined,
     choices: choices,
   });
 
   if (!result || result.length === 0 || !result[0]) {
-    throw new Error('Source locale selection is required');
+    throw new Error(Messages.errors.sourceLocaleRequired);
   }
 
   return result[0];
@@ -52,37 +51,36 @@ export async function sourceInput(options: InitOptions): Promise<string> {
 
 export async function autoTargetInput(source: string): Promise<string[]> {
   const shouldAutoTarget = await confirm({
-    message: 'Automatically detect and add target locales?',
+    message: Messages.prompts.autoDetectTarget,
   });
 
   if (shouldAutoTarget) {
-    const spinner = Ora({ text: 'Searching for target locales...', color: 'yellow' }).start();
+    const spinner = Ora({ text: Messages.info.searchingTargetLocales, color: 'yellow' }).start();
     const locales = await extractLocaleFromPath(source);
 
     if (locales.length === 0) {
-      spinner.warn('No target locales were found. You can add them manually.');
+      spinner.warn(Messages.info.noTargetLocalesFound);
       return [];
     }
 
     // For large lists, show a formatted table; for small lists, show inline
-    const targetLocalesMessage = locales.length === 1 ? 'locale' : 'locales';
     if (locales.length > 10) {
       displayLocaleTable({
         locales,
-        title: `Found ${locales.length} target ${targetLocalesMessage}`,
+        title: Messages.success.foundTargetLocales(locales.length),
         spinner,
         type: 'succeed',
       });
     } else {
       spinner.succeed(
-        `Found ${locales.length} target ${targetLocalesMessage}: ${formatLocaleList(locales, 10)}`
+        Messages.success.foundTargetLocales(locales.length, formatLocaleList(locales, 10))
       );
     }
 
     return locales;
   }
 
-  Ora({ text: 'Automatic detection of target locales was skipped.', color: 'blue' }).info();
+  Ora({ text: Messages.info.autoDetectionSkipped, color: 'blue' }).info();
   return [];
 }
 
@@ -102,11 +100,11 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
     // For large lists, just show count; for small lists, show the locales
     const alreadyAddedMessage =
       autoDetectedLocales.length <= 5
-        ? `Already added: ${formatLocaleList(autoDetectedLocales)}`
-        : `${autoDetectedLocales.length} ${autoDetectedLocales.length === 1 ? 'locale' : 'locales'} already added`;
+        ? Messages.info.alreadyAdded(formatLocaleList(autoDetectedLocales))
+        : Messages.info.localesAlreadyAdded(autoDetectedLocales.length);
 
     addMoreTargetLocales = await confirm({
-      message: `Do you want to add more target locales? (${alreadyAddedMessage})`,
+      message: Messages.prompts.addMoreTargetLocales(alreadyAddedMessage),
     });
   }
 
@@ -116,8 +114,8 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
 
   const additionalLocalesMessage =
     autoDetectedLocales.length > 0
-      ? 'Select additional target locales'
-      : 'What are the target locales?';
+      ? Messages.prompts.selectAdditionalTargetLocales
+      : Messages.prompts.selectTargetLocales;
 
   const additionalLocales = await customSearchableSelect({
     message: additionalLocalesMessage,
@@ -133,7 +131,7 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
     },
     validate: (value: string[]) => {
       if (autoDetectedLocales.length === 0 && value.length === 0) {
-        return 'Please select at least one locale';
+        return Messages.errors.selectAtLeastOneLocale;
       }
 
       return true;
@@ -149,10 +147,10 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
 
     const summaryParts: string[] = [];
     if (autoCount > 0) {
-      summaryParts.push(`${autoCount} auto-detected`);
+      summaryParts.push(Messages.info.autoDetected(autoCount));
     }
     if (manualCount > 0) {
-      summaryParts.push(`${manualCount} manually added`);
+      summaryParts.push(Messages.info.manuallyAdded(manualCount));
     }
 
     const summaryText = summaryParts.length > 0 ? ` (${summaryParts.join(', ')})` : '';
@@ -161,12 +159,12 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
     if (allTargetLocales.length > 10) {
       displayLocaleTable({
         locales: allTargetLocales,
-        title: `Total ${allTargetLocales.length} target ${allTargetLocales.length === 1 ? 'locale' : 'locales'} selected${summaryText}`,
+        title: Messages.success.totalTargetLocalesSelected(allTargetLocales.length, summaryText),
         type: 'succeed',
       });
     } else {
       Ora().succeed(
-        `Target locales selected: ${formatLocaleList(allTargetLocales, 10)}${summaryText}`
+        Messages.success.targetLocalesSelected(formatLocaleList(allTargetLocales, 10), summaryText)
       );
     }
   }
@@ -175,16 +173,15 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
 }
 
 export async function pathsInput(options: InitOptions) {
-  const spinner = Ora({ text: 'Searching for paths...', color: 'yellow' }).start();
+  const spinner = Ora({ text: Messages.info.searchingPaths, color: 'yellow' }).start();
 
   const paths = await searchLocalePaths();
 
   if (paths.length === 0) {
-    spinner.warn('No paths found');
+    spinner.warn(Messages.info.noPathsFound);
 
     const inputPath = await input({
-      message:
-        'No paths found, enter the paths to watch (separated by a comma, a space or a combination of both)',
+      message: Messages.prompts.enterPaths,
       default: options.paths.join(', '),
       validate: (value) => {
         const paths = value.split(COMMA_AND_SPACE_REGEX);
@@ -192,7 +189,7 @@ export async function pathsInput(options: InitOptions) {
         for (const path of paths) {
           const parsedPath = FilePath.safeParse(path);
           if (!parsedPath.success) {
-            return parsedPath.error.issues[0]?.message || 'Invalid path';
+            return parsedPath.error.issues[0]?.message || Messages.errors.invalidPath;
           }
         }
 
@@ -203,7 +200,7 @@ export async function pathsInput(options: InitOptions) {
     return inputPath.split(COMMA_AND_SPACE_REGEX);
   }
 
-  spinner.succeed('Paths found successfully');
+  spinner.succeed(Messages.success.pathsFound);
 
   const optionPaths = paths.map((path) => ({
     name: path,
@@ -212,7 +209,7 @@ export async function pathsInput(options: InitOptions) {
   }));
 
   return await customSearchableSelect({
-    message: 'Select the paths to watch',
+    message: Messages.prompts.selectPaths,
     choices: optionPaths.map((path) => ({
       value: path.value,
       label: path.name,
@@ -227,7 +224,7 @@ export async function pathsInput(options: InitOptions) {
       },
     },
     validate: (value: string[]) => {
-      return value.length > 0 || 'Please select at least one path';
+      return value.length > 0 || Messages.errors.selectAtLeastOnePath;
     },
   });
 }
@@ -241,9 +238,7 @@ export async function translationMemoriesInput(
   }
 
   const shouldHandleTranslationMessage =
-    existingMemories.length > 0
-      ? 'Do you want to update the selected Translation Memories?'
-      : 'Do you want to use translation memories?';
+    existingMemories.length > 0 ? Messages.prompts.updateMemories : Messages.prompts.useMemories;
   const shouldHandleTranslationMemories = await confirm({
     message: shouldHandleTranslationMessage,
     default: existingMemories.length === 0,
@@ -257,7 +252,7 @@ export async function translationMemoriesInput(
   const clientTranslationMemories = await translationService.getTranslationMemories();
 
   if (clientTranslationMemories.length === 0) {
-    Ora().warn(`No Translation Memories linked. Visit ${LARA_WEB_URL} to learn more.`);
+    Ora().warn(Messages.warnings.noMemoriesLinked(LARA_WEB_URL));
     return [];
   }
 
@@ -267,7 +262,7 @@ export async function translationMemoriesInput(
   }));
 
   const translationMemories = await customSearchableSelect({
-    message: 'Select the memories Lara will use to personalize your translations',
+    message: Messages.prompts.selectMemories,
     choices: choices,
     multiple: true,
     default: existingMemories,
@@ -286,8 +281,8 @@ export async function glossariesInput(
 
   const shouldHandleGlossariesMessage =
     existingGlossaries.length > 0
-      ? 'Do you want to update the selected Glossaries?'
-      : 'Do you want to use glossaries?';
+      ? Messages.prompts.updateGlossaries
+      : Messages.prompts.useGlossaries;
   const shouldHandleGlossaries = await confirm({
     message: shouldHandleGlossariesMessage,
     default: existingGlossaries.length === 0,
@@ -301,7 +296,7 @@ export async function glossariesInput(
   const clientGlossaries = await translationService.getGlossaries();
 
   if (clientGlossaries.length === 0) {
-    Ora().warn(`No Glossaries linked. Visit ${LARA_WEB_URL} to learn more.`);
+    Ora().warn(Messages.warnings.noGlossariesLinked(LARA_WEB_URL));
     return [];
   }
 
@@ -311,7 +306,7 @@ export async function glossariesInput(
   }));
 
   const glossaries = await customSearchableSelect({
-    message: 'Select the glossaries Lara will use to personalize your translations',
+    message: Messages.prompts.selectGlossaries,
     choices: choices,
     multiple: true,
     default: existingGlossaries,

@@ -3,6 +3,7 @@ import Ora from 'ora';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 
 import { ConfigProvider } from '#modules/config/config.provider.js';
+import { Messages } from '#messages/messages.js';
 
 /**
  * Resolves the project instruction based on CLI option or existing config.
@@ -41,7 +42,7 @@ function validateCredential(credential: string, name: string): string {
   const sanitized = credential.trim().replace(/[\r\n]+/g, '');
   // Accept alphanumeric, dash, underscore, min 8 chars, max 128 chars
   if (sanitized.length < 8 || sanitized.length > 128) {
-    throw new Error(`${name} must be 8-128 characters.`);
+    throw new Error(Messages.errors.credentialValidation(name));
   }
   return sanitized;
 }
@@ -53,8 +54,8 @@ function validateCredential(credential: string, name: string): string {
  * @returns Promise that resolves when credentials are updated
  */
 export async function setCredentials(): Promise<void> {
-  const apiKeyRaw = await input({ message: 'Insert your API Key:' });
-  const apiSecretRaw = await input({ message: 'Insert your API Secret:' });
+  const apiKeyRaw = await input({ message: Messages.prompts.apiKey });
+  const apiSecretRaw = await input({ message: Messages.prompts.apiSecret });
   let apiKey: string, apiSecret: string;
   try {
     apiKey = validateCredential(apiKeyRaw, 'API Key');
@@ -63,7 +64,7 @@ export async function setCredentials(): Promise<void> {
     if (err instanceof Error) {
       Ora({ text: err.message, color: 'red' }).fail();
     } else {
-      Ora({ text: 'An unknown error occurred', color: 'red' }).fail();
+      Ora({ text: Messages.errors.unknownError, color: 'red' }).fail();
     }
     throw err;
   }
@@ -71,7 +72,7 @@ export async function setCredentials(): Promise<void> {
   const envPath = '.env';
 
   if (!existsSync(envPath)) {
-    Ora({ text: 'No .env file found. Creating one...', color: 'yellow' }).warn();
+    Ora({ text: Messages.info.noEnvFile, color: 'yellow' }).warn();
     writeFileSync(envPath, '');
   }
 
@@ -79,14 +80,11 @@ export async function setCredentials(): Promise<void> {
   try {
     envContent = readFileSync(envPath, 'utf-8');
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      Ora({
-        text: `Failed to read .env file: ${err.message}. Please check file permissions.`,
-        color: 'red',
-      }).fail();
-    } else {
-      Ora({ text: 'An unknown error occurred', color: 'red' }).fail();
-    }
+    const errorMessage = err instanceof Error ? err.message : Messages.errors.unknownErrorFallback;
+    Ora({
+      text: Messages.errors.envReadFailed(errorMessage),
+      color: 'red',
+    }).fail();
     throw err;
   }
 
@@ -108,7 +106,7 @@ export async function setCredentials(): Promise<void> {
 
   writeFileSync(envPath, envContent);
 
-  Ora({ text: 'API credentials set successfully', color: 'green' }).succeed();
+  Ora({ text: Messages.success.apiCredentialsSet, color: 'green' }).succeed();
 }
 
 /**

@@ -11,6 +11,7 @@ import picomatch from 'picomatch';
 import { handleLaraApiError } from '#utils/error.js';
 import { LaraApiError } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
+import { Messages } from '#messages/messages.js';
 
 type TranslateOptions = {
   target: string[];
@@ -35,7 +36,7 @@ export default new Command()
           const parsed = LocalesEnum.safeParse(locale);
 
           if (!parsed.success) {
-            Ora({ text: `Invalid locale: ${locale}`, color: 'red' }).fail();
+            Ora({ text: Messages.errors.invalidLocale(locale), color: 'red' }).fail();
             process.exit(1);
           }
         }
@@ -52,22 +53,22 @@ export default new Command()
       const config = ConfigProvider.getInstance().getConfig();
 
       if (options.target.includes(config.locales.source)) {
-        throw new Error('Source locale cannot be included in the target locales');
+        throw new Error(Messages.errors.sourceLocaleInTarget);
       }
 
-      const spinner = Ora({ text: 'Calculating total work...', color: 'yellow' }).start();
+      const spinner = Ora({ text: Messages.info.calculatingWork, color: 'yellow' }).start();
       const { totalElements } = await calculateTotalWork(options, config);
-      spinner.succeed(`Found ${totalElements} file × locale combinations`);
+      spinner.succeed(Messages.success.foundFileCombinations(totalElements));
 
-      progressWithOra.start({ message: 'Translating files...', total: totalElements });
+      progressWithOra.start({ message: Messages.info.translatingFiles, total: totalElements });
 
       for (const fileType of Object.keys(config.files)) {
         await handleFileType(fileType, options, config);
       }
 
-      progressWithOra.stop('All files translated successfully!');
+      progressWithOra.stop(Messages.success.allFilesTranslated);
 
-      Ora().succeed('Localization completed! Happy coding!');
+      Ora().succeed(Messages.success.localizationCompleted);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       Ora({ text: message, color: 'red' }).fail();
@@ -108,12 +109,16 @@ async function handleFileType(
       await translationEngine.translate();
     } catch (error) {
       if (error instanceof LaraApiError) {
-        handleLaraApiError(error, `Error translating ${inputPath}`, progressWithOra.spinner);
+        handleLaraApiError(
+          error,
+          Messages.errors.errorTranslatingFile(inputPath),
+          progressWithOra.spinner
+        );
         continue;
       }
 
       const message = error instanceof Error ? error.message : String(error);
-      progressWithOra.stop(`Error translating ${inputPath}: ${message}`, 'fail');
+      progressWithOra.stop(Messages.errors.translatingFile(inputPath, message), 'fail');
       return;
     }
   }
@@ -123,9 +128,7 @@ function getTargetLocales(options: TranslateOptions, config: ConfigType): string
   const targetLocales = options.target.length > 0 ? options.target : config.locales.target;
 
   if (targetLocales.length === 0) {
-    throw new Error(
-      'No target locales specified. Please add target locales in config or use -t option.'
-    );
+    throw new Error(Messages.errors.noTargetLocales);
   }
 
   return targetLocales;

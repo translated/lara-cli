@@ -3,6 +3,7 @@ import path from 'path';
 import yaml from 'yaml';
 
 import { Config, type ConfigType } from './config.types.js';
+import { Messages } from '#messages/messages.js';
 
 export class ConfigProvider {
   private static instance: ConfigProvider | null = null;
@@ -33,7 +34,7 @@ export class ConfigProvider {
     }
 
     if (!this.doesConfigExists()) {
-      throw new Error('Config file not found. Please run `lara-dev init` to create a config file.');
+      throw new Error(Messages.errors.configNotFound);
     }
 
     const config = fs.readFileSync(this.configPath, 'utf8');
@@ -44,7 +45,7 @@ export class ConfigProvider {
       const issues = safeConfig.error.issues.map(
         (issue) => `${issue.path.join('.')}: ${issue.message}`
       );
-      throw new Error(`Invalid config file for properties:\n${issues.join('\n')}`);
+      throw new Error(Messages.errors.invalidConfig(issues.join('\n')));
     }
     this.config = safeConfig.data;
 

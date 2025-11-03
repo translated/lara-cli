@@ -4,6 +4,7 @@ import { TranslationService } from '#modules/translation/translation.service.js'
 import { LARA_WEB_URL } from '#modules/common/common.const.js';
 import { handleLaraApiError } from '#utils/error.js';
 import { LaraApiError } from '@translated/lara';
+import { Messages } from '#messages/messages.js';
 
 export default new Command()
   .command('memory')
@@ -12,7 +13,7 @@ export default new Command()
   .action(async () => {
     if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
       Ora({
-        text: 'No API credentials found. Please run `lara-dev init` to set the API credentials.',
+        text: Messages.errors.noApiCredentials,
         color: 'red',
       }).fail();
       process.exit(1);
@@ -31,27 +32,25 @@ async function handleMemory(): Promise<void> {
 }
 
 async function listMemories(): Promise<void> {
-  const spinner = Ora().start('Fetching Translation Memories...');
+  const spinner = Ora().start(Messages.info.fetchingMemories);
   try {
     const translationService = TranslationService.getInstance();
     const clientTranslationMemories = await translationService.getTranslationMemories();
 
     if (clientTranslationMemories.length === 0) {
-      spinner.warn(`No Translation Memories linked. Visit ${LARA_WEB_URL} to learn more.`);
+      spinner.warn(Messages.warnings.noMemoriesLinked(LARA_WEB_URL));
       return;
     }
 
-    spinner.succeed(
-      `Found ${clientTranslationMemories.length} Translation ${clientTranslationMemories.length === 1 ? 'Memory' : 'Memories'}:\n`
-    );
+    spinner.succeed(Messages.success.foundMemories(clientTranslationMemories.length));
 
     for (const memory of clientTranslationMemories) {
-      console.log(`  ID: ${memory.id}`);
-      console.log(`  Name: ${memory.name}\n`);
+      console.log(Messages.ui.itemId(memory.id));
+      console.log(Messages.ui.itemName(memory.name) + '\n');
     }
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, 'Error getting Translation Memories', spinner);
+      handleLaraApiError(error, Messages.errors.gettingMemories, spinner);
       return;
     }
 

@@ -35,7 +35,8 @@
   "imports": {
     "#utils/*": "./build/utils/*",
     "#modules/*": "./build/modules/*",
-    "#cli/*": "./build/cli/*"
+    "#cli/*": "./build/cli/*",
+    "#messages/*": "./build/messages/*"
   },
   "scripts": {
     "build": "rm -rf build && npx tsc",

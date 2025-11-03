@@ -17,7 +17,7 @@ import {
 } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
-import { NO_API_CREDENTIALS_MESSAGE } from './init.const.js';
+import { Messages } from '#messages/messages.js';
 import {
   setCredentials,
   resolveProjectInstruction,
@@ -36,7 +36,7 @@ export default new Command()
         const locale = LocalesEnum.safeParse(value);
 
         if (!locale.success) {
-          Ora({ text: `Invalid locale: ${value}`, color: 'red' }).fail();
+          Ora({ text: Messages.errors.invalidLocale(value), color: 'red' }).fail();
           return process.exit(1);
         }
 
@@ -55,7 +55,7 @@ export default new Command()
         const parsed = LocalesEnum.safeParse(locale);
 
         if (!parsed.success) {
-          Ora({ text: `Invalid locale: ${locale}`, color: 'red' }).fail();
+          Ora({ text: Messages.errors.invalidLocale(locale), color: 'red' }).fail();
           process.exit(1);
         }
       }
@@ -103,19 +103,17 @@ export default new Command()
       ? await handleInteractiveMode(options)
       : handleNonInteractiveMode(options);
 
-    const spinner = Ora({ text: 'Creating config file...', color: 'yellow' }).start();
+    const spinner = Ora({ text: Messages.info.creatingConfig, color: 'yellow' }).start();
 
     ConfigProvider.getInstance().saveConfig(config);
 
-    spinner.succeed(
-      'Config file created successfully! You can run `lara-dev translate` to start translating your files.'
-    );
+    spinner.succeed(Messages.success.configCreated);
   });
 
 function handleNonInteractiveMode(options: InitOptions): ConfigType {
   if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
     Ora({
-      text: `No API credentials found on machine. ${NO_API_CREDENTIALS_MESSAGE}`,
+      text: Messages.warnings.noApiCredentials,
       color: 'yellow',
     }).warn();
 
@@ -151,7 +149,7 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
 async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> {
   if (options.resetCredentials) {
     const shouldOverwrite = await confirm({
-      message: 'Do you want to reset the API credentials?',
+      message: Messages.prompts.resetCredentials,
     });
 
     if (shouldOverwrite) {
@@ -163,12 +161,12 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
 
   if (configProvider.doesConfigExists() && !options.force) {
     const shouldOverwrite = await confirm({
-      message: 'Config file already exists, do you want to overwrite it?',
+      message: Messages.prompts.overwriteConfig,
     });
 
     if (!shouldOverwrite) {
       Ora({
-        text: 'Config file already exists and the user did not want to overwrite it',
+        text: Messages.errors.configOverwriteDeclined,
         color: 'red',
       }).fail();
       return process.exit(1);
@@ -181,15 +179,14 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
 
   if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
     const shouldInsertCredentials = await confirm({
-      message:
-        'No API credentials found on machine, do you want to insert them now in a .env file?',
+      message: Messages.prompts.insertCredentials,
     });
 
     if (shouldInsertCredentials) {
       await setCredentials();
     } else {
       Ora({
-        text: NO_API_CREDENTIALS_MESSAGE,
+        text: Messages.warnings.noApiCredentials,
         color: 'yellow',
       }).warn();
     }

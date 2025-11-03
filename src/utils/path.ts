@@ -7,6 +7,7 @@ import {
   DEFAULT_EXCLUDED_DIRECTORIES,
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
+import { Messages } from '#messages/messages.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
@@ -188,7 +189,7 @@ function normalizePath(filePath: string): string | null {
  */
 async function searchPaths(): Promise<string[]> {
   if (SUPPORTED_FILE_TYPES.length === 0) {
-    throw new Error('No supported file types configured');
+    throw new Error(Messages.errors.noSupportedFileTypes);
   }
 
   // Use simple pattern if only one file type, otherwise use brace expansion

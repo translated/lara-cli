@@ -8,6 +8,7 @@ import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
+import { Messages } from '#messages/messages.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -140,7 +141,9 @@ export class TranslationEngine {
     const keysCount = Object.keys(changelog).length;
 
     for (const targetLocale of this.targetLocales) {
-      progressWithOra.setText(`Translating ${inputPath} → ${targetLocale} (${keysCount} keys)...`);
+      progressWithOra.setText(
+        Messages.info.translatingFileProgress(inputPath, targetLocale, keysCount)
+      );
 
       const targetPath = buildLocalePath(inputPath, targetLocale);
       const targetContent = await readSafe(targetPath, '{}');
@@ -246,7 +249,7 @@ export class TranslationEngine {
 
     const lastTranslation = translations.pop();
     if (!lastTranslation) {
-      throw new Error(`Translation service returned empty result for: ${value}`);
+      throw new Error(Messages.errors.emptyTranslationResult(value));
     }
 
     return lastTranslation.text;

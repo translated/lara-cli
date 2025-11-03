@@ -11,6 +11,7 @@ import {
   isDownKey,
   type KeypressEvent,
 } from '@inquirer/core';
+import { Messages } from '#messages/messages.js';
 
 // ANSI color codes and control sequences
 const colors = {
@@ -191,14 +192,14 @@ export const searchableSelect = createPrompt(
         const isValid = await validate([...selection.map((choice) => choice.value)]);
 
         if (required && selection.length === 0) {
-          setError('At least one choice must be selected');
+          setError(Messages.errors.selectionRequired);
         } else if (isValid === true) {
           setStatus('done');
           done(selection.map((choice) => choice.value));
         } else if (typeof isValid === 'string') {
           setError(isValid);
         } else {
-          setError('You must select at least one choice');
+          setError(Messages.errors.selectionRequired);
         }
       } else if (isUpKey(key) || isDownKey(key)) {
         if (
@@ -303,7 +304,7 @@ export const searchableSelect = createPrompt(
 
         if (item.choice.disabled) {
           const disabledLabel =
-            typeof item.choice.disabled === 'string' ? item.choice.disabled : '(disabled)';
+            typeof item.choice.disabled === 'string' ? item.choice.disabled : Messages.ui.disabled;
           return colors.dim(
             `${cursor}${checkboxSpace}${checkbox}${checkbox ? ' ' : ''}${item.choice.label} ${disabledLabel}`
           );
@@ -326,22 +327,25 @@ export const searchableSelect = createPrompt(
     }
 
     const helpTip = multiple
-      ? colors.dim('\n(Type to search, ') +
-        colors.cyan('↑/↓') +
-        colors.dim(' navigate, ') +
-        colors.cyan('Space') +
-        colors.dim(' select, ') +
-        colors.cyan('Ctrl+A') +
-        colors.dim(' toggle all)')
-      : colors.dim('\n(Type to search, ') +
-        colors.cyan('↑/↓') +
-        colors.dim(' navigate, ') +
-        colors.cyan('Space/Enter') +
-        colors.dim(' to select)');
+      ? colors.dim(
+          '\n' +
+            Messages.ui.helpMultiSelect(
+              colors.cyan(Messages.ui.navigate),
+              colors.cyan(Messages.ui.space),
+              colors.cyan(Messages.ui.ctrlA)
+            )
+        )
+      : colors.dim(
+          '\n' +
+            Messages.ui.helpSingleSelect(
+              colors.cyan(Messages.ui.navigate),
+              colors.cyan(Messages.ui.space + '/' + Messages.ui.enter)
+            )
+        );
 
     const searchIndicator = searchQuery
-      ? colors.dim(`\n🔍 Search: ${colors.cyan(searchQuery)}`)
-      : colors.dim('\n🔍 Type to search...');
+      ? colors.dim(`\n🔍 ${Messages.ui.searchLabel(colors.cyan(searchQuery))}`)
+      : colors.dim(`\n🔍 ${Messages.ui.typeToSearch}`);
 
     /*const choiceCount =
       filteredItems.length !== items.length

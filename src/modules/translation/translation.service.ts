@@ -1,4 +1,5 @@
 import { Credentials, TranslateOptions, Translator, Memory } from '@translated/lara';
+import { Messages } from '#messages/messages.js';
 
 export type TextBlock = {
   text: string;
@@ -15,7 +16,7 @@ export class TranslationService {
     const keySecret = process.env.LARA_ACCESS_KEY_SECRET!;
 
     if (!keyId || !keySecret) {
-      throw new Error('LARA_ACCESS_KEY_ID and LARA_ACCESS_KEY_SECRET must be set');
+      throw new Error(Messages.errors.envVarsNotSet);
     }
 
     this.client = new Translator(new Credentials(keyId, keySecret));
@@ -60,7 +61,7 @@ export class TranslationService {
     }
 
     // This should never be reached, but TypeScript requires it
-    throw new Error('Max retries exceeded');
+    throw new Error(Messages.errors.maxRetriesExceeded);
   }
 
   public async getTranslationMemories(): Promise<Memory[]> {
