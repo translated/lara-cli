@@ -40,9 +40,7 @@ interface CustomSelectConfig<Value> {
   loop?: boolean;
   required?: boolean;
   default?: Value;
-  validate?: (
-    items: readonly Value[]
-  ) => boolean | string | Promise<string | boolean>;
+  validate?: (items: readonly Value[]) => boolean | string | Promise<string | boolean>;
   theme?: {
     icon?: {
       checked?: string;
@@ -60,9 +58,7 @@ interface CustomMultiSelectConfig<Value> {
   loop?: boolean;
   required?: boolean;
   default?: readonly Value[];
-  validate?: (
-    items: readonly Value[]
-  ) => boolean | string | Promise<string | boolean>;
+  validate?: (items: readonly Value[]) => boolean | string | Promise<string | boolean>;
   theme?: {
     icon?: {
       checked?: string;
@@ -99,7 +95,10 @@ function isSelectable<Value>(item: Item<Value>): boolean {
   return item.choice.disabled !== true && typeof item.choice.disabled !== 'string';
 }
 
-function toggleChoice<Value>(choice: Choice<Value>, selectedChoices: ReadonlySet<Choice<Value>>): Set<Choice<Value>> {
+function toggleChoice<Value>(
+  choice: Choice<Value>,
+  selectedChoices: ReadonlySet<Choice<Value>>
+): Set<Choice<Value>> {
   const newSet = new Set(selectedChoices);
   if (newSet.has(choice)) {
     newSet.delete(choice);
@@ -124,38 +123,27 @@ function deselectAll<Value>(): Set<Choice<Value>> {
 }
 
 export const searchableSelect = createPrompt(
-  <Value,>(
-    config: CustomSelectPromptConfig<Value>,
-    done: (value: Value[]) => void
-  ): string => {
+  <Value>(config: CustomSelectPromptConfig<Value>, done: (value: Value[]) => void): string => {
     const multiple = config.multiple !== false;
-    const {
-      choices,
-      loop = true,
-      pageSize = 7,
-      required,
-      validate = (): boolean => true,
-    } = config;
+    const { choices, loop = true, pageSize = 7, required, validate = (): boolean => true } = config;
     const theme = { ...customSelectTheme, ...config.theme };
-    
+
     const [status, setStatus] = useState<string>('pending');
     const prefix = usePrefix({ status });
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [items, setItems] = useState<readonly Item<Value>[]>(() =>
       choices.map((choice) => ({
         choice,
-        isChecked: multiple 
-          ? (config.multiple ? (config.default?.includes(choice.value) ?? false) : false)
+        isChecked: multiple
+          ? config.multiple
+            ? (config.default?.includes(choice.value) ?? false)
+            : false
           : false,
       }))
     );
 
     const selectedChoices = useRef<Set<Choice<Value>>>(
-      new Set(
-        items
-          .filter((item) => item.isChecked)
-          .map((item) => item.choice)
-      )
+      new Set(items.filter((item) => item.isChecked).map((item) => item.choice))
     );
 
     // Filter items based on search query
@@ -185,7 +173,6 @@ export const searchableSelect = createPrompt(
     }
 
     useKeypress(async (key: KeypressEvent) => {
-
       if (isEnterKey(key)) {
         // In single-select mode, always select the current active item
         if (!multiple) {
@@ -242,16 +229,11 @@ export const searchableSelect = createPrompt(
             done([selectedItem.choice.value]);
           } else {
             // Multi-select mode: toggle selection
-            selectedChoices.current = toggleChoice(
-              selectedItem.choice,
-              selectedChoices.current
-            );
+            selectedChoices.current = toggleChoice(selectedItem.choice, selectedChoices.current);
 
             setItems(
               items.map((item) =>
-                item.choice === selectedItem.choice
-                  ? { ...item, isChecked: !item.isChecked }
-                  : item
+                item.choice === selectedItem.choice ? { ...item, isChecked: !item.isChecked } : item
               )
             );
           }
@@ -278,16 +260,11 @@ export const searchableSelect = createPrompt(
           selectedChoices.current = selectAll(filteredItems);
           setItems(
             items.map((item) =>
-              allFilteredChoices.includes(item.choice)
-                ? { ...item, isChecked: true }
-                : item
+              allFilteredChoices.includes(item.choice) ? { ...item, isChecked: true } : item
             )
           );
         }
-      } else if (
-        key.name === 'backspace' ||
-        key.name === 'delete'
-      ) {
+      } else if (key.name === 'backspace' || key.name === 'delete') {
         if (searchQuery.length > 0) {
           setSearchQuery(searchQuery.slice(0, -1));
           setActive(0);
@@ -304,7 +281,14 @@ export const searchableSelect = createPrompt(
     const page = usePagination({
       items: filteredItems,
       active,
-      renderItem({ item, isActive }: { item: Item<Value>; index: number; isActive: boolean }): string {
+      renderItem({
+        item,
+        isActive,
+      }: {
+        item: Item<Value>;
+        index: number;
+        isActive: boolean;
+      }): string {
         const color = isActive ? colors.cyan : (x: string): string => x;
         const cursor = isActive ? (theme.icon.cursor ?? '›') : ' ';
 
@@ -314,18 +298,20 @@ export const searchableSelect = createPrompt(
             ? colors.cyan(theme.icon.checked ?? '◉')
             : (theme.icon.unchecked ?? '◯')
           : '';
-        
+
         const checkboxSpace = multiple ? ' ' : '';
 
         if (item.choice.disabled) {
           const disabledLabel =
-            typeof item.choice.disabled === 'string'
-              ? item.choice.disabled
-              : '(disabled)';
-          return colors.dim(`${cursor}${checkboxSpace}${checkbox}${checkbox ? ' ' : ''}${item.choice.label} ${disabledLabel}`);
+            typeof item.choice.disabled === 'string' ? item.choice.disabled : '(disabled)';
+          return colors.dim(
+            `${cursor}${checkboxSpace}${checkbox}${checkbox ? ' ' : ''}${item.choice.label} ${disabledLabel}`
+          );
         }
 
-        return color(`${cursor}${checkboxSpace}${checkbox}${checkbox ? ' ' : ''}${item.choice.label}`);
+        return color(
+          `${cursor}${checkboxSpace}${checkbox}${checkbox ? ' ' : ''}${item.choice.label}`
+        );
       },
       pageSize,
       loop,
@@ -371,7 +357,7 @@ export const searchableSelect = createPrompt(
 
 /**
  * Multi-select or single-select prompt with search functionality
- * 
+ *
  * Key bindings:
  * - Type any character: Filter choices by search
  * - ↑/↓: Navigate through choices
@@ -379,7 +365,7 @@ export const searchableSelect = createPrompt(
  * - Ctrl+A: Toggle select all / deselect all (multi-select mode only)
  * - Backspace/Delete: Remove last search character
  * - Enter: Confirm selection
- * 
+ *
  * @template Value - The type of values being selected
  * @param config - Configuration for the prompt
  * @param config.multiple - Enable multi-select mode (default: true). If false, default should be a single value.

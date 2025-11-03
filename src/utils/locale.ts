@@ -9,35 +9,34 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
 
   const targetLocales: Set<string> = new Set();
 
-  for(const filePath of paths) {
+  for (const filePath of paths) {
     const relativeFilePath = path.relative(process.cwd(), filePath);
     const parts = relativeFilePath.split('/');
 
-    for(let i = 0; i < parts.length; i++) {
+    for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      if(!part) {
+      if (!part) {
         continue;
       }
-    
+
       // Handle the last part of the path (filename)
-      if(i === parts.length - 1) {
+      if (i === parts.length - 1) {
         const [filename] = part.split('.');
-        if(!filename) {
+        if (!filename) {
           continue;
         }
-        if(availableLocales.has(filename) && filename !== source) {
+        if (availableLocales.has(filename) && filename !== source) {
           targetLocales.add(filename);
         }
       }
-          
+
       // There might be situations where there might be more than one locale in the path.
       // If the locale is already set, we should treat the other locale as a normal part of the path.
       //
       // (e.g.) src/i18n/en/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
-      if(availableLocales.has(part) && part !== source) {
+      if (availableLocales.has(part) && part !== source) {
         targetLocales.add(part);
       }
-
     }
   }
 
@@ -46,7 +45,7 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
 
 /**
  * Extracts all locales found in the project paths.
- * 
+ *
  * @returns A promise that resolves to an array of all locales found in the project.
  */
 async function extractAllLocalesFromProject(): Promise<string[]> {
@@ -54,42 +53,38 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
 
   const foundLocales: Set<string> = new Set();
 
-  for(const filePath of paths) {
+  for (const filePath of paths) {
     const relativeFilePath = path.relative(process.cwd(), filePath);
     const parts = relativeFilePath.split('/');
 
-    for(let i = 0; i < parts.length; i++) {
+    for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      if(!part) {
+      if (!part) {
         continue;
       }
-    
+
       // Handle the last part of the path (filename)
-      if(i === parts.length - 1) {
+      if (i === parts.length - 1) {
         const [filename] = part.split('.');
-        if(!filename) {
+        if (!filename) {
           continue;
         }
-        if(availableLocales.has(filename)) {
+        if (availableLocales.has(filename)) {
           foundLocales.add(filename);
         }
       }
-          
+
       // There might be situations where there might be more than one locale in the path.
       // If the locale is already set, we should treat the other locale as a normal part of the path.
       //
       // (e.g.) src/i18n/en/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
-      if(availableLocales.has(part)) {
+      if (availableLocales.has(part)) {
         foundLocales.add(part);
       }
-
     }
   }
 
   return Array.from(foundLocales);
 }
 
-export {
-  extractLocaleFromPath,
-  extractAllLocalesFromProject
-};
+export { extractLocaleFromPath, extractAllLocalesFromProject };

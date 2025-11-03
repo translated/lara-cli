@@ -1,7 +1,11 @@
 import { confirm, input } from '@inquirer/prompts';
 import Ora from 'ora';
 import { searchLocalePaths } from '#utils/path.js';
-import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX, LARA_WEB_URL } from '#modules/common/common.const.js';
+import {
+  AVAILABLE_LOCALES,
+  COMMA_AND_SPACE_REGEX,
+  LARA_WEB_URL,
+} from '#modules/common/common.const.js';
 import { InitOptions } from './init.types.js';
 import { FilePath } from '#modules/config/config.types.js';
 import { extractLocaleFromPath, extractAllLocalesFromProject } from '#utils/locale.js';
@@ -11,25 +15,27 @@ import { TranslationService } from '#modules/translation/translation.service.js'
 
 export async function sourceInput(options: InitOptions): Promise<string> {
   const spinner = Ora({ text: 'Searching for locales in project...', color: 'yellow' }).start();
-  
+
   const foundLocales = await extractAllLocalesFromProject();
-  
+
   if (foundLocales.length === 0) {
     spinner.fail('No locales found in the project');
-    Ora({ 
-      text: 'Please ensure your project contains locale files (e.g., src/i18n/[locale].json or src/i18n/[locale]/...)', 
-      color: 'red' 
+    Ora({
+      text: 'Please ensure your project contains locale files (e.g., src/i18n/[locale].json or src/i18n/[locale]/...)',
+      color: 'red',
     }).fail();
     process.exit(1);
   }
 
-  spinner.succeed(`Found ${foundLocales.length} ${foundLocales.length === 1 ? 'locale' : 'locales'} in project`);
+  spinner.succeed(
+    `Found ${foundLocales.length} ${foundLocales.length === 1 ? 'locale' : 'locales'} in project`
+  );
 
   const choices = foundLocales.map((locale) => ({
     label: locale,
     value: locale,
   }));
-  
+
   const result = await customSearchableSelect({
     message: 'What is the source locale?',
     multiple: false,
@@ -37,7 +43,7 @@ export async function sourceInput(options: InitOptions): Promise<string> {
     choices: choices,
   });
 
-  if(!result || result.length === 0 || !result[0]) {
+  if (!result || result.length === 0 || !result[0]) {
     throw new Error('Source locale selection is required');
   }
 
@@ -61,9 +67,16 @@ export async function autoTargetInput(source: string): Promise<string[]> {
     // For large lists, show a formatted table; for small lists, show inline
     const targetLocalesMessage = locales.length === 1 ? 'locale' : 'locales';
     if (locales.length > 10) {
-      displayLocaleTable({ locales, title: `Found ${locales.length} target ${targetLocalesMessage}`, spinner, type: 'succeed' });
+      displayLocaleTable({
+        locales,
+        title: `Found ${locales.length} target ${targetLocalesMessage}`,
+        spinner,
+        type: 'succeed',
+      });
     } else {
-      spinner.succeed(`Found ${locales.length} target ${targetLocalesMessage}: ${formatLocaleList(locales, 10)}`);
+      spinner.succeed(
+        `Found ${locales.length} target ${targetLocalesMessage}: ${formatLocaleList(locales, 10)}`
+      );
     }
 
     return locales;
@@ -74,36 +87,37 @@ export async function autoTargetInput(source: string): Promise<string[]> {
 }
 
 export async function targetInput(source: string, defaults: string[] = []): Promise<string[]> {
-
   const autoDetectedLocales = await autoTargetInput(source);
   const autoDetectedLocalesSet = new Set(autoDetectedLocales);
 
-  const choices = AVAILABLE_LOCALES
-    .filter((locale) => locale !== source && !autoDetectedLocalesSet.has(locale))
-    .map((locale) => ({
-      label: locale,
-      value: locale,
-    }));
+  const choices = AVAILABLE_LOCALES.filter(
+    (locale) => locale !== source && !autoDetectedLocalesSet.has(locale)
+  ).map((locale) => ({
+    label: locale,
+    value: locale,
+  }));
 
   let addMoreTargetLocales = true;
-  if(autoDetectedLocales.length > 0) {
+  if (autoDetectedLocales.length > 0) {
     // For large lists, just show count; for small lists, show the locales
-    const alreadyAddedMessage = autoDetectedLocales.length <= 5
-      ? `Already added: ${formatLocaleList(autoDetectedLocales)}`
-      : `${autoDetectedLocales.length} ${autoDetectedLocales.length === 1 ? 'locale' : 'locales'} already added`;
-    
+    const alreadyAddedMessage =
+      autoDetectedLocales.length <= 5
+        ? `Already added: ${formatLocaleList(autoDetectedLocales)}`
+        : `${autoDetectedLocales.length} ${autoDetectedLocales.length === 1 ? 'locale' : 'locales'} already added`;
+
     addMoreTargetLocales = await confirm({
       message: `Do you want to add more target locales? (${alreadyAddedMessage})`,
     });
   }
 
-  if(!addMoreTargetLocales) {
+  if (!addMoreTargetLocales) {
     return Array.from(new Set([...defaults, ...autoDetectedLocales]));
   }
 
-  const additionalLocalesMessage = autoDetectedLocales.length > 0
-    ? 'Select additional target locales'
-    : 'What are the target locales?';
+  const additionalLocalesMessage =
+    autoDetectedLocales.length > 0
+      ? 'Select additional target locales'
+      : 'What are the target locales?';
 
   const additionalLocales = await customSearchableSelect({
     message: additionalLocalesMessage,
@@ -132,7 +146,7 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
   if (allTargetLocales.length > 0) {
     const autoCount = autoDetectedLocales.length;
     const manualCount = additionalLocales.length;
-    
+
     const summaryParts: string[] = [];
     if (autoCount > 0) {
       summaryParts.push(`${autoCount} auto-detected`);
@@ -140,16 +154,20 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
     if (manualCount > 0) {
       summaryParts.push(`${manualCount} manually added`);
     }
-    
-    const summaryText = summaryParts.length > 0 
-      ? ` (${summaryParts.join(', ')})`
-      : '';
+
+    const summaryText = summaryParts.length > 0 ? ` (${summaryParts.join(', ')})` : '';
 
     // For large lists, show a formatted table; for small lists, show inline
     if (allTargetLocales.length > 10) {
-      displayLocaleTable({ locales: allTargetLocales, title: `Total ${allTargetLocales.length} target ${allTargetLocales.length === 1 ? 'locale' : 'locales'} selected${summaryText}`, type: 'succeed' });
+      displayLocaleTable({
+        locales: allTargetLocales,
+        title: `Total ${allTargetLocales.length} target ${allTargetLocales.length === 1 ? 'locale' : 'locales'} selected${summaryText}`,
+        type: 'succeed',
+      });
     } else {
-      Ora().succeed(`Target locales selected: ${formatLocaleList(allTargetLocales, 10)}${summaryText}`);
+      Ora().succeed(
+        `Target locales selected: ${formatLocaleList(allTargetLocales, 10)}${summaryText}`
+      );
     }
   }
 
@@ -161,29 +179,30 @@ export async function pathsInput(options: InitOptions) {
 
   const paths = await searchLocalePaths();
 
-  if(paths.length === 0) {
+  if (paths.length === 0) {
     spinner.warn('No paths found');
 
     const inputPath = await input({
-      message: 'No paths found, enter the paths to watch (separated by a comma, a space or a combination of both)',
+      message:
+        'No paths found, enter the paths to watch (separated by a comma, a space or a combination of both)',
       default: options.paths.join(', '),
       validate: (value) => {
         const paths = value.split(COMMA_AND_SPACE_REGEX);
-  
-        for(const path of paths) {
+
+        for (const path of paths) {
           const parsedPath = FilePath.safeParse(path);
-          if(!parsedPath.success) {
+          if (!parsedPath.success) {
             return parsedPath.error.issues[0]?.message || 'Invalid path';
           }
         }
-  
+
         return true;
       },
     });
-  
+
     return inputPath.split(COMMA_AND_SPACE_REGEX);
   }
-  
+
   spinner.succeed('Paths found successfully');
 
   const optionPaths = paths.map((path) => ({
@@ -213,19 +232,24 @@ export async function pathsInput(options: InitOptions) {
   });
 }
 
-export async function translationMemoriesInput(existingMemories: string[], options: InitOptions): Promise<string[]> {
-  
-  if(options.translationMemories.length > 0) {
+export async function translationMemoriesInput(
+  existingMemories: string[],
+  options: InitOptions
+): Promise<string[]> {
+  if (options.translationMemories.length > 0) {
     return options.translationMemories;
   }
 
-  const shouldHandleTranslationMessage = existingMemories.length > 0 ? 'Do you want to update the selected Translation Memories?' : 'Do you want to use translation memories?';
+  const shouldHandleTranslationMessage =
+    existingMemories.length > 0
+      ? 'Do you want to update the selected Translation Memories?'
+      : 'Do you want to use translation memories?';
   const shouldHandleTranslationMemories = await confirm({
     message: shouldHandleTranslationMessage,
     default: existingMemories.length === 0,
   });
 
-  if(!shouldHandleTranslationMemories) {
+  if (!shouldHandleTranslationMemories) {
     return existingMemories;
   }
 
@@ -252,34 +276,40 @@ export async function translationMemoriesInput(existingMemories: string[], optio
   return translationMemories;
 }
 
-export async function glossariesInput(existingGlossaries: string[], options: InitOptions): Promise<string[]> {
-  if(options.glossaries.length > 0) {
+export async function glossariesInput(
+  existingGlossaries: string[],
+  options: InitOptions
+): Promise<string[]> {
+  if (options.glossaries.length > 0) {
     return options.glossaries;
   }
 
-  const shouldHandleGlossariesMessage = existingGlossaries.length > 0 ? 'Do you want to update the selected Glossaries?' : 'Do you want to use glossaries?';
+  const shouldHandleGlossariesMessage =
+    existingGlossaries.length > 0
+      ? 'Do you want to update the selected Glossaries?'
+      : 'Do you want to use glossaries?';
   const shouldHandleGlossaries = await confirm({
     message: shouldHandleGlossariesMessage,
     default: existingGlossaries.length === 0,
   });
 
-  if(!shouldHandleGlossaries) {
+  if (!shouldHandleGlossaries) {
     return existingGlossaries;
   }
 
   const translationService = TranslationService.getInstance();
   const clientGlossaries = await translationService.getGlossaries();
-  
+
   if (clientGlossaries.length === 0) {
     Ora().warn(`No Glossaries linked. Visit ${LARA_WEB_URL} to learn more.`);
     return [];
   }
-  
+
   const choices = clientGlossaries.map((glossary) => ({
     value: glossary.id,
     label: glossary.name,
   }));
-  
+
   const glossaries = await customSearchableSelect({
     message: 'Select the glossaries Lara will use to personalize your translations',
     choices: choices,

@@ -10,28 +10,29 @@ export default new Command()
   .description('Manage translation memories')
   .helpOption('-h, --help', 'Show help')
   .action(async () => {
-    if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
-      Ora({ text: 'No API credentials found. Please run `lara-dev init` to set the API credentials.', color: 'red' }).fail();
+    if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
+      Ora({
+        text: 'No API credentials found. Please run `lara-dev init` to set the API credentials.',
+        color: 'red',
+      }).fail();
       process.exit(1);
     }
     await handleMemory();
   });
 
-
 async function handleMemory(): Promise<void> {
-  try{
+  try {
     await listMemories();
-  } catch(error) {
+  } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Ora({ text: message, color: 'red' }).fail();
     process.exit(1);
   }
 }
 
-
 async function listMemories(): Promise<void> {
   const spinner = Ora().start('Fetching Translation Memories...');
-  try{
+  try {
     const translationService = TranslationService.getInstance();
     const clientTranslationMemories = await translationService.getTranslationMemories();
 
@@ -40,18 +41,20 @@ async function listMemories(): Promise<void> {
       return;
     }
 
-    spinner.succeed(`Found ${clientTranslationMemories.length} Translation ${clientTranslationMemories.length === 1 ? 'Memory' : 'Memories'}:\n`);
+    spinner.succeed(
+      `Found ${clientTranslationMemories.length} Translation ${clientTranslationMemories.length === 1 ? 'Memory' : 'Memories'}:\n`
+    );
 
-    for(const memory of clientTranslationMemories) {
+    for (const memory of clientTranslationMemories) {
       console.log(`  ID: ${memory.id}`);
       console.log(`  Name: ${memory.name}\n`);
-    } 
-  } catch(error) {
-    if(error instanceof LaraApiError) {
+    }
+  } catch (error) {
+    if (error instanceof LaraApiError) {
       handleLaraApiError(error, 'Error getting Translation Memories', spinner);
       return;
     }
 
     throw error;
-  } 
+  }
 }

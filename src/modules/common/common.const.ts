@@ -201,20 +201,9 @@ export const ISO_639_3_LOCALES = [
   'ydd',
 ];
 
-export const BCP_47_LOCALES = [
-  'en-GB',
-  'en-US',
-  'pt-BR',
-  'pt-PT',
-  'zh-CN',
-  'zh-TW',
-];
+export const BCP_47_LOCALES = ['en-GB', 'en-US', 'pt-BR', 'pt-PT', 'zh-CN', 'zh-TW'];
 
-export const AVAILABLE_LOCALES = [
-  ...ISO_639_1_LOCALES,
-  ...ISO_639_3_LOCALES,
-  ...BCP_47_LOCALES,
-];
+export const AVAILABLE_LOCALES = [...ISO_639_1_LOCALES, ...ISO_639_3_LOCALES, ...BCP_47_LOCALES];
 
 export const DEFAULT_EXCLUDED_DIRECTORIES = [
   'node_modules',

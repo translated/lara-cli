@@ -10,28 +10,29 @@ export default new Command()
   .description('Manage glossaries')
   .helpOption('-h, --help', 'Show help')
   .action(async () => {
-    if(!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
-      Ora({ text: 'No API credentials found. Please run `lara-dev init` to set the API credentials.', color: 'red' }).fail();
+    if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
+      Ora({
+        text: 'No API credentials found. Please run `lara-dev init` to set the API credentials.',
+        color: 'red',
+      }).fail();
       process.exit(1);
     }
     await handleGlossary();
   });
 
-
 async function handleGlossary(): Promise<void> {
-  try{
+  try {
     await listGlossaries();
-  } catch(error) {
+  } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Ora({ text: message, color: 'red' }).fail();
     process.exit(1);
   }
 }
 
-
 async function listGlossaries(): Promise<void> {
   const spinner = Ora().start('Fetching Glossaries...');
-  try{
+  try {
     const translationService = TranslationService.getInstance();
     const clientGlossaries = await translationService.getGlossaries();
 
@@ -40,18 +41,20 @@ async function listGlossaries(): Promise<void> {
       return;
     }
 
-    spinner.succeed(`Found ${clientGlossaries.length} ${clientGlossaries.length === 1 ? 'Glossary' : 'Glossaries'}:\n`);
+    spinner.succeed(
+      `Found ${clientGlossaries.length} ${clientGlossaries.length === 1 ? 'Glossary' : 'Glossaries'}:\n`
+    );
 
-    for(const glossary of clientGlossaries) {
+    for (const glossary of clientGlossaries) {
       console.log(`  ID: ${glossary.id}`);
       console.log(`  Name: ${glossary.name}\n`);
-    } 
-  } catch(error) {
-    if(error instanceof LaraApiError) {
+    }
+  } catch (error) {
+    if (error instanceof LaraApiError) {
       handleLaraApiError(error, 'Error getting Glossaries', spinner);
       return;
     }
 
     throw error;
-  } 
+  }
 }

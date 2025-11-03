@@ -1,0 +1,5 @@
+node_modules
+build
+dist
+*.map
+pnpm-lock.yaml

@@ -5,10 +5,13 @@ import yaml from 'yaml';
 
 import { parseFlattened } from './json.js';
 
-type ChecksumChangelog = Record<string, {
-  value: unknown;
-  state: 'new' | 'updated' | 'unchanged';
-}>;
+type ChecksumChangelog = Record<
+  string,
+  {
+    value: unknown;
+    state: 'new' | 'updated' | 'unchanged';
+  }
+>;
 
 type ChecksumFile = {
   version: string;
@@ -23,7 +26,7 @@ let cachedChecksumFile: ChecksumFile | null = null;
 
 /**
  * Calculates the checksum of a file. And saves the checksum.
- * 
+ *
  * @param fileName - The name of the file.
  * @param fileContent - The content of the file.
  * @returns The changelog of the file.
@@ -38,11 +41,11 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
 
   let changed: boolean = false;
 
-  for(const key in fileContent) {
-    if(!checksum[key]) {
+  for (const key in fileContent) {
+    if (!checksum[key]) {
       changelog[key] = {
         value: fileContent[key],
-        state: 'new'
+        state: 'new',
       };
       changed = true;
       continue;
@@ -51,33 +54,32 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
     const newHash = getHash(fileContent[key]);
     const oldHash = checksum[key];
 
-    if(newHash === oldHash) {
+    if (newHash === oldHash) {
       changelog[key] = {
         value: fileContent[key],
-        state: 'unchanged'
+        state: 'unchanged',
       };
       continue;
     }
 
     changelog[key] = {
       value: fileContent[key],
-      state: 'updated'
+      state: 'updated',
     };
     changed = true;
     continue;
   }
 
-  if(changed) {
+  if (changed) {
     updateChecksum(fileName, fileContent);
   }
 
   return changelog;
 }
 
-
 /**
  * Saves the checksum of a file.
- * 
+ *
  * @param fileName - The name of the file.
  * @param values - The values to save.
  */
@@ -85,7 +87,9 @@ function updateChecksum(fileName: string, values: Record<string, unknown>) {
   const checksumFile = getChecksumFile();
   const fileNameHash = getHash(fileName);
 
-  const hashedValues = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, getHash(value)]));
+  const hashedValues = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, getHash(value)])
+  );
 
   checksumFile.files[fileNameHash] = hashedValues;
 
@@ -95,19 +99,19 @@ function updateChecksum(fileName: string, values: Record<string, unknown>) {
 
 /**
  * Returns the checksum lock of a file.
- * 
+ *
  * @param fileName - The name of the file.
  * @returns The checksum lock of the file.
  */
 function getChecksumFile(): ChecksumFile {
-  if(cachedChecksumFile) {
+  if (cachedChecksumFile) {
     return cachedChecksumFile;
   }
 
-  if(!fs.existsSync(checksumFilePath)) {
+  if (!fs.existsSync(checksumFilePath)) {
     cachedChecksumFile = {
       version: '1.0.0',
-      files: {}
+      files: {},
     };
 
     fs.writeFileSync(checksumFilePath, yaml.stringify(cachedChecksumFile));
@@ -120,7 +124,7 @@ function getChecksumFile(): ChecksumFile {
 
 /**
  * Returns the MD5 hash of a string or an object.
- * 
+ *
  * @param s - The string or object to hash.
  * @returns The MD5 hash of the string or object.
  */
@@ -129,6 +133,4 @@ function getHash(s: unknown) {
   return crypto.createHash('md5').update(data).digest('hex');
 }
 
-export {
-  calculateChecksum
-};
+export { calculateChecksum };

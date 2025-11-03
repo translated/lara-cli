@@ -6,7 +6,6 @@ export type TextBlock = {
 };
 
 export class TranslationService {
-
   private static instance: TranslationService;
 
   private readonly client: Translator;
@@ -15,7 +14,7 @@ export class TranslationService {
     const keyId = process.env.LARA_ACCESS_KEY_ID!;
     const keySecret = process.env.LARA_ACCESS_KEY_SECRET!;
 
-    if(!keyId || !keySecret) {
+    if (!keyId || !keySecret) {
       throw new Error('LARA_ACCESS_KEY_ID and LARA_ACCESS_KEY_SECRET must be set');
     }
 
@@ -23,30 +22,40 @@ export class TranslationService {
   }
 
   public static getInstance(): TranslationService {
-    if(!TranslationService.instance) {
+    if (!TranslationService.instance) {
       TranslationService.instance = new TranslationService();
     }
 
     return TranslationService.instance;
   }
 
-  public async translate(textBlocks: TextBlock[], sourceLocale: string, targetLocale: string, options: TranslateOptions): Promise<TextBlock[]> {
+  public async translate(
+    textBlocks: TextBlock[],
+    sourceLocale: string,
+    targetLocale: string,
+    options: TranslateOptions
+  ): Promise<TextBlock[]> {
     const maxRetries = 5;
     let attempt = 0;
 
     while (attempt < maxRetries) {
       try {
-        const response = await this.client.translate(textBlocks, sourceLocale, targetLocale, options);
+        const response = await this.client.translate(
+          textBlocks,
+          sourceLocale,
+          targetLocale,
+          options
+        );
         return response.translation;
       } catch (error) {
         attempt++;
-        
+
         if (attempt >= maxRetries) {
           throw error;
         }
 
         // Wait 200ms before retrying
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
     }
 

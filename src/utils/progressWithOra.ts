@@ -15,7 +15,7 @@ class ProgressWithOra {
     this.spinner = Ora({ text: message ?? 'Processing...', color: 'yellow' }).start();
   }
 
-  public start({ message, total }: { message: string; total: number; }): void {
+  public start({ message, total }: { message: string; total: number }): void {
     if (!this.spinner) {
       this.init({ message });
     }
@@ -41,7 +41,7 @@ class ProgressWithOra {
     this.spinner.text = text;
   }
 
-  public reset({ total, done }: { total: number; done?: number; }): void {
+  public reset({ total, done }: { total: number; done?: number }): void {
     if (total <= 0) {
       throw new Error('Progress total must be greater than 0');
     }
