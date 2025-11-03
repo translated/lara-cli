@@ -46,6 +46,16 @@ export default new Command()
       .default('')
   )
   .addOption(
+    new Option(
+      '-p, --paths <paths>',
+      'Specific file paths to translate (separated by a comma, a space or a combination of both). Must include [locale] placeholder.'
+    )
+      .argParser((value) => {
+        return value.split(COMMA_AND_SPACE_REGEX).map((path) => path.trim());
+      })
+      .default([])
+  )
+  .addOption(
     new Option('-f, --force', 'Force translation even if the files have not changed').default(false)
   )
   .action(async (options: TranslateOptions) => {
@@ -85,7 +95,7 @@ async function handleFileType(
   const sourceLocale = config.locales.source;
   const targetLocales = getTargetLocales(options, config);
 
-  const inputPathsArray = await getInputPaths(fileType, config);
+  const inputPathsArray = await getInputPaths(fileType, config, options.input);
 
   for (const inputPath of inputPathsArray) {
     const fileInstructionConfig = fileConfig.fileInstructions.find((fc) => fc.path === inputPath);
@@ -134,12 +144,19 @@ function getTargetLocales(options: TranslateOptions, config: ConfigType): string
   return targetLocales;
 }
 
-async function getInputPaths(fileType: string, config: ConfigType): Promise<string[]> {
+async function getInputPaths(
+  fileType: string,
+  config: ConfigType,
+  customPaths?: string[]
+): Promise<string[]> {
   const fileConfig = config.files[fileType]!;
   const excludePatterns = fileConfig.exclude.map((key) => picomatch(key));
   const inputPaths: Set<string> = new Set();
 
-  for (const includePath of fileConfig.include) {
+  // Use custom paths if provided, otherwise use config paths
+  const pathsToProcess = customPaths && customPaths.length > 0 ? customPaths : fileConfig.include;
+
+  for (const includePath of pathsToProcess) {
     // Static path, no need to search for files
     if (!includePath.includes('*')) {
       inputPaths.add(includePath);
@@ -168,7 +185,7 @@ async function calculateTotalWork(
   let totalElements = 0;
 
   for (const fileType of Object.keys(config.files)) {
-    const inputPaths = await getInputPaths(fileType, config);
+    const inputPaths = await getInputPaths(fileType, config, options.input);
     totalElements += inputPaths.length * targetLocales.length;
   }
 
