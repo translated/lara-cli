@@ -29,6 +29,8 @@ lara-dev translate [options]
 lara-dev translate
 ```
 
+Translates content to all target locales specified in your `lara.yaml` configuration file.
+
 ### Translate Specific Locales
 
 ```bash
@@ -58,6 +60,24 @@ Before using the translate command:
    LARA_ACCESS_KEY_SECRET=your_access_key_secret
    ```
 3. Create source locale files with content to translate
+
+## Change Detection
+
+Lara Dev uses checksums to determine what content needs translation:
+
+- **First run**: All content is translated
+- **Subsequent runs**: Only changed or new keys are translated
+- **Force mode** (`--force`): Retranslates all content, ignoring checksums
+
+When you modify source locale files, the tool automatically detects changes and translates only the updated content. This saves time and API costs by avoiding unnecessary retranslations.
+
+### When to Use Force Mode
+
+Use `--force` when you need to:
+- Retranslate content after updating instructions
+- Apply new Translation Memories or Glossaries to existing content
+- Fix translation errors by regenerating all translations
+- Reset translations after configuration changes
 
 ## Related
 

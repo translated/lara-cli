@@ -20,7 +20,6 @@ glossaries:
 - **Type**: Array of strings (Glossary IDs)
 - **Required**: No (defaults to empty array)
 - **Format**: Glossary IDs typically start with `gls_` (e.g., `gls_abc123`)
-- **Availability**: Pro and Team subscriptions only
 
 ## Example Configurations
 

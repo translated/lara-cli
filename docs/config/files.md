@@ -54,6 +54,84 @@ files:
 - **Description**: Identifies keys that should be completely excluded from target files
 - **Format**: Uses glob patterns for matching keys (e.g., `internal/**`, `**/debug`)
 
+## Locked vs Ignored Keys
+
+Understanding the difference between `lockedKeys` and `ignoredKeys`:
+
+### Locked Keys
+Keys marked as locked are **copied** from source to target files without translation. Use this for:
+- IDs, codes, and identifiers
+- URLs and API endpoints
+- Configuration values that shouldn't change
+
+**Example:**
+
+Source file (`en.json`):
+```json
+{
+  "user": {
+    "id": "USER_001",
+    "name": "John Doe",
+    "role": "admin"
+  }
+}
+```
+
+Configuration:
+```yaml
+lockedKeys:
+  - "**/id"
+  - "**/role"
+```
+
+Target file (`es.json`):
+```json
+{
+  "user": {
+    "id": "USER_001",
+    "name": "Juan Pérez",
+    "role": "admin"
+  }
+}
+```
+
+### Ignored Keys
+Keys marked as ignored are **excluded** from target files entirely. Use this for:
+- Development-only messages
+- Internal debugging information
+- Keys not relevant to other locales
+
+**Example:**
+
+Source file (`en.json`):
+```json
+{
+  "app": {
+    "title": "My Application",
+    "debug": "Debug mode enabled",
+    "version": "1.0.0"
+  }
+}
+```
+
+Configuration:
+```yaml
+ignoredKeys:
+  - "**/debug"
+```
+
+Target file (`es.json`):
+```json
+{
+  "app": {
+    "title": "Mi Aplicación",
+    "version": "1.0.0"
+  }
+}
+```
+
+Note: The `debug` key is completely omitted from the target file.
+
 ## Path Patterns
 
 Paths in the `include` and `exclude` arrays must use the `[locale]` placeholder to indicate where locale codes should appear.
