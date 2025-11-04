@@ -15,7 +15,8 @@
     "paths": {
       "#utils/*": ["src/utils/*"],
       "#modules/*": ["src/modules/*"],
-      "#cli/*": ["src/cli/*"]
+      "#cli/*": ["src/cli/*"],
+      "#messages/*": ["src/messages/*"]
     },
 
     // Source Map

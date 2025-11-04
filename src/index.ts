@@ -6,18 +6,19 @@ dotenv.config({ debug: false, quiet: true });
 
 import initCommand from './cli/cmd/init/init.js';
 import translateCommand from './cli/cmd/translate/translate.js';
+import memoryCommand from './cli/cmd/memory/memory.js';
+import glossaryCommand from './cli/cmd/glossary/glossary.js';
 
 const program = new Command()
-  .name('lara-cli')
-  .description('Lara CLI')
+  .name('lara-dev')
+  .description('Lara Dev')
   .helpOption('-h, --help', 'Show help')
   .version('0.0.1')
-  .addOption(
-    new Option('-y --non-interactive', 'Run in non-interactive mode')
-      .default(false)
-  )
+  .addOption(new Option('-y --non-interactive', 'Run in non-interactive mode').default(false))
   .addCommand(initCommand)
-  .addCommand(translateCommand);
+  .addCommand(translateCommand)
+  .addCommand(memoryCommand)
+  .addCommand(glossaryCommand);
 
 // Parse command line arguments
 program.parse();

@@ -1,15 +1,23 @@
 {
-  "name": "lara-cli",
+  "name": "lara-dev",
   "type": "module",
   "version": "0.0.2",
-  "description": "Lara CLI",
+  "description": "Lara Dev",
   "main": "index.js",
-  "keywords": [],
+  "keywords": [
+    "laratranslate",
+    "lara",
+    "localization",
+    "translation",
+    "ai",
+    "translate",
+    "translated"
+  ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.11.1",
   "bin": {
-    "lara-cli": "./build/index.js"
+    "lara-dev": "./build/index.js"
   },
   "dependencies": {
     "@inquirer/core": "^10.2.2",
@@ -27,20 +35,25 @@
   "imports": {
     "#utils/*": "./build/utils/*",
     "#modules/*": "./build/modules/*",
-    "#cli/*": "./build/cli/*"
+    "#cli/*": "./build/cli/*",
+    "#messages/*": "./build/messages/*"
   },
   "scripts": {
     "build": "rm -rf build && npx tsc",
     "start": "rm -rf build && npx tsc && node build/index.js",
     "lint": "npx eslint src/**/*.ts",
-    "lint:fix": "npx eslint src/**/*.ts --fix"
+    "lint:fix": "npx eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json}\""
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
     "@types/node": "^24.3.0",
     "@types/picomatch": "^4.0.2",
     "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
     "globals": "^16.3.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.40.0"
   }
