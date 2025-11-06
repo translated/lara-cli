@@ -3,9 +3,9 @@ import path from 'path';
 import yaml from 'yaml';
 
 import { Config, type ConfigType } from './config.types.js';
+import { Messages } from '#messages/messages.js';
 
 export class ConfigProvider {
-
   private static instance: ConfigProvider | null = null;
 
   private config: ConfigType | null = null;
@@ -18,7 +18,7 @@ export class ConfigProvider {
   }
 
   public static getInstance() {
-    if(!ConfigProvider.instance) {
+    if (!ConfigProvider.instance) {
       ConfigProvider.instance = new ConfigProvider();
     }
     return ConfigProvider.instance;
@@ -29,29 +29,31 @@ export class ConfigProvider {
   }
 
   public getConfig(): ConfigType {
-    if(this.config) {
+    if (this.config) {
       return this.config;
     }
 
-    if(!this.doesConfigExists()) {
-      throw new Error('Config file not found. Please run `lara-dev init` to create a config file.');
+    if (!this.doesConfigExists()) {
+      throw new Error(Messages.errors.configNotFound);
     }
 
     const config = fs.readFileSync(this.configPath, 'utf8');
 
     const safeConfig = Config.safeParse(yaml.parse(config));
 
-    if(!safeConfig.success) {
-      const issues = safeConfig.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
-      throw new Error(`Invalid config file for properties:\n${issues.join('\n')}`);
+    if (!safeConfig.success) {
+      const issues = safeConfig.error.issues.map(
+        (issue) => `${issue.path.join('.')}: ${issue.message}`
+      );
+      throw new Error(Messages.errors.invalidConfig(issues.join('\n')));
     }
     this.config = safeConfig.data;
 
     return this.config;
-  } 
+  }
 
   public saveConfig(config: ConfigType) {
-    if(this.doesConfigExists()) {
+    if (this.doesConfigExists()) {
       fs.unlinkSync(this.configPath);
     }
 

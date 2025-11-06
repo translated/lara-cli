@@ -1,4 +1,5 @@
 import Ora, { Ora as OraType } from 'ora';
+import { Messages } from '#messages/messages.js';
 
 class ProgressWithOra {
   public spinner!: OraType;
@@ -12,16 +13,16 @@ class ProgressWithOra {
       return;
     }
 
-    this.spinner = Ora({ text: message ?? 'Processing...', color: 'yellow' }).start();
+    this.spinner = Ora({ text: message ?? Messages.errors.processing, color: 'yellow' }).start();
   }
 
-  public start({ message, total }: { message: string; total: number; }): void {
+  public start({ message, total }: { message: string; total: number }): void {
     if (!this.spinner) {
       this.init({ message });
     }
 
     if (total <= 0) {
-      throw new Error('Progress total must be greater than 0');
+      throw new Error(Messages.errors.progressTotalInvalid);
     }
 
     this.total = total;
@@ -41,9 +42,9 @@ class ProgressWithOra {
     this.spinner.text = text;
   }
 
-  public reset({ total, done }: { total: number; done?: number; }): void {
+  public reset({ total, done }: { total: number; done?: number }): void {
     if (total <= 0) {
-      throw new Error('Progress total must be greater than 0');
+      throw new Error(Messages.errors.progressTotalInvalid);
     }
 
     this.total = total;
@@ -65,7 +66,10 @@ class ProgressWithOra {
     process.stdout.write('\x1b[1A');
   }
 
-  public stop(message: string = 'Completed!', type: 'succeed' | 'fail' = 'succeed'): void {
+  public stop(
+    message: string = Messages.success.completed,
+    type: 'succeed' | 'fail' = 'succeed'
+  ): void {
     this.done = this.total;
     this.renderProgress();
 

@@ -20,7 +20,6 @@ memories:
 - **Type**: Array of strings (Memory IDs)
 - **Required**: No (defaults to empty array)
 - **Format**: Memory IDs typically start with `mem_` (e.g., `mem_abc123`)
-- **Availability**: Team and Enterprise subscriptions only
 
 ## Example Configurations
 
