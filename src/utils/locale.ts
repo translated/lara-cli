@@ -1,4 +1,4 @@
-import { AVAILABLE_LOCALES } from '#modules/common/common.const.js';
+import { AVAILABLE_LOCALES, SEPARATOR_FILENAME_REGEX } from '#modules/common/common.const.js';
 import { searchPaths } from './path.js';
 import path from 'path';
 
@@ -21,12 +21,14 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
 
       // Handle the last part of the path (filename)
       if (i === parts.length - 1) {
-        const [filename] = part.split('.');
-        if (!filename) {
+        const lastDotIndex = part.lastIndexOf('.');
+        const filename = lastDotIndex > -1 ? part.substring(0, lastDotIndex) : part;
+        const { locale } = extractLocaleFromFilename(filename);
+        if (!locale) {
           continue;
         }
-        if (availableLocales.has(filename) && filename !== source) {
-          targetLocales.add(filename);
+        if (availableLocales.has(locale) && locale !== source) {
+          targetLocales.add(locale);
         }
       }
 
@@ -65,12 +67,14 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
 
       // Handle the last part of the path (filename)
       if (i === parts.length - 1) {
-        const [filename] = part.split('.');
-        if (!filename) {
+        const lastDotIndex = part.lastIndexOf('.');
+        const filename = lastDotIndex > -1 ? part.substring(0, lastDotIndex) : part;
+        const { locale } = extractLocaleFromFilename(filename);
+        if (!locale) {
           continue;
         }
-        if (availableLocales.has(filename)) {
-          foundLocales.add(filename);
+        if (availableLocales.has(locale)) {
+          foundLocales.add(locale);
         }
       }
 
@@ -87,4 +91,51 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
   return Array.from(foundLocales);
 }
 
-export { extractLocaleFromPath, extractAllLocalesFromProject };
+/**
+ * Extracts a valid locale identifier from the beginning of a filename.
+ *
+ * This function attempts to find the longest valid locale match at the start of the filename,
+ * using common separators (dots, hyphens, underscores) as split points. The locale is validated
+ * against the available locales set.
+ *
+ * @param {string} filename - The filename to extract the locale from (e.g., "en-US.messages", "it_IT-common")
+ * @returns {{ locale: string; rest: string }} An object containing:
+ *   - `locale`: The extracted locale identifier (or the entire filename if no valid locale found)
+ *   - `rest`: The remaining part of the filename after the locale (including the separator)
+ *
+ * @example
+ * // Returns { locale: "en-US", rest: ".messages" }
+ * extractLocaleFromFilename("en-US.messages");
+ */
+function extractLocaleFromFilename(filename: string): { locale: string; rest: string } {
+  // Try to find a valid locale at the start of the filename
+  let locale = '';
+  let rest = '';
+  let bestMatchLength = 0;
+
+  // Try to find the longest valid locale match
+  for (let i = 0; i < filename.length; i++) {
+    // Find all possible split points (dots, hyphens, underscores)
+    if (SEPARATOR_FILENAME_REGEX.test(filename[i] ?? '') || i === filename.length - 1) {
+      const endIndex = i === filename.length - 1 ? filename.length : i;
+      const potentialLocale = filename.substring(0, endIndex);
+
+      // Check if this is a valid locale and if it's the longest match
+      if (availableLocales.has(potentialLocale) && potentialLocale.length > bestMatchLength) {
+        bestMatchLength = potentialLocale.length;
+        locale = potentialLocale;
+        rest = filename.substring(endIndex);
+      }
+    }
+  }
+
+  // If no valid locale found, treat the whole filename as locale candidate
+  if (!locale) {
+    locale = filename;
+    rest = '';
+  }
+
+  return { locale, rest };
+}
+
+export { extractLocaleFromPath, extractAllLocalesFromProject, extractLocaleFromFilename };
