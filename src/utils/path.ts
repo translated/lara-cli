@@ -186,13 +186,24 @@ function normalizePath(filePath: string): string | null {
 /**
  * Extracts all paths from the current working directory
  *
+ * @param options - Optional configuration object
+ * @param options.source - If provided, searches for files matching the source locale patterns
+ *                         (e.g., en.json, en.schema.json).
+ *                         If omitted, returns all files with supported extensions.
+ *
  * @returns A promise that resolves to an array of paths.
  *
- * Example:
- * [
- *  'src/i18n/en.json',
- *  'src/i18n/it.json',
- * ]
+ * @example
+ * Without options - returns all locale files
+ * const allPaths = await searchPaths();
+ * ['src/i18n/en.json', 'src/i18n/it.json', 'src/i18n/fr.json']
+ *
+ * @example
+ * With source - filters only matching locale files
+ * Given files: en.json, en.default.json, zh.schema.json
+ * const enPaths = await searchPaths({ source: 'en' });
+ * Returns: ['en.json', 'en.default.json']
+ * (zh.schema.json is excluded because it doesn't start with 'en')
  */
 async function searchPaths(options?: SearchPathsOptions | undefined): Promise<string[]> {
   if (SUPPORTED_FILE_TYPES.length === 0) {

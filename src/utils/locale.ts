@@ -93,7 +93,6 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
 
 /**
  * Extracts a valid locale identifier from the beginning of a filename.
- *
  * This function attempts to find the longest valid locale match at the start of the filename,
  * using common separators (dots, hyphens, underscores) as split points. The locale is validated
  * against the available locales set.
@@ -104,7 +103,7 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
  *   - `rest`: The remaining part of the filename after the locale (including the separator)
  *
  * @example
- * // Returns { locale: "en-US", rest: ".messages" }
+ * Returns { locale: "en-US", rest: ".messages" }
  * extractLocaleFromFilename("en-US.messages");
  */
 function extractLocaleFromFilename(filename: string): { locale: string; rest: string } {
@@ -129,7 +128,6 @@ function extractLocaleFromFilename(filename: string): { locale: string; rest: st
     }
   }
 
-  // If no valid locale found, treat the whole filename as locale candidate
   if (!locale) {
     locale = filename;
     rest = '';
