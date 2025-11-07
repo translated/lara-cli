@@ -149,10 +149,7 @@ function normalizePath(filePath: string): string | null {
       const lastDotIndex = part.lastIndexOf('.');
       const filename = lastDotIndex > -1 ? part.substring(0, lastDotIndex) : part;
       const extension = lastDotIndex > -1 ? part.substring(lastDotIndex + 1) : '';
-      console.log('filename', filename);
       const { locale, rest } = extractLocaleFromFilename(filename);
-      console.log('locale', locale);
-      console.log('rest', rest);
 
       if (!currentLocale && availableLocales.has(locale ?? '')) {
         currentLocale = locale;
@@ -242,6 +239,22 @@ export {
   searchPaths,
 };
 
+/**
+ * Extracts a valid locale identifier from the beginning of a filename.
+ *
+ * This function attempts to find the longest valid locale match at the start of the filename,
+ * using common separators (dots, hyphens, underscores) as split points. The locale is validated
+ * against the available locales set.
+ *
+ * @param {string} filename - The filename to extract the locale from (e.g., "en-US.messages", "it_IT-common")
+ * @returns {{ locale: string; rest: string }} An object containing:
+ *   - `locale`: The extracted locale identifier (or the entire filename if no valid locale found)
+ *   - `rest`: The remaining part of the filename after the locale (including the separator)
+ *
+ * @example
+ * // Returns { locale: "en-US", rest: ".messages" }
+ * extractLocaleFromFilename("en-US.messages");
+ */
 function extractLocaleFromFilename(filename: string): { locale: string; rest: string } {
   // Try to find a valid locale at the start of the filename
   let locale = '';
