@@ -60,7 +60,10 @@ export default new Command()
   )
   .action(async (options: TranslateOptions) => {
     try {
+      console.log('options', options);
       const config = ConfigProvider.getInstance().getConfig();
+
+      console.log('config', config);
 
       if (options.target.includes(config.locales.source)) {
         throw new Error(Messages.errors.sourceLocaleInTarget);
@@ -80,6 +83,7 @@ export default new Command()
 
       Ora().succeed(Messages.success.localizationCompleted);
     } catch (error) {
+      console.log('error ---------------->', error);
       const message = error instanceof Error ? error.message : String(error);
       Ora({ text: message, color: 'red' }).fail();
       process.exit(1);
@@ -99,6 +103,7 @@ async function handleFileType(
 
   for (const inputPath of inputPathsArray) {
     const fileInstructionConfig = fileConfig.fileInstructions.find((fc) => fc.path === inputPath);
+    console.log('fileInstructionConfig', fileInstructionConfig);
 
     const translationEngine = new TranslationEngine({
       sourceLocale,
@@ -114,6 +119,8 @@ async function handleFileType(
       translationMemoryIds: config.memories,
       glossaryIds: config.glossaries,
     });
+
+    console.log('translationEngine', translationEngine);
 
     try {
       await translationEngine.translate();

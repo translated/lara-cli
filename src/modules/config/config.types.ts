@@ -21,7 +21,7 @@ const IncludeFilePath = z
   .refine(
     (path) => {
       const hasDirectoryPattern = path.includes('/[locale]/');
-      const hasFilenamePattern = /\[locale\]\.[a-zA-Z0-9]+$/.test(path);
+      const hasFilenamePattern = /\[locale\]([.\-_][a-zA-Z0-9.\-_]+)?(\.[a-zA-Z0-9]+)?$/.test(path);
 
       return hasDirectoryPattern || hasFilenamePattern;
     },

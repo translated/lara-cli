@@ -175,7 +175,9 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
 export async function pathsInput(options: InitOptions) {
   const spinner = Ora({ text: Messages.info.searchingPaths, color: 'yellow' }).start();
 
-  const paths = await searchLocalePaths();
+  const allPaths = await searchLocalePaths(options);
+  console.log('allPaths', allPaths);
+  const paths = allPaths.filter((path) => path.startsWith('locales/'));
 
   if (paths.length === 0) {
     spinner.warn(Messages.info.noPathsFound);

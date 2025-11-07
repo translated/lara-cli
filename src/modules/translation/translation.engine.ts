@@ -9,6 +9,7 @@ import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
+import { existsSync } from 'fs';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -137,6 +138,13 @@ export class TranslationEngine {
 
   private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
+
+    // If the source file does not exist, we skip the path
+    if (!existsSync(sourcePath)) {
+      progressWithOra.spinner.warn(Messages.warnings.sourceFileNotFound(sourcePath, inputPath));
+      return;
+    }
+
     const changelog = calculateChecksum(sourcePath);
     const keysCount = Object.keys(changelog).length;
 

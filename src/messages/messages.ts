@@ -94,6 +94,8 @@ export const Messages = {
     noMemoriesLinked: (url: string) =>
       `No Translation Memories linked. Visit ${url} to learn more.`,
     noGlossariesLinked: (url: string) => `No Glossaries linked. Visit ${url} to learn more.`,
+    sourceFileNotFound: (sourcePath: string, inputPath: string) =>
+      `Source file not found: ${sourcePath}. Skipping path: ${inputPath}`,
   },
 
   ui: {

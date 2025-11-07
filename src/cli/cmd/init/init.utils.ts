@@ -15,6 +15,7 @@ import { Messages } from '#messages/messages.js';
 export function resolveProjectInstruction(cliInstruction?: string): string | undefined {
   // If instruction provided via CLI, use it
   if (cliInstruction) {
+    console.log('cliInstruction', cliInstruction);
     return cliInstruction;
   }
 
@@ -22,6 +23,7 @@ export function resolveProjectInstruction(cliInstruction?: string): string | und
   const configProvider = ConfigProvider.getInstance();
   if (configProvider.doesConfigExists()) {
     const config = configProvider.getConfig();
+    console.log('config', config);
     return config.project?.instruction;
   }
 

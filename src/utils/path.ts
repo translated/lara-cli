@@ -5,9 +5,11 @@ import { glob } from 'glob';
 import {
   AVAILABLE_LOCALES,
   DEFAULT_EXCLUDED_DIRECTORIES,
+  SEPARATOR_FILENAME_REGEX,
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
+import { InitOptions } from '#cli/cmd/init/init.types.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
@@ -105,8 +107,8 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
  *  'src/i18n/[locale].json',
  * ]
  */
-async function searchLocalePaths(): Promise<string[]> {
-  const allJsonPaths = await searchPaths();
+async function searchLocalePaths(options: InitOptions): Promise<string[]> {
+  const allJsonPaths = await searchPaths(options);
 
   const pathsWithLocales: string[] = [];
 
@@ -143,12 +145,20 @@ function normalizePath(filePath: string): string | null {
 
     // Handle the last part of the path (filename)
     if (i === parts.length - 1) {
-      const [filename, extension] = part.split('.');
-      if (!currentLocale && availableLocales.has(filename ?? '')) {
-        currentLocale = filename!;
+      // Find the last dot to separate filename and extension
+      const lastDotIndex = part.lastIndexOf('.');
+      const filename = lastDotIndex > -1 ? part.substring(0, lastDotIndex) : part;
+      const extension = lastDotIndex > -1 ? part.substring(lastDotIndex + 1) : '';
+      console.log('filename', filename);
+      const { locale, rest } = extractLocaleFromFilename(filename);
+      console.log('locale', locale);
+      console.log('rest', rest);
+
+      if (!currentLocale && availableLocales.has(locale ?? '')) {
+        currentLocale = locale;
       }
-      if (filename === currentLocale) {
-        normalizedPath += `[locale].${extension}`;
+      if (locale === currentLocale) {
+        normalizedPath += rest ? `[locale]${rest}.${extension}` : `[locale].${extension}`;
         continue;
       }
       normalizedPath += part;
@@ -187,16 +197,33 @@ function normalizePath(filePath: string): string | null {
  *  'src/i18n/it.json',
  * ]
  */
-async function searchPaths(): Promise<string[]> {
+async function searchPaths(options?: InitOptions | undefined): Promise<string[]> {
   if (SUPPORTED_FILE_TYPES.length === 0) {
     throw new Error(Messages.errors.noSupportedFileTypes);
   }
 
-  // Use simple pattern if only one file type, otherwise use brace expansion
-  const pattern =
-    SUPPORTED_FILE_TYPES.length === 1
-      ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
-      : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
+  let pattern: string;
+
+  if (options?.source) {
+    // If source is provided, search for paths that start with the source locale
+    const source = options.source;
+
+    if (SUPPORTED_FILE_TYPES.length === 1) {
+      const ext = SUPPORTED_FILE_TYPES[0];
+      // Pattern that matches: source.ext, source-*.ext, source_*.ext, source.*.ext
+      pattern = `**/${source}{.${ext},-*.${ext},_*.${ext},.*.${ext}}`;
+    } else {
+      // For multiple extensions, create a pattern for each type
+      const extensions = SUPPORTED_FILE_TYPES.join(',');
+      pattern = `**/${source}{.{${extensions}},-*.{${extensions}},_*.{${extensions}},.*.{${extensions}}}`;
+    }
+  } else {
+    // Original pattern for all files
+    pattern =
+      SUPPORTED_FILE_TYPES.length === 1
+        ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
+        : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
+  }
 
   return glob(pattern, {
     cwd: process.cwd(),
@@ -214,3 +241,34 @@ export {
   searchLocalePaths,
   searchPaths,
 };
+
+function extractLocaleFromFilename(filename: string): { locale: string; rest: string } {
+  // Try to find a valid locale at the start of the filename
+  let locale = '';
+  let rest = '';
+  let bestMatchLength = 0;
+
+  // Try to find the longest valid locale match
+  for (let i = 0; i < filename.length; i++) {
+    // Find all possible split points (dots, hyphens, underscores)
+    if (SEPARATOR_FILENAME_REGEX.test(filename[i] ?? '') || i === filename.length - 1) {
+      const endIndex = i === filename.length - 1 ? filename.length : i;
+      const potentialLocale = filename.substring(0, endIndex);
+
+      // Check if this is a valid locale and if it's the longest match
+      if (availableLocales.has(potentialLocale) && potentialLocale.length > bestMatchLength) {
+        bestMatchLength = potentialLocale.length;
+        locale = potentialLocale;
+        rest = filename.substring(endIndex);
+      }
+    }
+  }
+
+  // If no valid locale found, treat the whole filename as locale candidate
+  if (!locale) {
+    locale = filename;
+    rest = '';
+  }
+
+  return { locale, rest };
+}
