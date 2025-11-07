@@ -8,3 +8,7 @@ export interface InitOptions {
   translationMemories: string[];
   glossaries: string[];
 }
+
+export type SearchPathsOptions = {
+  source?: string;
+};

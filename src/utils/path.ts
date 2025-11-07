@@ -9,7 +9,7 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
-import { InitOptions } from '#cli/cmd/init/init.types.js';
+import { SearchPathsOptions } from '#cli/cmd/init/init.types.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
@@ -107,7 +107,7 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
  *  'src/i18n/[locale].json',
  * ]
  */
-async function searchLocalePaths(options: InitOptions): Promise<string[]> {
+async function searchLocalePaths(options?: SearchPathsOptions | undefined): Promise<string[]> {
   const allJsonPaths = await searchPaths(options);
 
   const pathsWithLocales: string[] = [];
@@ -194,28 +194,25 @@ function normalizePath(filePath: string): string | null {
  *  'src/i18n/it.json',
  * ]
  */
-async function searchPaths(options?: InitOptions | undefined): Promise<string[]> {
+async function searchPaths(options?: SearchPathsOptions | undefined): Promise<string[]> {
   if (SUPPORTED_FILE_TYPES.length === 0) {
     throw new Error(Messages.errors.noSupportedFileTypes);
   }
 
   let pattern: string;
+  const source = options?.source;
 
-  if (options?.source) {
-    // If source is provided, search for paths that start with the source locale
-    const source = options.source;
-
+  // If source is provided, search for paths that start with the source locale
+  // Pattern that matches: source.ext, source-*.ext, source_*.ext, source.*.ext
+  if (source) {
     if (SUPPORTED_FILE_TYPES.length === 1) {
       const ext = SUPPORTED_FILE_TYPES[0];
-      // Pattern that matches: source.ext, source-*.ext, source_*.ext, source.*.ext
       pattern = `**/${source}{.${ext},-*.${ext},_*.${ext},.*.${ext}}`;
     } else {
-      // For multiple extensions, create a pattern for each type
       const extensions = SUPPORTED_FILE_TYPES.join(',');
       pattern = `**/${source}{.{${extensions}},-*.{${extensions}},_*.{${extensions}},.*.{${extensions}}}`;
     }
   } else {
-    // Original pattern for all files
     pattern =
       SUPPORTED_FILE_TYPES.length === 1
         ? `**/*.${SUPPORTED_FILE_TYPES[0]}`

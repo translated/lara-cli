@@ -175,6 +175,12 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
 
   const inputSource = await sourceInput(options);
   const inputTarget = await targetInput(inputSource, options.target);
+
+  // Update the source in the options to be used in pathsInput.
+  // This is necessary because the pathsInput function needs the source to search only for filenames
+  // that start with that source and find existing patterns
+  // This is an alternative solution to avoid passing the source as an option to the pathsInput function.
+  options.source = inputSource;
   const inputPaths = await pathsInput(options);
 
   if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
