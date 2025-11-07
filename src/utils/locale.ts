@@ -103,8 +103,8 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
  *   - `rest`: The remaining part of the filename after the locale (including the separator)
  *
  * @example
- * Returns { locale: "en-US", rest: ".messages" }
  * extractLocaleFromFilename("en-US.messages");
+ * // Returns { locale: "en-US", rest: ".messages" }
  */
 function extractLocaleFromFilename(filename: string): { locale: string; rest: string } {
   // Try to find a valid locale at the start of the filename

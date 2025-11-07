@@ -155,7 +155,13 @@ function normalizePath(filePath: string): string | null {
         currentLocale = locale;
       }
       if (locale === currentLocale) {
-        normalizedPath += rest ? `[locale]${rest}.${extension}` : `[locale].${extension}`;
+        if (rest) {
+          normalizedPath += `[locale]${rest}.${extension}`;
+        } else if (extension) {
+          normalizedPath += `[locale].${extension}`;
+        } else {
+          normalizedPath += `[locale]`;
+        }
         continue;
       }
       normalizedPath += part;
@@ -202,8 +208,8 @@ function normalizePath(filePath: string): string | null {
  * With source - filters only matching locale files
  * Given files: en.json, en.default.json, zh.schema.json
  * const enPaths = await searchPaths({ source: 'en' });
- * Returns: ['en.json', 'en.default.json']
- * (zh.schema.json is excluded because it doesn't start with 'en')
+ * Returns: ['src/i18n/en.json', 'src/i18n/en.default.json']
+ * (src/i18n/zh.schema.json is excluded because it doesn't start with 'en')
  */
 async function searchPaths(options?: SearchPathsOptions | undefined): Promise<string[]> {
   if (SUPPORTED_FILE_TYPES.length === 0) {
