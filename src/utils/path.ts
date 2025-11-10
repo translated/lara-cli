@@ -8,7 +8,6 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
-import { extractLocaleFromFilename } from '#utils/locale.js';
 import { SearchPathsOptions } from '#cli/cmd/init/init.types.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
@@ -226,7 +225,7 @@ async function searchPaths(options?: SearchPathsOptions | undefined): Promise<st
   // If source is provided, search for paths that start with the source locale
   // Pattern that matches: source.ext, source-*.ext, source_*.ext, source.*.ext
   if (source) {
-    pattern = `**/${source}{.${ext},-*.${ext},_*.${ext},.*.${ext}}`;
+    pattern = `**/${source}*.${ext}`;
   } else {
     pattern = `**/*.${ext}`;
   }
@@ -247,3 +246,44 @@ export {
   searchLocalePaths,
   searchPaths,
 };
+
+/**
+ * Extracts a valid locale identifier from the beginning of a filename.
+ * This function attempts to find the longest valid locale match at the start of the filename.
+ * The locale is validated against the available locales set.
+ *
+ * @param {string} filename - The filename to extract the locale from (e.g., "en-US.messages", "it_IT-common")
+ * @returns {{ locale: string; rest: string }} An object containing:
+ *   - `locale`: The extracted locale identifier (or the entire filename if no valid locale found)
+ *   - `rest`: The remaining part of the filename after the locale (including the separator)
+ *
+ * @example
+ * extractLocaleFromFilename("en-US.messages");
+ * // Returns { locale: "en-US", rest: ".messages" }
+ */
+export function extractLocaleFromFilename(filename: string): { locale: string; rest: string } {
+  // Try to find a valid locale at the start of the filename
+  let locale = '';
+  let rest = '';
+  let bestMatchLength = 0;
+
+  // Try to find the longest valid locale match
+  for (let i = 0; i < filename.length; i++) {
+    const endIndex = i === filename.length - 1 ? filename.length : i;
+    const potentialLocale = filename.substring(0, endIndex);
+
+    // Check if this is a valid locale and if it's the longest match
+    if (availableLocales.has(potentialLocale) && potentialLocale.length > bestMatchLength) {
+      bestMatchLength = potentialLocale.length;
+      locale = potentialLocale;
+      rest = filename.substring(endIndex);
+    }
+  }
+
+  if (!locale) {
+    locale = filename;
+    rest = '';
+  }
+
+  return { locale, rest };
+}
