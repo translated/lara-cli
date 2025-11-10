@@ -246,12 +246,12 @@ async function searchPaths(options?: SearchPathsOptions | undefined): Promise<st
     return [...new Set([...fileResults, ...dirResults])];
   } else {
     pattern = `**/*.${ext}`;
-  }
 
-  return glob(pattern, {
-    cwd: process.cwd(),
-    ignore: DEFAULT_EXCLUDED_DIRECTORIES.map((dir) => `${dir}/**`),
-  });
+    return glob(pattern, {
+      cwd: process.cwd(),
+      ignore: DEFAULT_EXCLUDED_DIRECTORIES.map((dir) => `${dir}/**`),
+    });
+  }
 }
 
 export {
