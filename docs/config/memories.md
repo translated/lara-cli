@@ -1,8 +1,3 @@
----
-title: Translation Memories
-sidebar_position: 6
----
-
 # Translation Memories Configuration
 
 Translation Memories allow Lara to adapt translations to your specific style and terminology using quality-vetted examples.

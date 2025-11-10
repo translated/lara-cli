@@ -1,8 +1,3 @@
----
-title: Glossary Command
-sidebar_position: 4
----
-
 # Glossary Command
 
 The `glossary` command lists all Glossaries available in your Lara account. Glossaries ensure consistent and accurate translations for domain-specific terminology.

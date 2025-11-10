@@ -1,8 +1,3 @@
----
-title: Lara Dev Documentation
-sidebar_position: 1
----
-
 # Lara Dev Documentation
 
 Welcome to the Lara Dev documentation. This guide will help you set up and use Lara Dev to manage your application's internationalization.

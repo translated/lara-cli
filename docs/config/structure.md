@@ -1,8 +1,3 @@
----
-title: Configuration Schema
-sidebar_position: 2
----
-
 # Configuration Schema
 
 This page explains the schema structure of the `lara.yaml` configuration file and how its sections relate to each other.

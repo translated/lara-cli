@@ -1,8 +1,3 @@
----
-title: Translate Command
-sidebar_position: 2
----
-
 # Translate Command
 
 The `translate` command processes internationalization files specified in your `lara.yaml` configuration and translates them from the source locale to the target locales.

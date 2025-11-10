@@ -1,8 +1,3 @@
----
-title: Locales Configuration
-sidebar_position: 3
----
-
 # Locales Configuration
 
 The `locales` section defines the source and target languages for translation.

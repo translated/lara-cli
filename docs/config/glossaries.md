@@ -1,8 +1,3 @@
----
-title: Glossaries
-sidebar_position: 7
----
-
 # Glossaries Configuration
 
 Glossaries give you control over domain-specific terminology to ensure consistent and accurate translations across your content.

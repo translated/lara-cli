@@ -1,8 +1,3 @@
----
-title: Files Configuration
-sidebar_position: 4
----
-
 # Files Configuration
 
 The `files` section defines which files should be translated and how they should be processed.

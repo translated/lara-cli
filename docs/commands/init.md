@@ -1,8 +1,3 @@
----
-title: Init Command
-sidebar_position: 1
----
-
 # Init Command
 
 The `init` command initializes a new Lara project by creating a configuration file (`lara.yaml`) that defines localization settings for your project.

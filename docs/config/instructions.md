@@ -1,8 +1,3 @@
----
-title: Translation Instructions
-sidebar_position: 5
----
-
 # Translation Instructions
 
 Translation instructions help adjust the tone, style, and behavior of translations. They provide context that helps clarify ambiguities in the source text.

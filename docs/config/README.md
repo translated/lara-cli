@@ -1,8 +1,3 @@
----
-title: Configuration Overview
-sidebar_position: 1
----
-
 # Lara Configuration Overview
 
 Lara Dev uses a configuration file (`lara.yaml`) to define your internationalization settings. This file is created when you run `lara-dev init` and defines how translations are handled in your project.

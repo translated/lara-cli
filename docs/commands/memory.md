@@ -1,8 +1,3 @@
----
-title: Memory Command
-sidebar_position: 3
----
-
 # Memory Command
 
 The `memory` command lists all Translation Memories available in your Lara account. Translation Memories enable Lara to adapt translations to your specific style and terminology.
