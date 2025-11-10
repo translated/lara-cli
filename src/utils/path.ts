@@ -222,10 +222,28 @@ async function searchPaths(options?: SearchPathsOptions | undefined): Promise<st
       ? SUPPORTED_FILE_TYPES[0]
       : `{${SUPPORTED_FILE_TYPES.join(',')}}`;
 
-  // If source is provided, search for paths that start with the source locale
-  // Pattern that matches: source.ext, source-*.ext, source_*.ext, source.*.ext
+  // If source is provided, search for paths that:
+  // 1. Start with the source locale: source.ext, source-*.ext, source_*.ext, source.*.ext
+  // 2. Are inside directories named after the source locale or its variants:
+  //    - source/**/*.ext (e.g., en/**/*.json)
+  //    - source-*/**/*.ext (e.g., en-US/**/*.json, en-GB/**/*.json)
   if (source) {
-    pattern = `**/${source}*.${ext}`;
+    // Search both file patterns and directory patterns
+    const filePattern = `**/${source}*.${ext}`;
+    const dirPattern = `**/${source}*/**/*.${ext}`;
+
+    const [fileResults, dirResults] = await Promise.all([
+      glob(filePattern, {
+        cwd: process.cwd(),
+        ignore: DEFAULT_EXCLUDED_DIRECTORIES.map((dir) => `${dir}/**`),
+      }),
+      glob(dirPattern, {
+        cwd: process.cwd(),
+        ignore: DEFAULT_EXCLUDED_DIRECTORIES.map((dir) => `${dir}/**`),
+      }),
+    ]);
+
+    return [...new Set([...fileResults, ...dirResults])];
   } else {
     pattern = `**/*.${ext}`;
   }
@@ -268,15 +286,14 @@ export function extractLocaleFromFilename(filename: string): { locale: string; r
   let bestMatchLength = 0;
 
   // Try to find the longest valid locale match
-  for (let i = 0; i < filename.length; i++) {
-    const endIndex = i === filename.length - 1 ? filename.length : i;
-    const potentialLocale = filename.substring(0, endIndex);
+  for (let i = 1; i <= filename.length; i++) {
+    const potentialLocale = filename.substring(0, i);
 
     // Check if this is a valid locale and if it's the longest match
     if (availableLocales.has(potentialLocale) && potentialLocale.length > bestMatchLength) {
       bestMatchLength = potentialLocale.length;
       locale = potentialLocale;
-      rest = filename.substring(endIndex);
+      rest = filename.substring(i);
     }
   }
 
