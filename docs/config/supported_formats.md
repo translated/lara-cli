@@ -6,6 +6,16 @@ This document describes the file structure supported by Lara Dev.
 
 Lara Dev supports only **`.json`** files.
 
+## Supported Locales
+
+Lara Dev supports **ISO 639-1**, **ISO 639-3**, and **BCP-47** locale codes for naming folders and files.
+
+**[See all supported locales →](/docs/config/locales.md)**
+
+Use these locale codes as:
+- **File names**: `en.json`, `es.json`, `en-US.json`, `it-IT.json`
+- **Directory names**: `en/`, `es/`, `en-US/`, `it-IT/`
+
 ## Supported Structure
 
 Lara Dev follows the standard **i18n structure**, where translation files are organized by locale.
@@ -43,23 +53,6 @@ project/
       translation.json
 ```
 
-Each JSON file contains your translations in a nested key-value structure:
-
-```json
-{
-  "common": {
-    "buttons": {
-      "submit": "Submit",
-      "cancel": "Cancel"
-    }
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "welcome": "Welcome back"
-  }
-}
-```
-
 ## Multiple Files Per Locale
 
 Lara Dev supports multiple translation files per locale, allowing you to organize your translations by feature, module, or domain.
@@ -84,6 +77,23 @@ project/
       dashboard.json
       settings.json
       errors.json
+```
+
+Each JSON file contains your translations in a nested key-value structure:
+
+```json
+{
+  "common": {
+    "buttons": {
+      "submit": "Submit",
+      "cancel": "Cancel"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back"
+  }
+}
 ```
 
 ## Limitations and Best Practices
@@ -135,7 +145,7 @@ You don't need to manually exclude these in your configuration.
 
 **Use consistent naming**: Choose one pattern and stick to it across your project.
 
-**Avoid special characters**: Use only alphanumeric characters, es: en.json, translation.jsonr
+**Avoid special characters**: Use only alphanumeric characters, es: en.json, translation.json
 
 **Use relative paths**: Configure paths relative to your project root.
 
