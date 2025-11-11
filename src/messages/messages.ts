@@ -40,6 +40,8 @@ export const Messages = {
     processing: 'Processing...',
     selectionRequired: 'At least one choice must be selected',
     unknownErrorFallback: 'Unknown error',
+    translationCompletedWithErrors: 'Translation completed with errors',
+    localizationFailed: 'Localization failed due to errors',
   },
 
   success: {
@@ -55,7 +57,8 @@ export const Messages = {
       locales
         ? `Found ${count} target ${count === 1 ? 'locale' : 'locales'}: ${locales}`
         : `Found ${count} target ${count === 1 ? 'locale' : 'locales'}`,
-    foundFileCombinations: (count: number) => `Found ${count} file × locale combinations`,
+    foundFileCombinations: (count: number) =>
+      count > 1 ? `Found ${count} files to localize` : `Found ${count} file to localize`,
     pathsFound: 'Paths found successfully',
     foundMemories: (count: number) =>
       `Found ${count} Translation ${count === 1 ? 'Memory' : 'Memories'}:\n`,

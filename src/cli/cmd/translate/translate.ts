@@ -72,13 +72,20 @@ export default new Command()
 
       progressWithOra.start({ message: Messages.info.translatingFiles, total: totalElements });
 
+      let hasErrors = false;
       for (const fileType of Object.keys(config.files)) {
-        await handleFileType(fileType, options, config);
+        const fileTypeHasErrors = await handleFileType(fileType, options, config);
+        if (fileTypeHasErrors) {
+          hasErrors = true;
+        }
       }
 
-      progressWithOra.stop(Messages.success.allFilesTranslated);
+      if (hasErrors) {
+        progressWithOra.stop(Messages.errors.localizationFailed, 'fail');
+        process.exit(1);
+      }
 
-      Ora().succeed(Messages.success.localizationCompleted);
+      progressWithOra.stop(Messages.success.localizationCompleted);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       Ora({ text: message, color: 'red' }).fail();
@@ -90,12 +97,13 @@ async function handleFileType(
   fileType: string,
   options: TranslateOptions,
   config: ConfigType
-): Promise<void> {
+): Promise<boolean> {
   const fileConfig = config.files[fileType]!;
   const sourceLocale = config.locales.source;
   const targetLocales = getTargetLocales(options, config);
 
   const inputPathsArray = await getInputPaths(fileType, config, options.input);
+  let hasErrors = false;
 
   for (const inputPath of inputPathsArray) {
     const fileInstructionConfig = fileConfig.fileInstructions.find((fc) => fc.path === inputPath);
@@ -124,14 +132,21 @@ async function handleFileType(
           Messages.errors.errorTranslatingFile(inputPath),
           progressWithOra.spinner
         );
+        // Check if the error was fatal (401 or >= 500) - if so, process.exit was called
+        // For non-fatal errors, continue but mark as having errors
+        if (error.statusCode !== 401 && error.statusCode < 500) {
+          hasErrors = true;
+        }
         continue;
       }
 
       const message = error instanceof Error ? error.message : String(error);
       progressWithOra.stop(Messages.errors.translatingFile(inputPath, message), 'fail');
-      return;
+      return true;
     }
   }
+
+  return hasErrors;
 }
 
 function getTargetLocales(options: TranslateOptions, config: ConfigType): string[] {

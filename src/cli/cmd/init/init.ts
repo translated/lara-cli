@@ -8,22 +8,11 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import {
-  pathsInput,
-  sourceInput,
-  targetInput,
-  translationMemoriesInput,
-  glossariesInput,
-} from './init.input.js';
+import { pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { Messages } from '#messages/messages.js';
-import {
-  setCredentials,
-  resolveProjectInstruction,
-  getExistingMemories,
-  getExistingGlossaries,
-} from './init.utils.js';
+import { setCredentials, resolveProjectInstruction } from './init.utils.js';
 
 export default new Command()
   .command('init')
@@ -192,20 +181,14 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     }
   }
 
-  const existingMemories = getExistingMemories(options.force);
-  const inputTranslationMemories = await translationMemoriesInput(existingMemories, options);
-
-  const existingGlossaries = getExistingGlossaries(options.force);
-  const inputGlossaries = await glossariesInput(existingGlossaries, options);
-
   return {
     version: '1.0.0',
     locales: {
       source: inputSource,
       target: inputTarget,
     },
-    memories: inputTranslationMemories,
-    glossaries: inputGlossaries,
+    memories: [],
+    glossaries: [],
     files: {
       json: {
         include: inputPaths,

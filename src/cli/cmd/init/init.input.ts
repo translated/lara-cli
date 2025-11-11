@@ -1,17 +1,12 @@
 import { confirm, input } from '@inquirer/prompts';
 import Ora from 'ora';
 import { searchLocalePaths } from '#utils/path.js';
-import {
-  AVAILABLE_LOCALES,
-  COMMA_AND_SPACE_REGEX,
-  LARA_WEB_URL,
-} from '#modules/common/common.const.js';
+import { AVAILABLE_LOCALES, COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { InitOptions } from './init.types.js';
 import { FilePath } from '#modules/config/config.types.js';
 import { extractLocaleFromPath, extractAllLocalesFromProject } from '#utils/locale.js';
 import { displayLocaleTable, formatLocaleList } from '#utils/display.js';
 import customSearchableSelect from '#utils/prompt.js';
-import { TranslationService } from '#modules/translation/translation.service.js';
 import { Messages } from '#messages/messages.js';
 
 export async function sourceInput(options: InitOptions): Promise<string> {
@@ -227,90 +222,4 @@ export async function pathsInput(options: InitOptions) {
       return value.length > 0 || Messages.errors.selectAtLeastOnePath;
     },
   });
-}
-
-export async function translationMemoriesInput(
-  existingMemories: string[],
-  options: InitOptions
-): Promise<string[]> {
-  if (options.translationMemories.length > 0) {
-    return options.translationMemories;
-  }
-
-  const shouldHandleTranslationMessage =
-    existingMemories.length > 0 ? Messages.prompts.updateMemories : Messages.prompts.useMemories;
-  const shouldHandleTranslationMemories = await confirm({
-    message: shouldHandleTranslationMessage,
-    default: existingMemories.length === 0,
-  });
-
-  if (!shouldHandleTranslationMemories) {
-    return existingMemories;
-  }
-
-  const translationService = TranslationService.getInstance();
-  const clientTranslationMemories = await translationService.getTranslationMemories();
-
-  if (clientTranslationMemories.length === 0) {
-    Ora().warn(Messages.warnings.noMemoriesLinked(LARA_WEB_URL));
-    return [];
-  }
-
-  const choices = clientTranslationMemories.map((translationMemory) => ({
-    value: translationMemory.id,
-    label: translationMemory.name,
-  }));
-
-  const translationMemories = await customSearchableSelect({
-    message: Messages.prompts.selectMemories,
-    choices: choices,
-    multiple: true,
-    default: existingMemories,
-  });
-
-  return translationMemories;
-}
-
-export async function glossariesInput(
-  existingGlossaries: string[],
-  options: InitOptions
-): Promise<string[]> {
-  if (options.glossaries.length > 0) {
-    return options.glossaries;
-  }
-
-  const shouldHandleGlossariesMessage =
-    existingGlossaries.length > 0
-      ? Messages.prompts.updateGlossaries
-      : Messages.prompts.useGlossaries;
-  const shouldHandleGlossaries = await confirm({
-    message: shouldHandleGlossariesMessage,
-    default: existingGlossaries.length === 0,
-  });
-
-  if (!shouldHandleGlossaries) {
-    return existingGlossaries;
-  }
-
-  const translationService = TranslationService.getInstance();
-  const clientGlossaries = await translationService.getGlossaries();
-
-  if (clientGlossaries.length === 0) {
-    Ora().warn(Messages.warnings.noGlossariesLinked(LARA_WEB_URL));
-    return [];
-  }
-
-  const choices = clientGlossaries.map((glossary) => ({
-    value: glossary.id,
-    label: glossary.name,
-  }));
-
-  const glossaries = await customSearchableSelect({
-    message: Messages.prompts.selectGlossaries,
-    choices: choices,
-    multiple: true,
-    default: existingGlossaries,
-  });
-
-  return glossaries;
 }
