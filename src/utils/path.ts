@@ -5,6 +5,7 @@ import { glob } from 'glob';
 import {
   AVAILABLE_LOCALES,
   DEFAULT_EXCLUDED_DIRECTORIES,
+  LOCALE_PATTERN_REGEX,
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
@@ -143,12 +144,10 @@ function normalizePath(filePath: string): string | null {
 
     // Handle the last part of the path (filename)
     if (i === parts.length - 1) {
-      const [filename, extension] = part.split('.');
-      if (!currentLocale && availableLocales.has(filename ?? '')) {
-        currentLocale = filename!;
-      }
-      if (filename === currentLocale) {
-        normalizedPath += `[locale].${extension}`;
+      const locale = extractLocaleFromFilename(part);
+      if (!currentLocale && availableLocales.has(locale ?? '')) {
+        currentLocale = locale!;
+        normalizedPath += normalizeFilename(part);
         continue;
       }
       normalizedPath += part;
@@ -214,3 +213,17 @@ export {
   searchLocalePaths,
   searchPaths,
 };
+
+export function extractLocaleFromFilename(filename: string): string | null {
+  const match = filename.match(LOCALE_PATTERN_REGEX);
+
+  if (!match) {
+    return null;
+  }
+
+  return match[2]?.toLowerCase() ?? null;
+}
+
+export function normalizeFilename(filename: string) {
+  return filename.replace(LOCALE_PATTERN_REGEX, '$1[locale]');
+}
