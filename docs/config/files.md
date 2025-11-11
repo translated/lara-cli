@@ -2,7 +2,7 @@
 
 The `files` section defines which files should be translated and how they should be processed.
 
-> **See also**: [File Structure and Formats](./file-structure.md) for detailed information about supported file formats, JSON structure, file discovery, and best practices.
+> **See also**: [File Structure and Formats](./supported_formats.md) for detailed information about supported file formats, JSON structure, file discovery, and best practices.
 
 ## Configuration
 
