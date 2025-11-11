@@ -217,11 +217,11 @@ export {
 export function extractLocaleFromFilename(filename: string): string | null {
   const match = filename.match(LOCALE_PATTERN_REGEX);
 
-  if (!match) {
+  if (!match || !match[2]) {
     return null;
   }
 
-  return match[2]?.toLowerCase() ?? null;
+  return match[2];
 }
 
 export function normalizeFilename(filename: string) {
