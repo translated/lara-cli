@@ -105,16 +105,19 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
  *  'src/i18n/[locale].json',
  * ]
  */
-async function searchLocalePaths(): Promise<string[]> {
+async function searchLocalePaths(options: { source: string }): Promise<string[]> {
+  const { source } = options;
   const allJsonPaths = await searchPaths();
+  const filteredPaths = allJsonPaths.filter((path) => path.match(buildLocaleRegex([source])));
 
   const pathsWithLocales: string[] = [];
 
-  for (const jsonPath of allJsonPaths) {
+  for (const jsonPath of filteredPaths) {
     const normalizedPath = normalizePath(jsonPath);
-    if (normalizedPath !== null) {
-      pathsWithLocales.push(normalizedPath);
+    if (!normalizedPath) {
+      continue;
     }
+    pathsWithLocales.push(normalizedPath);
   }
 
   return Array.from(new Set(pathsWithLocales));
