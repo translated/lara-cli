@@ -428,10 +428,3 @@ export const DEFAULT_EXCLUDED_DIRECTORIES = [
 export const SUPPORTED_FILE_TYPES = ['json'];
 
 export const LARA_WEB_URL = 'https://app.laratranslate.com';
-
-// Regex to match a locale in a filename. Ordered by length descending because we want to match the longest locale first.
-const SORTED_LOCALES = [...AVAILABLE_LOCALES].sort((a, b) => b.length - a.length);
-export const LOCALE_PATTERN_REGEX = new RegExp(
-  `(^|[^a-zA-Z])(${SORTED_LOCALES.join('|')})(?=[^a-zA-Z]|$)`,
-  'i'
-);
