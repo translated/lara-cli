@@ -8,6 +8,7 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
+import { SearchLocalePathsOptions } from '#modules/common/common.types.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
@@ -105,7 +106,7 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
  *  'src/i18n/[locale].json',
  * ]
  */
-async function searchLocalePaths(options: { source: string }): Promise<string[]> {
+async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
   const { source } = options;
   const allJsonPaths = await searchPaths();
   const filteredPaths = allJsonPaths.filter((path) => path.match(buildLocaleRegex([source])));
@@ -237,7 +238,7 @@ export function extractLocaleFromFilename(filename: string): string | null {
 /**
  * Builds a regular expression to match locale codes in text
  *
- * @param locales - Array of locale codes to match. Defaults to AVAILABLE_LOCALES
+ * @param locales - Array of locale codes to match. Defaults to AVAILABLE_LOCALES if not provided
  * @returns A RegExp that matches locale codes when they appear as whole words
  */
 function buildLocaleRegex(locales: string[] = AVAILABLE_LOCALES): RegExp {
