@@ -67,7 +67,7 @@ class ProgressWithOra {
   }
 
   public stop(
-    message: string = Messages.success.completed,
+    message: string | string[] = Messages.success.completed,
     type: 'succeed' | 'fail' = 'succeed'
   ): void {
     this.done = this.total;
@@ -77,7 +77,13 @@ class ProgressWithOra {
     process.stdout.write('\x1b[2K\r');
     process.stdout.write('\x1b[1A');
 
-    this.spinner[type](message);
+    if (Array.isArray(message)) {
+      for (const msg of message) {
+        this.spinner[type](msg);
+      }
+    } else {
+      this.spinner[type](message);
+    }
   }
 }
 

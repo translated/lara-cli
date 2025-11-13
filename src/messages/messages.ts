@@ -68,6 +68,10 @@ export const Messages = {
       `Target locales selected: ${locales}${summary || ''}`,
     totalTargetLocalesSelected: (count: number, summary?: string) =>
       `Total ${count} target ${count === 1 ? 'locale' : 'locales'} selected${summary || ''}`,
+    totalFilesLocalized: (count: number) =>
+      `Successfully localized ${count} ${count === 1 ? 'file' : 'files'}`,
+    totalTargetLocalesLocalized: (count: number) =>
+      `Translated to ${count} target ${count === 1 ? 'locale' : 'locales'}`,
   },
 
   info: {

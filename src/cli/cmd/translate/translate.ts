@@ -85,7 +85,12 @@ export default new Command()
         process.exit(1);
       }
 
-      progressWithOra.stop(Messages.success.localizationCompleted);
+      const totalTargetLocales = getTargetLocales(options, config).length;
+      progressWithOra.stop([
+        Messages.success.totalFilesLocalized(totalElements),
+        Messages.success.totalTargetLocalesLocalized(totalTargetLocales),
+        Messages.success.localizationCompleted,
+      ]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       Ora({ text: message, color: 'red' }).fail();
