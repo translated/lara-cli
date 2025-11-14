@@ -12,6 +12,7 @@ import { handleLaraApiError } from '#utils/error.js';
 import { LaraApiError } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { Messages } from '#messages/messages.js';
+import { displaySummaryBox } from '#utils/display.js';
 
 type TranslateOptions = {
   target: string[];
@@ -74,23 +75,24 @@ export default new Command()
 
       let hasErrors = false;
       for (const fileType of Object.keys(config.files)) {
-        const fileTypeHasErrors = await handleFileType(fileType, options, config);
-        if (fileTypeHasErrors) {
-          hasErrors = true;
-        }
+        hasErrors = await handleFileType(fileType, options, config);
       }
 
       if (hasErrors) {
-        progressWithOra.stop(Messages.errors.localizationFailed, 'fail');
         process.exit(1);
       }
 
       const totalTargetLocales = getTargetLocales(options, config).length;
-      progressWithOra.stop([
-        Messages.success.totalFilesLocalized(totalElements),
-        Messages.success.totalTargetLocalesLocalized(totalTargetLocales),
-        Messages.success.localizationCompleted,
-      ]);
+      progressWithOra.stop();
+
+      displaySummaryBox({
+        title: Messages.summary.title,
+        items: [
+          [Messages.summary.filesLabel, Messages.summary.filesLocalized(totalElements)],
+          [Messages.summary.targetLocalesLabel, Messages.summary.targetLocales(totalTargetLocales)],
+        ],
+        footer: Messages.summary.allDone,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       Ora({ text: message, color: 'red' }).fail();

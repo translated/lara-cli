@@ -1,4 +1,5 @@
 import Ora, { Ora as OraType } from 'ora';
+import stringWidth from 'string-width';
 
 /**
  * Formats a list of locales for display in a user-friendly way.
@@ -74,4 +75,73 @@ export function displayLocaleTable({
   } else {
     Ora()[type](tableOutput);
   }
+}
+
+/**
+ * Displays a summary box with statistics using box-drawing characters.
+ * Creates a perfectly aligned box that handles emojis and wide characters correctly.
+ *
+ * @param title - Title to display at the top of the box
+ * @param items - Array of [label, value] tuples to display in the box
+ * @param footer - Footer message to display at the bottom of the box
+ *
+ * @example
+ * displaySummaryBox({
+ *   title: '📦 Localization Summary',
+ *   items: [['Files localized', '5 files'], ['Target locales', '3 locales']],
+ *   footer: '✓ All done! Happy coding!'
+ * })
+ * // Output:
+ * // ╔══════════════════════════════════════════════╗
+ * // ║       📦 Localization Summary                ║
+ * // ╠══════════════════════════════════════════════╣
+ * // ║  Files localized: 5 files                    ║
+ * // ║  Target locales: 3 locales                   ║
+ * // ╠══════════════════════════════════════════════╣
+ * // ║       ✓ All done! Happy coding!              ║
+ * // ╚══════════════════════════════════════════════╝
+ */
+type DisplaySummaryBoxOptions = {
+  title: string;
+  items: Array<[string, string]>;
+  footer: string;
+};
+
+export function displaySummaryBox({ title, items, footer }: DisplaySummaryBoxOptions): void {
+  const boxWidth = 50;
+  const topBorder = `╔${'═'.repeat(boxWidth - 1)}╗`;
+  const bottomBorder = `╚${'═'.repeat(boxWidth - 1)}╝`;
+  const separator = `╠${'═'.repeat(boxWidth - 1)}╣`;
+
+  const centerText = (text: string): string => {
+    const visualLength = stringWidth(text);
+    const padding = boxWidth - 4 - visualLength;
+    const leftPad = Math.floor(padding / 2);
+    const rightPad = padding - leftPad;
+    return `║ ${' '.repeat(leftPad)}${text}${' '.repeat(rightPad + 1)} ║`;
+  };
+
+  const alignText = (label: string, value: string): string => {
+    const content = `${label}: ${value}`;
+    const visualLength = stringWidth(content);
+    const padding = boxWidth - 4 - visualLength;
+    return `║  ${content}${' '.repeat(padding)} ║`;
+  };
+
+  const lines = [
+    '',
+    topBorder,
+    centerText(title),
+    separator,
+    ...items.map(([label, value]) => alignText(label, value)),
+    separator,
+    centerText(footer),
+    bottomBorder,
+    '',
+  ];
+
+  const summaryBox = lines.join('\n');
+
+  // Use console.log to display without the checkmark icon
+  console.log(summaryBox);
 }
