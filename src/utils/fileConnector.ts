@@ -5,18 +5,6 @@ import { Parser } from './parser.js';
 import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { JsonParserFormattingType, SupportedExtensionEnum } from '#modules/common/common.types.js';
 
-export type FileConnectorOptions = {
-  /**
-   * The file extension. If not provided, it will be extracted from the filePath
-   */
-  extension?: SupportedExtensionEnum;
-
-  /**
-   * Formatting options for JSON files (indentation and trailing newline)
-   */
-  formatting?: JsonParserFormattingType;
-};
-
 /**
  * File connector that automatically detects file type and uses the appropriate parser.
  *
@@ -41,7 +29,7 @@ export type FileConnectorOptions = {
 export class FileConnector {
   private readonly filePath: string;
   private readonly extension: SupportedExtensionEnum;
-  private readonly parser: Parser<Record<string, unknown>>;
+  private readonly parser: Parser<Record<string, unknown>, unknown>;
 
   /**
    * Creates a new FileConnector instance.
@@ -50,12 +38,12 @@ export class FileConnector {
    * @param options - Optional configuration options
    * @throws {Error} If the file extension is not supported
    */
-  constructor(filePath: string, options?: FileConnectorOptions) {
+  constructor(filePath: string, extension?: SupportedExtensionEnum) {
     this.filePath = filePath;
 
     // Step 1: Determine the extension (calculate if not provided)
-    if (options?.extension) {
-      this.extension = options.extension;
+    if (extension) {
+      this.extension = extension;
     } else {
       const detectedExtension = getFileExtension(filePath).toLowerCase();
       if (!this.isSupportedExtension(detectedExtension)) {
@@ -84,46 +72,34 @@ export class FileConnector {
    * Gets the appropriate parser based on the file extension
    *
    * @param extension - The file extension
-   * @param formatting - Optional formatting options for JSON files
    * @returns The parser instance for the given extension
    */
   private getParserForExtension(
     extension: SupportedExtensionEnum
-  ): Parser<Record<string, unknown>> {
+  ): Parser<Record<string, unknown>, unknown> {
     switch (extension) {
-      case SupportedExtensionEnum.JSON: {
+      case SupportedExtensionEnum.JSON:
         return new JsonParser('/');
-      }
       case SupportedExtensionEnum.PO:
         return new PoParser('utf-8', {});
-      default:
-        throw new Error(`Unsupported file extension: ${extension}`);
     }
   }
 
   /**
    * Parses the file content and returns the parsed data
    *
+   * @param targetContent - The raw file content to parse (string or Buffer)
    * @returns The parsed data as a Record<string, unknown>
    */
-  parse(targetContent: string): Record<string, unknown> {
+  parse(targetContent: string | Buffer): Record<string, unknown> {
     return this.parser.parse(targetContent);
-  }
-
-  /**
-   * Parses the provided content using the appropriate parser
-   *
-   * @param content - The content to parse
-   * @returns The parsed data as a Record<string, unknown>
-   */
-  parseContent(content: string | Buffer): Record<string, unknown> {
-    return this.parser.parse(content);
   }
 
   /**
    * Serializes the data back to the file format
    *
    * @param data - The data to serialize
+   * @param formatting - Optional formatting options (only used for JSON files)
    * @returns The serialized content as string or Buffer
    */
   serialize(data: Record<string, unknown>, formatting?: JsonParserFormattingType): string | Buffer {
@@ -146,5 +122,20 @@ export class FileConnector {
    */
   getFilePath(): string {
     return this.filePath;
+  }
+
+  /**
+   * Gets the default fallback content for when a file doesn't exist.
+   * Each parser type defines its own appropriate fallback.
+   *
+   * @returns The default fallback string for the file type
+   */
+  getDefaultFallback(): string {
+    switch (this.extension) {
+      case SupportedExtensionEnum.JSON:
+        return '{}';
+      case SupportedExtensionEnum.PO:
+        return '';
+    }
   }
 }

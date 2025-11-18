@@ -31,9 +31,11 @@ export type TranslationEngineOptions = {
 };
 
 /**
- * Detects the formatting used in a JSON string
+ * Detects the formatting used in a JSON string by analyzing indentation patterns
+ * and trailing newlines.
+ *
  * @param jsonContent - The JSON string to analyze
- * @returns Object with indentation and trailing newline information
+ * @returns Object containing detected indentation (tabs or number of spaces) and trailing newline
  */
 function detectFormatting(jsonContent: string): {
   indentation: string | number;
@@ -101,6 +103,10 @@ export class TranslationEngine {
 
   private readonly translatorService: TranslationService;
 
+  /**
+   * File connector instance used to parse and serialize translation files.
+   * Automatically detects the file format based on the input path extension.
+   */
   private readonly parser: FileConnector;
 
   constructor(options: TranslationEngineOptions) {
@@ -151,8 +157,7 @@ export class TranslationEngine {
 
       const targetPath = buildLocalePath(inputPath, targetLocale);
 
-      // Provide appropriate fallback based on file type
-      const fallback = this.parser.getExtension() === 'po' ? '' : '{}';
+      const fallback = this.parser.getDefaultFallback();
       const targetContent = await readSafe(targetPath, fallback);
       const target = this.parser.parse(targetContent);
       const formatting = detectFormatting(targetContent);

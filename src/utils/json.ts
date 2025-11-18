@@ -16,7 +16,7 @@ import { JsonParserFormattingType } from '#modules/common/common.types.js';
  * const json = parser.serialize(flattened);
  * // Returns: '{"dashboard": {"title": "Dashboard"}}'
  */
-export class JsonParser implements Parser<Record<string, unknown>> {
+export class JsonParser implements Parser<Record<string, unknown>, JsonParserFormattingType> {
   private delimiter: string;
 
   /**
@@ -59,6 +59,7 @@ export class JsonParser implements Parser<Record<string, unknown>> {
    * Serializes a flattened object back into a JSON string.
    *
    * @param data - The flattened object to serialize
+   * @param formatting - Formatting options (indentation and trailingNewline)
    * @returns The JSON string with formatting applied
    *
    * @example

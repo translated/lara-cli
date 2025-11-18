@@ -15,7 +15,7 @@ import type { Parser } from './parser.js';
  *
  * const poBuffer = parser.serialize(translations);
  */
-export class PoParser implements Parser<Record<string, string>> {
+export class PoParser implements Parser<Record<string, unknown>, void> {
   private charset: string;
   private headers: Record<string, string>;
   private foldLength: number;
@@ -54,7 +54,7 @@ export class PoParser implements Parser<Record<string, string>> {
    *   "Welcome": "Benvenuto",
    * }
    */
-  parse(content: Buffer | string): Record<string, string> {
+  parse(content: Buffer | string): Record<string, unknown> {
     const parsed = gettextParser.po.parse(content);
 
     // Preserve existing headers if parsed headers are empty or undefined
@@ -67,7 +67,7 @@ export class PoParser implements Parser<Record<string, string>> {
       this.charset = parsed.charset;
     }
 
-    const translations: Record<string, string> = {};
+    const translations: Record<string, unknown> = {};
     const messages = parsed.translations[''];
 
     for (const msgid in messages) {
@@ -99,7 +99,7 @@ export class PoParser implements Parser<Record<string, string>> {
    * msgid "Welcome"
    * msgstr "Benvenuto"
    */
-  serialize(data: Record<string, string>): Buffer {
+  serialize(data: Record<string, unknown>): Buffer {
     const poData: gettextParser.GetTextTranslations = {
       charset: this.charset,
       headers: this.headers,
@@ -108,9 +108,10 @@ export class PoParser implements Parser<Record<string, string>> {
 
     for (const msgid in data) {
       if (msgid) {
+        const msgstr = typeof data[msgid] === 'string' ? data[msgid] : String(data[msgid] || '');
         poData.translations['']![msgid] = {
           msgid: msgid,
-          msgstr: [data[msgid] || ''],
+          msgstr: [msgstr],
         };
       }
     }
