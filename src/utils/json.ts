@@ -1,54 +1,85 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
+import type { Parser } from './parser.js';
+import { JsonParserFormattingType } from '#modules/common/common.types.js';
 
 /**
- * Parses a JSON string and returns a flattened object
+ * JSON parser that handles flattening and unflattening of JSON objects.
  *
- * @param json - The JSON string to parse
- * @returns The flattened object with the keys being the path to the value.
+ * This parser converts nested JSON structures into flat key-value pairs and vice versa,
+ * making it easier to work with translations and other hierarchical data.
  *
- * Example:
- * {
- *   "dashboard": {
- *     "title": "Dashboard",
- *     "content": ["content 1", "content 2"]
- *   }
- * }
+ * @example
+ * const parser = new JsonParser();
+ * const flattened = parser.parse('{"dashboard": {"title": "Dashboard"}}');
+ * // Returns: { "dashboard/title": "Dashboard" }
  *
- * Will be parsed as:
- * {
- *   "dashboard.title": "Dashboard",
- *   "dashboard.content.0": "content 1",
- *   "dashboard.content.1": "content 2",
- * }
+ * const json = parser.serialize(flattened);
+ * // Returns: '{"dashboard": {"title": "Dashboard"}}'
  */
-function parseFlattened(json: string): Record<string, unknown> {
-  const parsed = JSON.parse(json);
-  return flat(parsed, { delimiter: '/' });
-}
+export class JsonParser implements Parser<Record<string, unknown>> {
+  private delimiter: string;
 
-/**
- * Unflattens a flattened object
- *
- * @param flattened - The flattened object to unflatten
- * @returns The unflattened object
- *
- * Example:
- * {
- *   "dashboard.title": "Dashboard",
- *   "dashboard.content.0": "content 1",
- *   "dashboard.content.1": "content 2",
- * }
- *
- * Will be unflattened as:
- * {
- *   "dashboard": {
- *     "title": "Dashboard",
- *     "content": ["content 1", "content 2"]
- *   }
- * }
- */
-function unflatten(flattened: Record<string, unknown>): Record<string, unknown> {
-  return unflat(flattened, { delimiter: '/' });
-}
+  /**
+   * Creates a new JsonParser instance.
+   *
+   * @param delimiter - The delimiter to use for flattening keys (default: '/')
+   */
+  constructor(delimiter: string = '/') {
+    this.delimiter = delimiter;
+  }
 
-export { parseFlattened, unflatten };
+  /**
+   * Parses a JSON string and returns a flattened object.
+   *
+   * @param content - The JSON string to parse
+   * @returns The flattened object with the keys being the path to the value.
+   *
+   * @example
+   * Input:
+   * {
+   *   "dashboard": {
+   *     "title": "Dashboard",
+   *     "content": ["content 1", "content 2"]
+   *   }
+   * }
+   *
+   * Output:
+   * {
+   *   "dashboard/title": "Dashboard",
+   *   "dashboard/content/0": "content 1",
+   *   "dashboard/content/1": "content 2",
+   * }
+   */
+  parse(content: string): Record<string, unknown> {
+    const parsed = JSON.parse(content);
+    return flat(parsed, { delimiter: this.delimiter });
+  }
+
+  /**
+   * Serializes a flattened object back into a JSON string.
+   *
+   * @param data - The flattened object to serialize
+   * @returns The JSON string with formatting applied
+   *
+   * @example
+   * Input:
+   * {
+   *   "dashboard/title": "Dashboard",
+   *   "dashboard/content/0": "content 1",
+   *   "dashboard/content/1": "content 2",
+   * }
+   *
+   * Output:
+   * {
+   *   "dashboard": {
+   *     "title": "Dashboard",
+   *     "content": ["content 1", "content 2"]
+   *   }
+   * }
+   */
+  serialize(data: Record<string, unknown>, formatting: JsonParserFormattingType): string {
+    const unflattened = unflat(data, { delimiter: this.delimiter });
+    const formatted = JSON.stringify(unflattened, null, formatting.indentation);
+    return formatted + formatting.trailingNewline;
+  }
+}

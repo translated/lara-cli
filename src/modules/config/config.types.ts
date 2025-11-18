@@ -63,7 +63,7 @@ const Config = z
 
     glossaries: z.array(z.string()).default([]),
 
-    files: z.record(
+    files: z.partialRecord(
       SupportedFileTypesEnum,
       z.object({
         include: z.array(IncludeFilePath),
@@ -99,7 +99,15 @@ const Config = z
   })
   .refine(
     (data) => {
+      if (Object.keys(data.files).length === 0) {
+        return false;
+      }
+
       for (const [fileType, fileConfig] of Object.entries(data.files)) {
+        if (!fileConfig) {
+          return false;
+        }
+
         for (const includePath of fileConfig.include) {
           const fileExtension = getFileExtension(includePath);
 

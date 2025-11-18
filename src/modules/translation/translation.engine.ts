@@ -2,13 +2,13 @@ import picomatch, { Matcher } from 'picomatch';
 
 import { TranslationService } from './translation.service.js';
 import { calculateChecksum } from '#utils/checksum.js';
-import { parseFlattened, unflatten } from '#utils/json.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
+import { FileConnector } from '#utils/fileConnector.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -101,6 +101,8 @@ export class TranslationEngine {
 
   private readonly translatorService: TranslationService;
 
+  private readonly parser: FileConnector;
+
   constructor(options: TranslationEngineOptions) {
     this.sourceLocale = options.sourceLocale;
     this.targetLocales = options.targetLocales;
@@ -129,6 +131,8 @@ export class TranslationEngine {
     this.glossaryIds = options.glossaryIds;
 
     this.translatorService = TranslationService.getInstance();
+
+    this.parser = new FileConnector(this.inputPath);
   }
 
   public async translate() {
@@ -137,7 +141,7 @@ export class TranslationEngine {
 
   private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
-    const changelog = calculateChecksum(sourcePath);
+    const changelog = calculateChecksum(sourcePath, this.parser);
     const keysCount = Object.keys(changelog).length;
 
     for (const targetLocale of this.targetLocales) {
@@ -146,8 +150,11 @@ export class TranslationEngine {
       );
 
       const targetPath = buildLocalePath(inputPath, targetLocale);
-      const targetContent = await readSafe(targetPath, '{}');
-      const targetJson = parseFlattened(targetContent);
+
+      // Provide appropriate fallback based on file type
+      const fallback = this.parser.getExtension() === 'po' ? '' : '{}';
+      const targetContent = await readSafe(targetPath, fallback);
+      const target = this.parser.parse(targetContent);
       const formatting = detectFormatting(targetContent);
 
       const entries = (
@@ -157,7 +164,7 @@ export class TranslationEngine {
             .map(async ([key, value]) => {
               const state = value.state;
               const sourceValue = value.value;
-              const targetValue = targetJson[key];
+              const targetValue = target[key];
 
               // If the key is locked, we should NOT elaborate it and therefore return the source value
               if (this.isLocked(key)) {
@@ -206,11 +213,7 @@ export class TranslationEngine {
       const newContent = Object.fromEntries(entries);
 
       await ensureDirectoryExists(targetPath);
-      await writeFile(
-        targetPath,
-        JSON.stringify(unflatten(newContent), null, formatting.indentation) +
-          formatting.trailingNewline
-      );
+      await writeFile(targetPath, this.parser.serialize(newContent, formatting));
       progressWithOra.tick(1);
     }
   }
