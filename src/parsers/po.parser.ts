@@ -10,26 +10,9 @@ import type { PoKey, PoParserOptionsType } from './parser.types.js';
  * to allow the translation engine to handle them transparently.
  */
 export class PoParser implements Parser<Record<string, unknown>, PoParserOptionsType> {
-  private charset: string;
-  private headers: Record<string, string>;
-  private foldLength: number;
-
-  /**
-   * Creates a new PoParser instance.
-   *
-   * @param charset - The character encoding for the PO file (e.g., 'utf-8', 'iso-8859-1')
-   * @param headers - PO file headers as key-value pairs (e.g., Project-Id-Version, Language, etc.)
-   * @param foldLength - The length of the line after which the text should be folded (default: 78)
-   */
-  constructor(
-    charset: string = 'utf-8',
-    headers: Record<string, string> = {},
-    foldLength: number = 300
-  ) {
-    this.charset = charset;
-    this.headers = headers;
-    this.foldLength = foldLength;
-  }
+  private charset: string = 'utf-8';
+  private headers: Record<string, string> = {};
+  private foldLength: number = 300;
 
   /**
    * A classic problem with PO parsers is that they tend to group translations by context,
@@ -39,7 +22,6 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * @returns A map of (context + msgid) -> order index
    */
   private buildOrderMap(content: string): Map<string, number> {
-    console.log('buildOrderMap', content);
     const map = new Map<string, number>();
     const lines = content.split(/\r?\n/);
     let currentContext = '';
@@ -172,7 +154,7 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * @param options - Optional serialization options
    * @returns A Buffer containing the compiled PO file
    */
-  serialize(data: Record<string, unknown>, options?: { targetLocale?: string }): Buffer {
+  serialize(data: Record<string, unknown>, options: PoParserOptionsType): Buffer {
     // Update headers based on options and defaults
     if (options?.targetLocale) {
       this.headers['Language'] = options.targetLocale;
@@ -273,6 +255,6 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * Returns the fallback content for a PO file.
    */
   getFallback(): string {
-    return '';
+    return 'msgid ""\nmsgstr ""\n';
   }
 }

@@ -17,16 +17,7 @@ import type { JsonParserOptionsType } from './parser.types.js';
  * // Returns: '{"dashboard": {"title": "Dashboard"}}'
  */
 export class JsonParser implements Parser<Record<string, unknown>, JsonParserOptionsType> {
-  private delimiter: string;
-
-  /**
-   * Creates a new JsonParser instance.
-   *
-   * @param delimiter - The delimiter to use for flattening keys (default: '/')
-   */
-  constructor(delimiter: string = '/') {
-    this.delimiter = delimiter;
-  }
+  private delimiter: string = '/';
 
   /**
    * Parses a JSON string and returns a flattened object.
@@ -78,10 +69,10 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    *   }
    * }
    */
-  serialize(data: Record<string, unknown>, formatting: JsonParserOptionsType): string {
+  serialize(data: Record<string, unknown>, options: JsonParserOptionsType): string {
     const unflattened = unflat(data, { delimiter: this.delimiter });
-    const formatted = JSON.stringify(unflattened, null, formatting.indentation);
-    return formatted + formatting.trailingNewline;
+    const formatted = JSON.stringify(unflattened, null, options.indentation);
+    return formatted + options.trailingNewline;
   }
 
   /**

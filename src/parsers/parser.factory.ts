@@ -28,35 +28,25 @@ import type { ParserOptionsType } from './parser.types.js';
  * ```
  */
 export class ParserFactory {
-  private readonly filePath: string;
-  private readonly extension: SupportedExtensionEnum;
-  private readonly parser: Parser<Record<string, unknown>, unknown>;
+  private readonly parser: Parser<Record<string, unknown>, ParserOptionsType>;
 
   /**
    * Creates a new FileConnector instance.
    *
    * @param filePath - The path to the file to parse
-   * @param options - Optional configuration options
    * @throws {Error} If the file extension is not supported
    */
-  constructor(filePath: string, extension?: SupportedExtensionEnum) {
-    this.filePath = filePath;
-
+  constructor(filePath: string) {
     // Step 1: Determine the extension (calculate if not provided)
-    if (extension) {
-      this.extension = extension;
-    } else {
-      const detectedExtension = getFileExtension(filePath).toLowerCase();
-      if (!this.isSupportedExtension(detectedExtension)) {
-        throw new Error(
-          `Unsupported file extension: ${detectedExtension}. Supported extensions: json, po`
-        );
-      }
-      this.extension = detectedExtension as SupportedExtensionEnum;
+    const detectedExtension = getFileExtension(filePath).toLowerCase();
+    if (!this.isSupportedExtension(detectedExtension)) {
+      throw new Error(
+        `Unsupported file extension: ${detectedExtension}. Supported extensions: json, po`
+      );
     }
 
     // Step 2: Get the appropriate parser based on extension
-    this.parser = this.getParserForExtension(this.extension);
+    this.parser = this.getParserForExtension(detectedExtension);
   }
 
   /**
@@ -77,7 +67,7 @@ export class ParserFactory {
    */
   private getParserForExtension(
     extension: SupportedExtensionEnum
-  ): Parser<Record<string, unknown>, unknown> {
+  ): Parser<Record<string, unknown>, ParserOptionsType> {
     switch (extension) {
       case SupportedExtensionEnum.JSON:
         return new JsonParser();
@@ -103,26 +93,8 @@ export class ParserFactory {
    * @param options - Optional formatting/serialization options
    * @returns The serialized content as string or Buffer
    */
-  serialize(data: Record<string, unknown>, options?: ParserOptionsType): string | Buffer {
+  serialize(data: Record<string, unknown>, options: ParserOptionsType): string | Buffer {
     return this.parser.serialize(data, options);
-  }
-
-  /**
-   * Gets the file extension being used
-   *
-   * @returns The file extension
-   */
-  getExtension(): SupportedExtensionEnum {
-    return this.extension;
-  }
-
-  /**
-   * Gets the file path
-   *
-   * @returns The file path
-   */
-  getFilePath(): string {
-    return this.filePath;
   }
 
   getFallback(): string {
