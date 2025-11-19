@@ -38,4 +38,11 @@ export interface Parser<T = Record<string, unknown>, TOptions = void> {
    * @returns The serialized content as string or Buffer
    */
   serialize(data: T, options?: TOptions): string | Buffer;
+
+  /**
+   * Returns the fallback content for the file format.
+   *
+   * @returns The default content string
+   */
+  getFallback(): string;
 }

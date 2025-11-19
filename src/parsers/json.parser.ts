@@ -83,4 +83,8 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserFor
     const formatted = JSON.stringify(unflattened, null, formatting.indentation);
     return formatted + formatting.trailingNewline;
   }
+
+  getFallback(): string {
+    return '{}';
+  }
 }

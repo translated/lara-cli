@@ -1,19 +1,20 @@
 import * as gettextParser from 'gettext-parser';
 import type { Parser } from '../interface/parser.js';
 
+interface PoKey {
+  msgid: string;
+  msgctxt?: string;
+  msgid_plural?: string;
+  idx?: number;
+  order?: number; // Tracks the original position in the file
+}
+
 /**
  * PO (Portable Object) parser for handling gettext translation files.
  *
  * This parser converts PO files into simple key-value translation mappings and vice versa.
- * It only handles translations from the default (empty string) context and does not
- * handle plural forms or multiple contexts.
- *
- * @example
- * const parser = new PoParser('utf-8', { 'Project-Id-Version': 'MyApp 1.0' });
- * const translations = parser.parse(poFileBuffer);
- * // Returns: { "Hello": "Ciao", "Welcome": "Benvenuto" }
- *
- * const poBuffer = parser.serialize(translations);
+ * It flattens the PO structure (including contexts and plurals) into JSON-serialized keys
+ * to allow the translation engine to handle them transparently.
  */
 export class PoParser implements Parser<Record<string, unknown>, void> {
   private charset: string;
@@ -39,24 +40,13 @@ export class PoParser implements Parser<Record<string, unknown>, void> {
 
   /**
    * Parses the content of a PO (Portable Object) file and extracts translations
-   * from the default context as a simple key-value mapping.
+   * as a simple key-value mapping.
+   *
+   * Keys are JSON-serialized objects containing metadata (msgid, context, plural info).
+   * Values are the translated strings (msgstr).
    *
    * @param content - The content of the PO file as a Buffer or string
-   * @returns A record mapping message IDs (msgid) to their translated strings (msgstr)
-   *
-   * @example
-   * Input PO file:
-   * msgid "Hello"
-   * msgstr "Ciao"
-   *
-   * msgid "Welcome"
-   * msgstr "Benvenuto"
-   *
-   * Output:
-   * {
-   *   "Hello": "Ciao",
-   *   "Welcome": "Benvenuto",
-   * }
+   * @returns A record mapping serialized keys to their translated strings
    */
   parse(content: Buffer | string): Record<string, unknown> {
     const parsed = gettextParser.po.parse(content);
@@ -71,12 +61,54 @@ export class PoParser implements Parser<Record<string, unknown>, void> {
       this.charset = parsed.charset;
     }
 
-    const translations: Record<string, unknown> = {};
-    const messages = parsed.translations[''];
+    // Step 1: Scan the file to determine the order of messages
+    const contentStr = content.toString();
+    const orderMap = this.buildOrderMap(contentStr);
 
-    for (const msgid in messages) {
-      if (msgid && msgid !== '' && messages[msgid]) {
-        translations[msgid] = messages[msgid].msgstr[0] || '';
+    const translations: Record<string, unknown> = {};
+    const contexts = parsed.translations;
+
+    for (const context in contexts) {
+      const messages = contexts[context];
+      for (const msgid in messages) {
+        if (!msgid || msgid === '') continue; // Skip header entry
+
+        const message = messages[msgid];
+        if (!message) continue;
+
+        const msgstr = message.msgstr;
+        const msgctxt = message.msgctxt || '';
+
+        // Get order index from map or fallback to default (end)
+        const orderKey = this.getOrderKey(msgctxt, msgid);
+        const order = orderMap.get(orderKey);
+
+        // Handle singular (index 0)
+        if (msgstr.length > 0) {
+          const keyObj: PoKey = {
+            msgid: message.msgid,
+            msgctxt: message.msgctxt, // context can be undefined or string
+            msgid_plural: message.msgid_plural, // plural id can be undefined or string
+            idx: 0,
+            order: order,
+          };
+          translations[JSON.stringify(keyObj)] = msgstr[0] || '';
+        }
+
+        // Handle plurals (index 1+)
+        // Only if msgid_plural is present, we consider it might have plural forms
+        if (message.msgid_plural && msgstr.length > 1) {
+          for (let i = 1; i < msgstr.length; i++) {
+            const keyObj: PoKey = {
+              msgid: message.msgid,
+              msgctxt: message.msgctxt,
+              msgid_plural: message.msgid_plural,
+              idx: i,
+              order: order,
+            };
+            translations[JSON.stringify(keyObj)] = msgstr[i] || '';
+          }
+        }
       }
     }
 
@@ -84,42 +116,140 @@ export class PoParser implements Parser<Record<string, unknown>, void> {
   }
 
   /**
+   * Scans the PO content to build a map of (context + msgid) -> order index.
+   * This is a heuristic scan to preserve relative order of messages.
+   */
+  private buildOrderMap(content: string): Map<string, number> {
+    const map = new Map<string, number>();
+    const lines = content.split(/\r?\n/);
+    let currentContext = '';
+    let orderIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]?.trim();
+      if (!line) continue;
+
+      // Match msgctxt "..."
+      if (line.startsWith('msgctxt')) {
+        const match = line.match(/^msgctxt\s+"(.*)"/);
+        if (match) {
+          // Basic extraction - limitation: doesn't handle multiline strings perfectly
+          // but typically msgctxt is single line.
+          // For robustness, we could use a more complex parser,
+          // but we assume standard format for order detection.
+          currentContext = match[1] || '';
+          // Unescape logic might be needed if context has quotes, but let's keep simple first
+          // If needed: JSON.parse(`"${match[1]}"`) could fail if not strictly JSON string compliant
+        }
+      } else if (line.startsWith('msgid')) {
+        const match = line.match(/^msgid\s+"(.*)"/);
+        if (match) {
+          const msgid = match[1] || '';
+          // Only track real messages, not the header (msgid "")
+          if (msgid !== '' || currentContext !== '') {
+            const key = this.getOrderKey(currentContext, msgid);
+            if (!map.has(key)) {
+              map.set(key, orderIndex++);
+            }
+          }
+          // Reset context after finding a msgid (next message starts fresh)
+          currentContext = '';
+        }
+      }
+    }
+    return map;
+  }
+
+  private getOrderKey(context: string, msgid: string): string {
+    return `${context}\u0004${msgid}`;
+  }
+
+  /**
    * Serializes a simple key-value translation object into a PO (Portable Object) file.
    *
-   * @param data - A record mapping message IDs (msgid) to their translated strings (msgstr)
+   * @param data - A record mapping serialized keys to their translated strings
    * @returns A Buffer containing the compiled PO file
-   *
-   * @example
-   * Input:
-   * {
-   *   "Hello": "Ciao",
-   *   "Welcome": "Benvenuto",
-   * }
-   *
-   * Output PO file:
-   * msgid "Hello"
-   * msgstr "Ciao"
-   *
-   * msgid "Welcome"
-   * msgstr "Benvenuto"
    */
   serialize(data: Record<string, unknown>): Buffer {
     const poData: gettextParser.GetTextTranslations = {
       charset: this.charset,
       headers: this.headers,
-      translations: { '': {} },
+      translations: {},
     };
 
-    for (const msgid in data) {
-      if (msgid) {
-        const msgstr = typeof data[msgid] === 'string' ? data[msgid] : String(data[msgid] || '');
-        poData.translations['']![msgid] = {
-          msgid: msgid,
-          msgstr: [msgstr],
-        };
+    // Sort keys based on the captured 'order' property
+    const sortedKeys = Object.keys(data).sort((a, b) => {
+      try {
+        const keyA = JSON.parse(a) as PoKey;
+        const keyB = JSON.parse(b) as PoKey;
+
+        const orderA = keyA.order ?? Number.MAX_SAFE_INTEGER;
+        const orderB = keyB.order ?? Number.MAX_SAFE_INTEGER;
+
+        if (orderA !== orderB) return orderA - orderB;
+
+        // Secondary sort: index (plural forms order)
+        const idxA = keyA.idx ?? 0;
+        const idxB = keyB.idx ?? 0;
+        return idxA - idxB;
+      } catch {
+        return 0;
+      }
+    });
+
+    for (const serializedKey of sortedKeys) {
+      try {
+        const keyObj: PoKey = JSON.parse(serializedKey);
+        const msgstrValue =
+          typeof data[serializedKey] === 'string'
+            ? (data[serializedKey] as string)
+            : String(data[serializedKey] || '');
+
+        const context = keyObj.msgctxt || '';
+
+        // Ensure context exists in translations
+        if (!poData.translations[context]) {
+          poData.translations[context] = {};
+        }
+
+        const msgid = keyObj.msgid;
+
+        // Initialize message object if not exists
+        if (!poData.translations[context][msgid]) {
+          poData.translations[context][msgid] = {
+            msgid: msgid,
+            msgctxt: keyObj.msgctxt,
+            msgid_plural: keyObj.msgid_plural,
+            msgstr: [], // Initialize empty, will fill by index
+          };
+        }
+
+        const message = poData.translations[context][msgid];
+        const idx = keyObj.idx || 0;
+
+        // Ensure the array is large enough
+        if (message.msgstr.length <= idx) {
+          // Fill holes with empty strings if necessary
+          while (message.msgstr.length < idx) {
+            message.msgstr.push('');
+          }
+          message.msgstr[idx] = msgstrValue;
+        } else {
+          message.msgstr[idx] = msgstrValue;
+        }
+      } catch {
+        // Fallback for non-JSON keys
+        continue;
       }
     }
 
     return gettextParser.po.compile(poData, { foldLength: this.foldLength });
+  }
+
+  /**
+   * Returns the fallback content for a PO file.
+   */
+  getFallback(): string {
+    return '';
   }
 }

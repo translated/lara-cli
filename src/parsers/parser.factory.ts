@@ -124,18 +124,7 @@ export class ParserFactory {
     return this.filePath;
   }
 
-  /**
-   * Gets the default fallback content for when a file doesn't exist.
-   * Each parser type defines its own appropriate fallback.
-   *
-   * @returns The default fallback string for the file type
-   */
-  getDefaultFallback(): string {
-    switch (this.extension) {
-      case SupportedExtensionEnum.JSON:
-        return '{}';
-      case SupportedExtensionEnum.PO:
-        return '';
-    }
+  getFallback(): string {
+    return this.parser.getFallback();
   }
 }
