@@ -28,8 +28,13 @@ Lara Dev provides several commands to manage your internationalization:
 The `lara.yaml` configuration file controls how Lara Dev works with your project:
 
 - [Configuration Overview](config/README.md) - Configuration system overview
+- [Supported Formats](config/formats.md) - Supported file formats (JSON, PO, etc.)
 - [Locales Configuration](config/locales.md) - Configure source and target languages
 - [Files Configuration](config/files.md) - Configure file paths and patterns
 - [Instructions](config/instructions.md) - Configure translation instructions
 - [Translation Memories](config/memories.md) - Configure Translation Memories
 - [Glossaries](config/glossaries.md) - Configure Glossaries
+
+## Format-Specific Guides
+
+- [PO Files Guide](config/po-files.md) - Complete guide for gettext PO files

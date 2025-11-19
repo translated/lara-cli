@@ -2,6 +2,12 @@
 
 The `files` section defines which files should be translated and how they should be processed.
 
+## Supported Formats
+
+Lara Dev supports multiple file formats (JSON, PO, etc.). Each format is configured separately under the `files` section. See [Supported Formats](./formats.md) for a complete list and format-specific documentation like [PO Files Guide](./po-files.md).
+
+The parser is automatically selected based on the file extension.
+
 ## Configuration
 
 ```yaml
