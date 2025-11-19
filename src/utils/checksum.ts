@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import yaml from 'yaml';
-import { FileConnector } from './fileConnector.js';
+import { ParserFactory } from '../parsers/parser.factory.js';
 
 type ChecksumChangelog = Record<
   string,
@@ -30,13 +30,13 @@ let cachedChecksumFile: ChecksumFile | null = null;
  * @param parser - Optional FileConnector instance to reuse (preserves metadata like PO headers)
  * @returns The changelog of the file.
  */
-function calculateChecksum(fileName: string, parser?: FileConnector): ChecksumChangelog {
+function calculateChecksum(fileName: string, parser?: ParserFactory): ChecksumChangelog {
   const checksumFile = getChecksumFile();
   const checksum = checksumFile.files[getHash(fileName)] || {};
 
   const changelog: ChecksumChangelog = {};
 
-  const fileParser = parser || new FileConnector(fileName);
+  const fileParser = parser || new ParserFactory(fileName);
   const fileContent = fileParser.parse(fs.readFileSync(fileName, 'utf8'));
 
   let changed: boolean = false;

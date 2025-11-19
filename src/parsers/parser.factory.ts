@@ -1,7 +1,7 @@
-import { getFileExtension } from './path.js';
-import { JsonParser } from './json.js';
-import { PoParser } from './po.js';
-import { Parser } from './parser.js';
+import { getFileExtension } from '../utils/path.js';
+import { JsonParser } from './json.parser.js';
+import { PoParser } from './po.parser.js';
+import { Parser } from '../interface/parser.js';
 import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { JsonParserFormattingType, SupportedExtensionEnum } from '#modules/common/common.types.js';
 
@@ -26,7 +26,7 @@ import { JsonParserFormattingType, SupportedExtensionEnum } from '#modules/commo
  * });
  * ```
  */
-export class FileConnector {
+export class ParserFactory {
   private readonly filePath: string;
   private readonly extension: SupportedExtensionEnum;
   private readonly parser: Parser<Record<string, unknown>, unknown>;
@@ -79,9 +79,9 @@ export class FileConnector {
   ): Parser<Record<string, unknown>, unknown> {
     switch (extension) {
       case SupportedExtensionEnum.JSON:
-        return new JsonParser('/');
+        return new JsonParser();
       case SupportedExtensionEnum.PO:
-        return new PoParser('utf-8', {});
+        return new PoParser();
     }
   }
 

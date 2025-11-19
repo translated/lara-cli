@@ -8,7 +8,7 @@ import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
-import { FileConnector } from '#utils/fileConnector.js';
+import { ParserFactory } from '../../parsers/parser.factory.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -107,7 +107,7 @@ export class TranslationEngine {
    * File connector instance used to parse and serialize translation files.
    * Automatically detects the file format based on the input path extension.
    */
-  private readonly parser: FileConnector;
+  private readonly parser: ParserFactory;
 
   constructor(options: TranslationEngineOptions) {
     this.sourceLocale = options.sourceLocale;
@@ -138,7 +138,7 @@ export class TranslationEngine {
 
     this.translatorService = TranslationService.getInstance();
 
-    this.parser = new FileConnector(this.inputPath);
+    this.parser = new ParserFactory(this.inputPath);
   }
 
   public async translate() {

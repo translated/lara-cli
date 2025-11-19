@@ -1,5 +1,5 @@
 import * as gettextParser from 'gettext-parser';
-import type { Parser } from './parser.js';
+import type { Parser } from '../interface/parser.js';
 
 /**
  * PO (Portable Object) parser for handling gettext translation files.
@@ -27,7 +27,11 @@ export class PoParser implements Parser<Record<string, unknown>, void> {
    * @param headers - PO file headers as key-value pairs (e.g., Project-Id-Version, Language, etc.)
    * @param foldLength - The length of the line after which the text should be folded (default: 78)
    */
-  constructor(charset: string, headers: Record<string, string>, foldLength: number = 300) {
+  constructor(
+    charset: string = 'utf-8',
+    headers: Record<string, string> = {},
+    foldLength: number = 300
+  ) {
     this.charset = charset;
     this.headers = headers;
     this.foldLength = foldLength;

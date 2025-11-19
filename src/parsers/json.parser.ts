@@ -1,5 +1,5 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
-import type { Parser } from './parser.js';
+import type { Parser } from '../interface/parser.js';
 import { JsonParserFormattingType } from '#modules/common/common.types.js';
 
 /**
