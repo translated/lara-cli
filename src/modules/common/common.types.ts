@@ -9,8 +9,3 @@ export enum SupportedExtensionEnum {
   JSON = 'json',
   PO = 'po',
 }
-
-export type JsonParserFormattingType = {
-  indentation: string | number;
-  trailingNewline: string;
-};

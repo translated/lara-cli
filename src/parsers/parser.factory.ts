@@ -3,7 +3,8 @@ import { JsonParser } from './json.parser.js';
 import { PoParser } from './po.parser.js';
 import { Parser } from '../interface/parser.js';
 import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
-import { JsonParserFormattingType, SupportedExtensionEnum } from '#modules/common/common.types.js';
+import { SupportedExtensionEnum } from '#modules/common/common.types.js';
+import type { ParserOptionsType } from './parser.types.js';
 
 /**
  * File connector that automatically detects file type and uses the appropriate parser.
@@ -99,11 +100,11 @@ export class ParserFactory {
    * Serializes the data back to the file format
    *
    * @param data - The data to serialize
-   * @param formatting - Optional formatting options (only used for JSON files)
+   * @param options - Optional formatting/serialization options
    * @returns The serialized content as string or Buffer
    */
-  serialize(data: Record<string, unknown>, formatting?: JsonParserFormattingType): string | Buffer {
-    return this.parser.serialize(data, formatting);
+  serialize(data: Record<string, unknown>, options?: ParserOptionsType): string | Buffer {
+    return this.parser.serialize(data, options);
   }
 
   /**

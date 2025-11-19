@@ -1,6 +1,6 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
-import { JsonParserFormattingType } from '#modules/common/common.types.js';
+import type { JsonParserOptionsType } from './parser.types.js';
 
 /**
  * JSON parser that handles flattening and unflattening of JSON objects.
@@ -16,7 +16,7 @@ import { JsonParserFormattingType } from '#modules/common/common.types.js';
  * const json = parser.serialize(flattened);
  * // Returns: '{"dashboard": {"title": "Dashboard"}}'
  */
-export class JsonParser implements Parser<Record<string, unknown>, JsonParserFormattingType> {
+export class JsonParser implements Parser<Record<string, unknown>, JsonParserOptionsType> {
   private delimiter: string;
 
   /**
@@ -78,12 +78,15 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserFor
    *   }
    * }
    */
-  serialize(data: Record<string, unknown>, formatting: JsonParserFormattingType): string {
+  serialize(data: Record<string, unknown>, formatting: JsonParserOptionsType): string {
     const unflattened = unflat(data, { delimiter: this.delimiter });
     const formatted = JSON.stringify(unflattened, null, formatting.indentation);
     return formatted + formatting.trailingNewline;
   }
 
+  /**
+   * Returns the fallback content for a JSON file.
+   */
   getFallback(): string {
     return '{}';
   }

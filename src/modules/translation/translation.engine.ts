@@ -218,7 +218,10 @@ export class TranslationEngine {
       const newContent = Object.fromEntries(entries);
 
       await ensureDirectoryExists(targetPath);
-      await writeFile(targetPath, this.parser.serialize(newContent, formatting));
+      await writeFile(
+        targetPath,
+        this.parser.serialize(newContent, { ...formatting, targetLocale })
+      );
       progressWithOra.tick(1);
     }
   }
