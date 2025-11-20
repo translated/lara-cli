@@ -8,6 +8,11 @@ import type { PoKey, PoParserOptionsType } from './parser.types.js';
  * This parser converts PO files into simple key-value translation mappings and vice versa.
  * It flattens the PO structure (including contexts and plurals) into JSON-serialized keys
  * to allow the translation engine to handle them transparently.
+ *
+ * IMPORTANT: This parser is stateful. It stores headers and charset from the parsed file
+ * to ensure they are preserved when serializing the translated file.
+ * Therefore, a new instance of this class MUST be created for each source file being processed.
+ * Do not reuse the same instance across multiple files.
  */
 export class PoParser implements Parser<Record<string, unknown>, PoParserOptionsType> {
   // Set foldLength to 0 to completely disable the wrapping of the lines in the generated PO file.
@@ -257,6 +262,6 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * Returns the fallback content for a PO file.
    */
   getFallback(): string {
-    return this.fallbackContent
+    return this.fallbackContent;
   }
 }

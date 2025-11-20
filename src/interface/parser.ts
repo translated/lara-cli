@@ -37,7 +37,7 @@ export interface Parser<T = Record<string, unknown>, TOptions = void> {
    * @param options - Optional formatting/serialization options (type depends on parser implementation)
    * @returns The serialized content as string or Buffer
    */
-  serialize(data: T, options?: TOptions): string | Buffer;
+  serialize(data: T, options: TOptions): string | Buffer;
 
   /**
    * Returns the fallback content for the file format.

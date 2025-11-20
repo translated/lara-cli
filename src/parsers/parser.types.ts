@@ -7,7 +7,7 @@ export interface PoKey {
 }
 
 export type PoParserOptionsType = {
-  targetLocale?: string;
+  targetLocale: string;
 };
 
 export type JsonParserOptionsType = {

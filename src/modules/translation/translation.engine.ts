@@ -103,10 +103,8 @@ export class TranslationEngine {
 
   private readonly translatorService: TranslationService;
 
-  /**
-   * File connector instance used to parse and serialize translation files.
-   * Automatically detects the file format based on the input path extension.
-   */
+  // Parser instance used to parse and serialize translation files.
+  // Automatically detects the file format based on the input path extension.
   private readonly parser: ParserFactory;
 
   constructor(options: TranslationEngineOptions) {

@@ -27,7 +27,7 @@ let cachedChecksumFile: ChecksumFile | null = null;
  * Calculates the checksum of a file. And saves the checksum.
  *
  * @param fileName - The name of the file.
- * @param parser - Optional FileConnector instance to reuse (preserves metadata like PO headers)
+ * @param parser - Optional ParserFactory instance to reuse (preserves metadata like PO headers)
  * @returns The changelog of the file.
  */
 function calculateChecksum(fileName: string, parser?: ParserFactory): ChecksumChangelog {

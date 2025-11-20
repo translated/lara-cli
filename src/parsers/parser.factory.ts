@@ -7,22 +7,22 @@ import { SupportedExtensionEnum } from '#modules/common/common.types.js';
 import type { ParserOptionsType } from './parser.types.js';
 
 /**
- * File connector that automatically detects file type and uses the appropriate parser.
+ * Parser factory that automatically detects file type and uses the appropriate parser.
  *
- * This connector acts as a facade for different file format parsers, determining which
+ * This factory acts as a facade for different file format parsers, determining which
  * parser to use based on the file extension.
  *
  * @example
  * ```typescript
- * const connector = new FileConnector('/path/to/translations/en.json');
- * const data = connector.parse();
+ * const parser = new ParserFactory('/path/to/translations/en.json');
+ * const data = parser.parse();
  * // Returns parsed JSON data
  *
- * const poConnector = new FileConnector('/path/to/translations/en.po');
- * const translations = poConnector.parse();
+ * const poParser = new ParserFactory('/path/to/translations/en.po');
+ * const translations = poParser.parse();
  * // Returns parsed PO translations
  *
- * const formattedConnector = new FileConnector('/path/to/translations/en.json', {
+ * const formattedParser = new ParserFactory('/path/to/translations/en.json', {
  *   formatting: { indentation: 2, trailingNewline: '\n' }
  * });
  * ```
@@ -31,7 +31,7 @@ export class ParserFactory {
   private readonly parser: Parser<Record<string, unknown>, ParserOptionsType>;
 
   /**
-   * Creates a new FileConnector instance.
+   * Creates a new ParserFactory instance.
    *
    * @param filePath - The path to the file to parse
    * @throws {Error} If the file extension is not supported
