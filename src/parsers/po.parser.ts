@@ -10,9 +10,11 @@ import type { PoKey, PoParserOptionsType } from './parser.types.js';
  * to allow the translation engine to handle them transparently.
  */
 export class PoParser implements Parser<Record<string, unknown>, PoParserOptionsType> {
+  // Set foldLength to 0 to completely disable the wrapping of the lines in the generated PO file.
+  private readonly foldLength: number = 0;
+  private readonly fallbackContent: string = 'msgid ""\nmsgstr ""\n';
   private charset: string = 'utf-8';
   private headers: Record<string, string> = {};
-  private foldLength: number = 300;
 
   /**
    * A classic problem with PO parsers is that they tend to group translations by context,
@@ -255,6 +257,6 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * Returns the fallback content for a PO file.
    */
   getFallback(): string {
-    return 'msgid ""\nmsgstr ""\n';
+    return this.fallbackContent
   }
 }

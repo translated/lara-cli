@@ -17,6 +17,7 @@ import type { JsonParserOptionsType } from './parser.types.js';
  * // Returns: '{"dashboard": {"title": "Dashboard"}}'
  */
 export class JsonParser implements Parser<Record<string, unknown>, JsonParserOptionsType> {
+  private readonly fallbackContent: string = '{}';
   private delimiter: string = '/';
 
   /**
@@ -79,6 +80,6 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    * Returns the fallback content for a JSON file.
    */
   getFallback(): string {
-    return '{}';
+    return this.fallbackContent;
   }
 }
