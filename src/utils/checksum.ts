@@ -28,16 +28,24 @@ let cachedChecksumFile: ChecksumFile | null = null;
  *
  * @param fileName - The name of the file.
  * @param parser - Optional ParserFactory instance to reuse (preserves metadata like PO headers)
+ * @param locale - Optional locale to filter keys (for multi-locale files like TS)
  * @returns The changelog of the file.
  */
-function calculateChecksum(fileName: string, parser?: ParserFactory): ChecksumChangelog {
+function calculateChecksum(
+  fileName: string,
+  parser?: ParserFactory,
+  locale?: string
+): ChecksumChangelog {
   const checksumFile = getChecksumFile();
   const checksum = checksumFile.files[getHash(fileName)] || {};
 
   const changelog: ChecksumChangelog = {};
 
   const fileParser = parser || new ParserFactory(fileName);
-  const fileContent = fileParser.parse(fs.readFileSync(fileName, 'utf8'));
+  const fileContent = fileParser.parse(
+    fs.readFileSync(fileName, 'utf8'),
+    locale ? { locale } : undefined
+  );
 
   let changed: boolean = false;
 

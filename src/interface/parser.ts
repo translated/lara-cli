@@ -28,16 +28,17 @@ export interface Parser<T = Record<string, unknown>, TOptions = void> {
    * @param content - The raw content to parse (string or Buffer)
    * @returns The parsed data structure of type T
    */
-  parse(content: string | Buffer): T;
+  parse(content: string | Buffer, options?: TOptions): T;
 
   /**
    * Serializes the data structure back into a string or Buffer.
    *
    * @param data - The data structure to serialize
    * @param options - Optional formatting/serialization options (type depends on parser implementation)
+   * @param originalContent - Optional original content to preserve (used for merging in some formats like TS)
    * @returns The serialized content as string or Buffer
    */
-  serialize(data: T, options: TOptions): string | Buffer;
+  serialize(data: T, options: TOptions, originalContent?: string | Buffer): string | Buffer;
 
   /**
    * Returns the fallback content for the file format.

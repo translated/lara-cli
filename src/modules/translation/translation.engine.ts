@@ -145,7 +145,7 @@ export class TranslationEngine {
 
   private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
-    const changelog = calculateChecksum(sourcePath, this.parser);
+    const changelog = calculateChecksum(sourcePath, this.parser, this.sourceLocale);
     const keysCount = Object.keys(changelog).length;
 
     for (const targetLocale of this.targetLocales) {
@@ -157,7 +157,7 @@ export class TranslationEngine {
 
       const fallback = this.parser.getFallback();
       const targetContent = await readSafe(targetPath, fallback);
-      const target = this.parser.parse(targetContent);
+      const target = this.parser.parse(targetContent, { locale: targetLocale });
       const formatting = detectFormatting(targetContent);
 
       const entries = (
@@ -218,7 +218,11 @@ export class TranslationEngine {
       await ensureDirectoryExists(targetPath);
       await writeFile(
         targetPath,
-        this.parser.serialize(newContent, { ...formatting, targetLocale })
+        this.parser.serialize(
+          newContent,
+          { ...formatting, targetLocale },
+          targetContent
+        )
       );
       progressWithOra.tick(1);
     }

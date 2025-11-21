@@ -171,6 +171,9 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
+    if (getFileExtension(filePath) === 'ts') {
+      return normalizedPath;
+    }
     return null;
   }
   return normalizedPath;

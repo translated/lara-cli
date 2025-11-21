@@ -15,4 +15,11 @@ export type JsonParserOptionsType = {
   trailingNewline: string;
 };
 
-export type ParserOptionsType = PoParserOptionsType | JsonParserOptionsType;
+export type ParserOptionsType = {
+  locale?: string;
+  // PO Parser Options
+  targetLocale?: string;
+  // JSON Parser Options
+  indentation?: string | number;
+  trailingNewline?: string;
+};

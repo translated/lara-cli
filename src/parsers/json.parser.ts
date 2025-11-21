@@ -24,6 +24,7 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    * Parses a JSON string and returns a flattened object.
    *
    * @param content - The JSON string to parse
+   * @param options - Optional parsing options (unused in JSON parser)
    * @returns The flattened object with the keys being the path to the value.
    *
    * @example
@@ -42,7 +43,11 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    *   "dashboard/content/1": "content 2",
    * }
    */
-  parse(content: string): Record<string, unknown> {
+  parse(
+    content: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options?: JsonParserOptionsType
+  ): Record<string, unknown> {
     const parsed = JSON.parse(content);
     return flat(parsed, { delimiter: this.delimiter });
   }
@@ -70,7 +75,12 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    *   }
    * }
    */
-  serialize(data: Record<string, unknown>, options: JsonParserOptionsType): string {
+  serialize(
+    data: Record<string, unknown>,
+    options: JsonParserOptionsType,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _originalContent?: string
+  ): string {
     const unflattened = unflat(data, { delimiter: this.delimiter });
     const formatted = JSON.stringify(unflattened, null, options.indentation);
     return formatted + options.trailingNewline;

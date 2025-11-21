@@ -20,6 +20,11 @@ const IncludeFilePath = z
   )
   .refine(
     (path) => {
+      const extension = getFileExtension(path);
+      if (extension === 'ts') {
+        return true;
+      }
+
       const hasDirectoryPattern = path.includes('/[locale]/');
       const hasFilenamePattern = /\[locale\]\.[a-zA-Z0-9]+$/.test(path);
 

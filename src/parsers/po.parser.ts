@@ -81,9 +81,14 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * Values are the translated strings (msgstr).
    *
    * @param content - The content of the PO file as a Buffer or string
+   * @param options - Optional parsing options (unused in PO parser)
    * @returns A record mapping serialized keys to their translated strings
    */
-  parse(content: Buffer | string): Record<string, unknown> {
+  parse(
+    content: Buffer | string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options?: PoParserOptionsType
+  ): Record<string, unknown> {
     const parsed = gettextParser.po.parse(content);
 
     // Preserve existing headers if parsed headers are empty or undefined
@@ -161,7 +166,12 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * @param options - Optional serialization options
    * @returns A Buffer containing the compiled PO file
    */
-  serialize(data: Record<string, unknown>, options: PoParserOptionsType): Buffer {
+  serialize(
+    data: Record<string, unknown>,
+    options: PoParserOptionsType,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _originalContent?: Buffer | string
+  ): Buffer {
     // Update headers based on options and defaults
     if (options?.targetLocale) {
       this.headers['Language'] = options.targetLocale;
