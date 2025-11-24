@@ -43,11 +43,7 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    *   "dashboard/content/1": "content 2",
    * }
    */
-  parse(
-    content: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _options?: JsonParserOptionsType
-  ): Record<string, unknown> {
+  parse(content: string): Record<string, unknown> {
     const parsed = JSON.parse(content);
     return flat(parsed, { delimiter: this.delimiter });
   }

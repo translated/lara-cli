@@ -171,7 +171,7 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
-    if (getFileExtension(filePath) === 'ts') {
+    if (normalizedPath.includes('i18n.ts')) {
       return normalizedPath;
     }
     return null;

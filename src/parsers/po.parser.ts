@@ -84,11 +84,7 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * @param options - Optional parsing options (unused in PO parser)
    * @returns A record mapping serialized keys to their translated strings
    */
-  parse(
-    content: Buffer | string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _options?: PoParserOptionsType
-  ): Record<string, unknown> {
+  parse(content: Buffer | string): Record<string, unknown> {
     const parsed = gettextParser.po.parse(content);
 
     // Preserve existing headers if parsed headers are empty or undefined

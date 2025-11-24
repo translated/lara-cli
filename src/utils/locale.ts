@@ -6,7 +6,7 @@ import { ParserFactory } from '../parsers/parser.factory.js';
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
 async function extractLocaleFromPath(source: string): Promise<string[]> {
-  if (source.endsWith('.ts')) {
+  if (source.endsWith('i18n.ts')) {
     try {
       const content = await readSafe(source);
       const parser = new ParserFactory(source);

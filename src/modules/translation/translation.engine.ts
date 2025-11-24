@@ -218,11 +218,11 @@ export class TranslationEngine {
       await ensureDirectoryExists(targetPath);
       await writeFile(
         targetPath,
-        this.parser.serialize(
-          newContent,
-          { ...formatting, targetLocale },
-          targetContent
-        )
+        this.parser.serialize(newContent, {
+          ...formatting,
+          targetLocale,
+          originalContent: targetContent,
+        })
       );
       progressWithOra.tick(1);
     }

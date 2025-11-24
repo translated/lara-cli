@@ -38,11 +38,8 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
     return flattened;
   }
 
-  serialize(
-    data: Record<string, unknown>,
-    options: ParserOptionsType,
-    originalContent?: string | Buffer
-  ): string | Buffer {
+  serialize(data: Record<string, unknown>, options: ParserOptionsType): string | Buffer {
+    const { originalContent } = options;
     if (!originalContent) {
       throw new Error('Original content is required for TS serialization');
     }
@@ -64,7 +61,7 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
     const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter });
 
     // Merge with existing messages
-    messagesObj = this.deepMerge(messagesObj, unflattenedData);
+    messagesObj = this.deepMerge(messagesObj, unflattenedData as Record<string, unknown>);
 
     // Serialize the object back to string
     const serializedObj = JSON.stringify(messagesObj, null, 4);
@@ -143,8 +140,10 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
     return content.substring(0, startIndex) + newObjStr + content.substring(endIndex);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private deepMerge(target: any, source: any): any {
+  private deepMerge(
+    target: Record<string, unknown>,
+    source: Record<string, unknown>
+  ): Record<string, unknown> {
     if (typeof target !== 'object' || target === null) return source;
     if (typeof source !== 'object' || source === null) return source;
 
@@ -152,7 +151,10 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
     for (const key in source) {
       if (Object.prototype.hasOwnProperty.call(source, key)) {
         if (key in target && typeof target[key] === 'object' && typeof source[key] === 'object') {
-          output[key] = this.deepMerge(target[key], source[key]);
+          output[key] = this.deepMerge(
+            target[key] as Record<string, unknown>,
+            source[key] as Record<string, unknown>
+          );
         } else {
           output[key] = source[key];
         }
@@ -161,4 +163,3 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
     return output;
   }
 }
-

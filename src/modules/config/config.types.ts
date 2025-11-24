@@ -20,19 +20,15 @@ const IncludeFilePath = z
   )
   .refine(
     (path) => {
-      const extension = getFileExtension(path);
-      if (extension === 'ts') {
-        return true;
-      }
-
       const hasDirectoryPattern = path.includes('/[locale]/');
       const hasFilenamePattern = /\[locale\]\.[a-zA-Z0-9]+$/.test(path);
+      const isI18nFile = path.endsWith('i18n.ts');
 
-      return hasDirectoryPattern || hasFilenamePattern;
+      return hasDirectoryPattern || hasFilenamePattern || isI18nFile;
     },
     {
       message:
-        'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension)',
+        'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension), or be named i18n.ts',
     }
   );
 

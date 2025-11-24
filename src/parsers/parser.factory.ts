@@ -98,12 +98,8 @@ export class ParserFactory {
    * @param originalContent - Optional original content to preserve (used for merging in some formats like TS)
    * @returns The serialized content as string or Buffer
    */
-  serialize(
-    data: Record<string, unknown>,
-    options: ParserOptionsType,
-    originalContent?: string | Buffer
-  ): string | Buffer {
-    return this.parser.serialize(data, options, originalContent);
+  serialize(data: Record<string, unknown>, options: ParserOptionsType): string | Buffer {
+    return this.parser.serialize(data, options);
   }
 
   getFallback(): string {
