@@ -162,12 +162,7 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * @param options - Optional serialization options
    * @returns A Buffer containing the compiled PO file
    */
-  serialize(
-    data: Record<string, unknown>,
-    options: PoParserOptionsType,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _originalContent?: Buffer | string
-  ): Buffer {
+  serialize(data: Record<string, unknown>, options: PoParserOptionsType): Buffer {
     // Update headers based on options and defaults
     if (options?.targetLocale) {
       this.headers['Language'] = options.targetLocale;

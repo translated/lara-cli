@@ -71,12 +71,7 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    *   }
    * }
    */
-  serialize(
-    data: Record<string, unknown>,
-    options: JsonParserOptionsType,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _originalContent?: string
-  ): string {
+  serialize(data: Record<string, unknown>, options: JsonParserOptionsType): string {
     const unflattened = unflat(data, { delimiter: this.delimiter });
     const formatted = JSON.stringify(unflattened, null, options.indentation);
     return formatted + options.trailingNewline;
