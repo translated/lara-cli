@@ -157,7 +157,7 @@ export class TranslationEngine {
 
       const fallback = this.parser.getFallback();
       const targetContent = await readSafe(targetPath, fallback);
-      const target = this.parser.parse(targetContent, { locale: targetLocale });
+      const target = this.parser.parse(targetContent, { targetLocale });
       const formatting = detectFormatting(targetContent);
 
       const entries = (

@@ -1,12 +1,12 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
-import type { ParserOptionsType } from './parser.types.js';
+import type { TsParserOptionsType } from './parser.types.js';
 
-export class TsParser implements Parser<Record<string, unknown>, ParserOptionsType> {
+export class TsParser implements Parser<Record<string, unknown>, TsParserOptionsType> {
   private readonly fallbackContent = 'const messages = {};\n\nexport default messages;';
   private delimiter = '/';
 
-  parse(content: string | Buffer, options?: ParserOptionsType): Record<string, unknown> {
+  parse(content: string | Buffer, options?: TsParserOptionsType): Record<string, unknown> {
     const strContent = content.toString();
     const messagesObj = this.extractMessagesObject(strContent);
 
@@ -18,12 +18,12 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
     const flattened = flat(messagesObj, { delimiter: this.delimiter }) as Record<string, unknown>;
 
     // If a specific locale is requested, filter and unprefix
-    if (options?.locale) {
-      const localePrefix = options.locale + this.delimiter;
+    if (options?.targetLocale) {
+      const localePrefix = options.targetLocale + this.delimiter;
       const filtered: Record<string, unknown> = {};
 
       for (const key in flattened) {
-        if (key === options.locale) {
+        if (key === options.targetLocale) {
           // Exact match (unlikely for locale root but possible)
           filtered[key] = flattened[key];
         } else if (key.startsWith(localePrefix)) {
@@ -38,7 +38,7 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
     return flattened;
   }
 
-  serialize(data: Record<string, unknown>, options: ParserOptionsType): string | Buffer {
+  serialize(data: Record<string, unknown>, options: TsParserOptionsType): string | Buffer {
     const { originalContent } = options;
     if (!originalContent) {
       throw new Error('Original content is required for TS serialization');
@@ -48,7 +48,7 @@ export class TsParser implements Parser<Record<string, unknown>, ParserOptionsTy
 
     // If options.locale is set, prefix keys back
     let dataToMerge = data;
-    const locale = options?.locale || options?.targetLocale;
+    const locale = options?.targetLocale;
 
     if (locale) {
       const prefixed: Record<string, unknown> = {};

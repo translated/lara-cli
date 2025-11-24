@@ -15,14 +15,11 @@ export type JsonParserOptionsType = {
   trailingNewline: string;
 };
 
-export type CommonParserOptionsType = {
-  locale?: string;
-};
-
 export type TsParserOptionsType = {
-  originalContent?: string | Buffer;
+  originalContent: string | Buffer;
+  targetLocale: string;
 };
 
 export type ParserOptionsType = Partial<
-  PoParserOptionsType & JsonParserOptionsType & CommonParserOptionsType & TsParserOptionsType
+  PoParserOptionsType & JsonParserOptionsType & TsParserOptionsType
 >;

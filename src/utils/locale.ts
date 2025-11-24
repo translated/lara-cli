@@ -30,6 +30,24 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
   const targetLocales: Set<string> = new Set();
 
   for (const filePath of paths) {
+    if (filePath.endsWith('.ts')) {
+      try {
+        const content = await readSafe(filePath);
+        const parser = new ParserFactory(filePath);
+        const parsed = parser.parse(content);
+
+        for (const key of Object.keys(parsed)) {
+          const root = key.split('/')[0];
+          if (root && availableLocales.has(root) && root !== source) {
+            targetLocales.add(root);
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+      continue;
+    }
+
     const relativeFilePath = path.relative(process.cwd(), filePath);
     const parts = relativeFilePath.split('/');
 

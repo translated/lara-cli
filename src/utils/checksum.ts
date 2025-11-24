@@ -44,7 +44,7 @@ function calculateChecksum(
   const fileParser = parser || new ParserFactory(fileName);
   const fileContent = fileParser.parse(
     fs.readFileSync(fileName, 'utf8'),
-    locale ? { locale } : undefined
+    locale ? { targetLocale: locale } : undefined
   );
 
   let changed: boolean = false;
