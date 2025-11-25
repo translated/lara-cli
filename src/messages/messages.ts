@@ -70,6 +70,15 @@ export const Messages = {
       `Total ${count} target ${count === 1 ? 'locale' : 'locales'} selected${summary || ''}`,
   },
 
+  summary: {
+    title: '📦 Localization Summary',
+    filesLocalized: (count: number) => `${count} ${count === 1 ? 'file' : 'files'}`,
+    targetLocales: (count: number) => `${count} ${count === 1 ? 'locale' : 'locales'}`,
+    allDone: '✓ All done! Happy coding!',
+    filesLabel: 'Files localized',
+    targetLocalesLabel: 'Target locales',
+  },
+
   info: {
     searchingLocales: 'Searching for locales in project...',
     searchingTargetLocales: 'Searching for target locales...',
