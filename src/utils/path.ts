@@ -8,6 +8,7 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
+import { SearchLocalePathsOptions } from '#modules/common/common.types.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
@@ -105,16 +106,19 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
  *  'src/i18n/[locale].json',
  * ]
  */
-async function searchLocalePaths(): Promise<string[]> {
+async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
+  const { source } = options;
   const allJsonPaths = await searchPaths();
+  const filteredPaths = allJsonPaths.filter((path) => path.match(buildLocaleRegex([source])));
 
   const pathsWithLocales: string[] = [];
 
-  for (const jsonPath of allJsonPaths) {
+  for (const jsonPath of filteredPaths) {
     const normalizedPath = normalizePath(jsonPath);
-    if (normalizedPath !== null) {
-      pathsWithLocales.push(normalizedPath);
+    if (!normalizedPath) {
+      continue;
     }
+    pathsWithLocales.push(normalizedPath);
   }
 
   return Array.from(new Set(pathsWithLocales));
@@ -143,12 +147,10 @@ function normalizePath(filePath: string): string | null {
 
     // Handle the last part of the path (filename)
     if (i === parts.length - 1) {
-      const [filename, extension] = part.split('.');
-      if (!currentLocale && availableLocales.has(filename ?? '')) {
-        currentLocale = filename!;
-      }
-      if (filename === currentLocale) {
-        normalizedPath += `[locale].${extension}`;
+      const locale = extractLocaleFromFilename(part);
+      if (!currentLocale && availableLocales.has(locale ?? '')) {
+        currentLocale = locale!;
+        normalizedPath += part.replace(locale!, '[locale]');
         continue;
       }
       normalizedPath += part;
@@ -214,3 +216,31 @@ export {
   searchLocalePaths,
   searchPaths,
 };
+
+/**
+ * Extracts the locale code from a filename
+ *
+ * @param filename - The filename to extract the locale from. Example: 'en.json' or 'it-IT.json'
+ * @returns The locale code if found, null otherwise. Example: 'en' or 'it-IT'
+ */
+export function extractLocaleFromFilename(filename: string): string | null {
+  // Ordered by length descending because we want to match the longest locale first.
+  const sortedLocales = [...AVAILABLE_LOCALES].sort((a, b) => b.length - a.length);
+  const match = filename.match(buildLocaleRegex(sortedLocales));
+
+  if (!match || !match[2]) {
+    return null;
+  }
+
+  return match[2];
+}
+
+/**
+ * Builds a regular expression to match locale codes in text
+ *
+ * @param locales - Array of locale codes to match. Defaults to AVAILABLE_LOCALES if not provided
+ * @returns A RegExp that matches locale codes when they appear as whole words
+ */
+function buildLocaleRegex(locales: string[] = AVAILABLE_LOCALES): RegExp {
+  return new RegExp(`(^|[^a-zA-Z])(${locales.join('|')})(?=[^a-zA-Z]|$)`, 'i');
+}
