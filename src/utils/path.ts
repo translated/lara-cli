@@ -173,6 +173,9 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
+    if (normalizedPath.includes('i18n.ts')) {
+      return normalizedPath;
+    }
     return null;
   }
   return normalizedPath;

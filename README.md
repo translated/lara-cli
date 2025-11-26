@@ -2,7 +2,9 @@
 
 # 🚀 Lara Dev – A Powerful CLI Tool for Instant i18n Localization
 
-Lara Dev automates translation of your i18n JSON files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n JSON files.
+Lara Dev automates translation of your i18n files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n files.
+
+Supports multiple file formats including JSON and PO (gettext). See [Supported Formats](docs/config/formats.md) for details.
 
 [![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/translated/lara-dev)
 
@@ -194,8 +196,12 @@ For detailed documentation on using Lara Dev:
 
 ### Configuration
 - [Configuration Overview](docs/config/README.md) - Configuration system overview
+- [Supported Formats](docs/config/formats.md) - Supported file formats (JSON, PO, etc.)
 - [Locales Configuration](docs/config/locales.md) - Configure source and target languages
 - [Files Configuration](docs/config/files.md) - Configure file paths and patterns
 - [Instructions](docs/config/instructions.md) - Configure translation instructions
 - [Translation Memories](docs/config/memories.md) - Configure Translation Memories
 - [Glossaries](docs/config/glossaries.md) - Configure Glossaries
+
+### Format-Specific Guides
+- [PO Files Guide](docs/config/po-files.md) - Complete guide for gettext PO files

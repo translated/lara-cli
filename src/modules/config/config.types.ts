@@ -21,15 +21,16 @@ const IncludeFilePath = z
   .refine(
     (path) => {
       const hasDirectoryPattern = path.includes('/[locale]/');
+      const isI18nFile = path.endsWith('i18n.ts');
       const hasFilenamePattern = new RegExp(
         `[^/]*\\[locale\\][^/]*\\.(${SUPPORTED_FILE_TYPES.join('|')})$`
       ).test(path);
 
-      return hasDirectoryPattern || hasFilenamePattern;
+      return hasDirectoryPattern || hasFilenamePattern || isI18nFile;
     },
     {
       message:
-        'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension)',
+        'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension), or be named i18n.ts',
     }
   );
 
@@ -65,7 +66,7 @@ const Config = z
 
     glossaries: z.array(z.string()).default([]),
 
-    files: z.record(
+    files: z.partialRecord(
       SupportedFileTypesEnum,
       z.object({
         include: z.array(IncludeFilePath),
@@ -101,7 +102,15 @@ const Config = z
   })
   .refine(
     (data) => {
+      if (Object.keys(data.files).length === 0) {
+        return false;
+      }
+
       for (const [fileType, fileConfig] of Object.entries(data.files)) {
+        if (!fileConfig) {
+          return false;
+        }
+
         for (const includePath of fileConfig.include) {
           const fileExtension = getFileExtension(includePath);
 

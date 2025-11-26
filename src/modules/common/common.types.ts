@@ -5,6 +5,11 @@ export const LocalesEnum = z.enum(AVAILABLE_LOCALES);
 
 export const SupportedFileTypesEnum = z.enum(SUPPORTED_FILE_TYPES);
 
+export enum SupportedExtensionEnum {
+  JSON = 'json',
+  PO = 'po',
+  TS = 'ts',
+}
 export type SearchLocalePathsOptions = {
   source: string;
 };

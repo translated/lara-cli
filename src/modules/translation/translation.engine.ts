@@ -2,13 +2,13 @@ import picomatch, { Matcher } from 'picomatch';
 
 import { TranslationService } from './translation.service.js';
 import { calculateChecksum } from '#utils/checksum.js';
-import { parseFlattened, unflatten } from '#utils/json.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
+import { ParserFactory } from '../../parsers/parser.factory.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -31,9 +31,11 @@ export type TranslationEngineOptions = {
 };
 
 /**
- * Detects the formatting used in a JSON string
+ * Detects the formatting used in a JSON string by analyzing indentation patterns
+ * and trailing newlines.
+ *
  * @param jsonContent - The JSON string to analyze
- * @returns Object with indentation and trailing newline information
+ * @returns Object containing detected indentation (tabs or number of spaces) and trailing newline
  */
 function detectFormatting(jsonContent: string): {
   indentation: string | number;
@@ -101,6 +103,10 @@ export class TranslationEngine {
 
   private readonly translatorService: TranslationService;
 
+  // Parser instance used to parse and serialize translation files.
+  // Automatically detects the file format based on the input path extension.
+  private readonly parser: ParserFactory;
+
   constructor(options: TranslationEngineOptions) {
     this.sourceLocale = options.sourceLocale;
     this.targetLocales = options.targetLocales;
@@ -129,6 +135,8 @@ export class TranslationEngine {
     this.glossaryIds = options.glossaryIds;
 
     this.translatorService = TranslationService.getInstance();
+
+    this.parser = new ParserFactory(this.inputPath);
   }
 
   public async translate() {
@@ -137,7 +145,7 @@ export class TranslationEngine {
 
   private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
-    const changelog = calculateChecksum(sourcePath);
+    const changelog = calculateChecksum(sourcePath, this.parser, this.sourceLocale);
     const keysCount = Object.keys(changelog).length;
 
     for (const targetLocale of this.targetLocales) {
@@ -146,8 +154,10 @@ export class TranslationEngine {
       );
 
       const targetPath = buildLocalePath(inputPath, targetLocale);
-      const targetContent = await readSafe(targetPath, '{}');
-      const targetJson = parseFlattened(targetContent);
+
+      const fallback = this.parser.getFallback();
+      const targetContent = await readSafe(targetPath, fallback);
+      const target = this.parser.parse(targetContent, { targetLocale });
       const formatting = detectFormatting(targetContent);
 
       const entries = (
@@ -157,7 +167,7 @@ export class TranslationEngine {
             .map(async ([key, value]) => {
               const state = value.state;
               const sourceValue = value.value;
-              const targetValue = targetJson[key];
+              const targetValue = target[key];
 
               // If the key is locked, we should NOT elaborate it and therefore return the source value
               if (this.isLocked(key)) {
@@ -208,8 +218,11 @@ export class TranslationEngine {
       await ensureDirectoryExists(targetPath);
       await writeFile(
         targetPath,
-        JSON.stringify(unflatten(newContent), null, formatting.indentation) +
-          formatting.trailingNewline
+        this.parser.serialize(newContent, {
+          ...formatting,
+          targetLocale,
+          originalContent: targetContent,
+        })
       );
       progressWithOra.tick(1);
     }
