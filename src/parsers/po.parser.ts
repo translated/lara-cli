@@ -81,6 +81,7 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * Values are the translated strings (msgstr).
    *
    * @param content - The content of the PO file as a Buffer or string
+   * @param options - Optional parsing options (unused in PO parser)
    * @returns A record mapping serialized keys to their translated strings
    */
   parse(content: Buffer | string): Record<string, unknown> {

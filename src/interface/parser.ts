@@ -28,7 +28,7 @@ export interface Parser<T = Record<string, unknown>, TOptions = void> {
    * @param content - The raw content to parse (string or Buffer)
    * @returns The parsed data structure of type T
    */
-  parse(content: string | Buffer): T;
+  parse(content: string | Buffer, options?: TOptions): T;
 
   /**
    * Serializes the data structure back into a string or Buffer.

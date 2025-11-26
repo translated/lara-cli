@@ -8,4 +8,5 @@ export const SupportedFileTypesEnum = z.enum(SUPPORTED_FILE_TYPES);
 export enum SupportedExtensionEnum {
   JSON = 'json',
   PO = 'po',
+  TS = 'ts',
 }

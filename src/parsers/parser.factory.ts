@@ -1,6 +1,7 @@
 import { getFileExtension } from '../utils/path.js';
 import { JsonParser } from './json.parser.js';
 import { PoParser } from './po.parser.js';
+import { TsParser } from './ts.parser.js';
 import { Parser } from '../interface/parser.js';
 import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { SupportedExtensionEnum } from '#modules/common/common.types.js';
@@ -73,6 +74,8 @@ export class ParserFactory {
         return new JsonParser();
       case SupportedExtensionEnum.PO:
         return new PoParser();
+      case SupportedExtensionEnum.TS:
+        return new TsParser();
     }
   }
 
@@ -80,10 +83,11 @@ export class ParserFactory {
    * Parses the file content and returns the parsed data
    *
    * @param targetContent - The raw file content to parse (string or Buffer)
+   * @param options - Optional parsing options
    * @returns The parsed data as a Record<string, unknown>
    */
-  parse(targetContent: string | Buffer): Record<string, unknown> {
-    return this.parser.parse(targetContent);
+  parse(targetContent: string | Buffer, options?: ParserOptionsType): Record<string, unknown> {
+    return this.parser.parse(targetContent, options);
   }
 
   /**
@@ -91,6 +95,7 @@ export class ParserFactory {
    *
    * @param data - The data to serialize
    * @param options - Optional formatting/serialization options
+   * @param originalContent - Optional original content to preserve (used for merging in some formats like TS)
    * @returns The serialized content as string or Buffer
    */
   serialize(data: Record<string, unknown>, options: ParserOptionsType): string | Buffer {

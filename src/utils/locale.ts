@@ -1,15 +1,53 @@
 import { AVAILABLE_LOCALES } from '#modules/common/common.const.js';
-import { searchPaths } from './path.js';
+import { searchPaths, readSafe } from './path.js';
 import path from 'path';
+import { ParserFactory } from '../parsers/parser.factory.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
 async function extractLocaleFromPath(source: string): Promise<string[]> {
+  if (source.endsWith('i18n.ts')) {
+    try {
+      const content = await readSafe(source);
+      const parser = new ParserFactory(source);
+      const parsed = parser.parse(content);
+      const locales = new Set<string>();
+
+      for (const key of Object.keys(parsed)) {
+        const root = key.split('/')[0];
+        if (root && availableLocales.has(root)) {
+          locales.add(root);
+        }
+      }
+      return Array.from(locales);
+    } catch {
+      return [];
+    }
+  }
+
   const paths = await searchPaths();
 
   const targetLocales: Set<string> = new Set();
 
   for (const filePath of paths) {
+    if (filePath.endsWith('.ts')) {
+      try {
+        const content = await readSafe(filePath);
+        const parser = new ParserFactory(filePath);
+        const parsed = parser.parse(content);
+
+        for (const key of Object.keys(parsed)) {
+          const root = key.split('/')[0];
+          if (root && availableLocales.has(root) && root !== source) {
+            targetLocales.add(root);
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+      continue;
+    }
+
     const relativeFilePath = path.relative(process.cwd(), filePath);
     const parts = relativeFilePath.split('/');
 
@@ -54,6 +92,24 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
   const foundLocales: Set<string> = new Set();
 
   for (const filePath of paths) {
+    if (filePath.endsWith('.ts')) {
+      try {
+        const content = await readSafe(filePath);
+        const parser = new ParserFactory(filePath);
+        const parsed = parser.parse(content);
+
+        for (const key of Object.keys(parsed)) {
+          const root = key.split('/')[0];
+          if (root && availableLocales.has(root)) {
+            foundLocales.add(root);
+          }
+        }
+      } catch {
+        // Ignore errors for non-translation TS files
+      }
+      continue;
+    }
+
     const relativeFilePath = path.relative(process.cwd(), filePath);
     const parts = relativeFilePath.split('/');
 
