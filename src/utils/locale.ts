@@ -1,5 +1,5 @@
 import { AVAILABLE_LOCALES } from '#modules/common/common.const.js';
-import { searchPaths, readSafe } from './path.js';
+import { extractLocaleFromFilename, searchPaths, readSafe } from './path.js';
 import path from 'path';
 import { ParserFactory } from '../parsers/parser.factory.js';
 
@@ -59,12 +59,12 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
 
       // Handle the last part of the path (filename)
       if (i === parts.length - 1) {
-        const [filename] = part.split('.');
-        if (!filename) {
+        const locale = extractLocaleFromFilename(part);
+        if (!locale) {
           continue;
         }
-        if (availableLocales.has(filename) && filename !== source) {
-          targetLocales.add(filename);
+        if (availableLocales.has(locale) && locale !== source) {
+          targetLocales.add(locale);
         }
       }
 
@@ -121,12 +121,12 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
 
       // Handle the last part of the path (filename)
       if (i === parts.length - 1) {
-        const [filename] = part.split('.');
-        if (!filename) {
+        const locale = extractLocaleFromFilename(part);
+        if (!locale) {
           continue;
         }
-        if (availableLocales.has(filename)) {
-          foundLocales.add(filename);
+        if (availableLocales.has(locale)) {
+          foundLocales.add(locale);
         }
       }
 

@@ -42,6 +42,7 @@ The configuration is divided into several sections:
 - **[Supported Formats](./formats.md)** - List of supported file formats
 - **[Locales](./locales.md)** - Source and target language configuration
 - **[Files](./files.md)** - File paths and exclusion patterns
+- **[File Structure and Formats](./supported_formats.md)** - Supported file formats, JSON structure, and file discovery
 - **[Instructions](./instructions.md)** - Project, file, and key-level translation instructions
 - **[Translation Memories](./memories.md)** - Memory configuration for domain adaptation
 - **[Glossaries](./glossaries.md)** - Glossary configuration for terminology control

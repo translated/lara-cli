@@ -31,6 +31,7 @@ The `lara.yaml` configuration file controls how Lara Dev works with your project
 - [Supported Formats](config/formats.md) - Supported file formats (JSON, PO, etc.)
 - [Locales Configuration](config/locales.md) - Configure source and target languages
 - [Files Configuration](config/files.md) - Configure file paths and patterns
+- [File Structure and Formats](config/supported_formats.md) - Supported file formats and JSON structure
 - [Instructions](config/instructions.md) - Configure translation instructions
 - [Translation Memories](config/memories.md) - Configure Translation Memories
 - [Glossaries](config/glossaries.md) - Configure Glossaries

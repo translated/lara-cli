@@ -10,3 +10,6 @@ export enum SupportedExtensionEnum {
   PO = 'po',
   TS = 'ts',
 }
+export type SearchLocalePathsOptions = {
+  source: string;
+};

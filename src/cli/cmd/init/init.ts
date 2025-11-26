@@ -184,6 +184,9 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
 
   const inputSource = await sourceInput(options);
   const inputTarget = await targetInput(inputSource, options.target);
+
+  // Update the source in the options object so pathsInput can use it to search for files matching the source locale patterns
+  options.source = inputSource;
   const inputPaths = await pathsInput(options);
 
   if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
