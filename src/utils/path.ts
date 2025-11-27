@@ -121,35 +121,29 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
 async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
   const { source } = options;
   const allPaths = await searchPaths();
-  console.log('allPaths', allPaths);
   
-  // First filter: basic pattern matching
-  const initiallyFilteredPaths = allPaths.filter((p) => {
-    if (p.endsWith('i18n.ts')) {
+  const initiallyFilteredPaths = allPaths.filter((path) => {
+    if (path.endsWith('i18n.ts')) {
       return true;
     }
-    if (p.endsWith('.vue')) {
-      // Will be filtered further below
+    if (path.endsWith('.vue')) {
       return true;
     }
-    return p.match(buildLocaleRegex([source]));
+    return path.match(buildLocaleRegex([source]));
   });
 
-  // Second filter: check Vue files for i18n tags
+  //Check Vue files for i18n tags
   const filteredPaths: string[] = [];
-  for (const p of initiallyFilteredPaths) {
-    if (p.endsWith('.vue')) {
-      // Check if Vue file has i18n tag using VueParser
-      const content = await readSafe(p);
+  for (const path of initiallyFilteredPaths) {
+    if (path.endsWith('.vue')) {
+      const content = await readSafe(path);
       if (hasI18nTag(content)) {
-        filteredPaths.push(p);
+        filteredPaths.push(path);
       }
     } else {
-      filteredPaths.push(p);
+      filteredPaths.push(path);
     }
   }
-  
-  console.log('filteredPaths', filteredPaths);
 
   const pathsWithLocales: string[] = [];
 
