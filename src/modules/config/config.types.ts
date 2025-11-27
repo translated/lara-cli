@@ -21,10 +21,11 @@ const IncludeFilePath = z
   .refine(
     (path) => {
       const hasDirectoryPattern = path.includes('/[locale]/');
+      // const hasFilenamePattern = new RegExp(
+      //   `[^/]*\\[locale\\][^/]*\\.(${SUPPORTED_FILE_TYPES.join('|')})$`
+      // ).test(path);
+      const hasFilenamePattern = /\[locale\]\.[a-zA-Z0-9]+$/.test(path);
       const isI18nFile = path.endsWith('i18n.ts');
-      const hasFilenamePattern = new RegExp(
-        `[^/]*\\[locale\\][^/]*\\.(${SUPPORTED_FILE_TYPES.join('|')})$`
-      ).test(path);
 
       return hasDirectoryPattern || hasFilenamePattern || isI18nFile;
     },

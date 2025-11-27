@@ -2,6 +2,7 @@ import { getFileExtension } from '../utils/path.js';
 import { JsonParser } from './json.parser.js';
 import { PoParser } from './po.parser.js';
 import { TsParser } from './ts.parser.js';
+import { VueParser } from './vue.parser.js';
 import { Parser } from '../interface/parser.js';
 import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { SupportedExtensionEnum } from '#modules/common/common.types.js';
@@ -42,7 +43,7 @@ export class ParserFactory {
     const detectedExtension = getFileExtension(filePath).toLowerCase();
     if (!this.isSupportedExtension(detectedExtension)) {
       throw new Error(
-        `Unsupported file extension: ${detectedExtension}. Supported extensions: json, po`
+        `Unsupported file extension: ${detectedExtension}. Supported extensions: json, po, ts, vue`
       );
     }
 
@@ -76,6 +77,8 @@ export class ParserFactory {
         return new PoParser();
       case SupportedExtensionEnum.TS:
         return new TsParser();
+      case SupportedExtensionEnum.VUE:
+        return new VueParser();
     }
   }
 

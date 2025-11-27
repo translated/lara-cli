@@ -9,6 +9,7 @@ export enum SupportedExtensionEnum {
   JSON = 'json',
   PO = 'po',
   TS = 'ts',
+  VUE = 'vue',
 }
 export type SearchLocalePathsOptions = {
   source: string;

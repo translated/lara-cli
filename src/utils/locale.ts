@@ -48,6 +48,24 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
       continue;
     }
 
+    if (filePath.endsWith('.vue')) {
+      try {
+        const content = await readSafe(filePath);
+        const parser = new ParserFactory(filePath);
+        const parsed = parser.parse(content);
+
+        for (const key of Object.keys(parsed)) {
+          const root = key.split('/')[0];
+          if (root && availableLocales.has(root) && root !== source) {
+            targetLocales.add(root);
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+      continue;
+    }
+
     const relativeFilePath = path.relative(process.cwd(), filePath);
     const parts = relativeFilePath.split('/');
 
@@ -106,6 +124,24 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
         }
       } catch {
         // Ignore errors for non-translation TS files
+      }
+      continue;
+    }
+
+    if (filePath.endsWith('.vue')) {
+      try {
+        const content = await readSafe(filePath);
+        const parser = new ParserFactory(filePath);
+        const parsed = parser.parse(content);
+
+        for (const key of Object.keys(parsed)) {
+          const root = key.split('/')[0];
+          if (root && availableLocales.has(root)) {
+            foundLocales.add(root);
+          }
+        }
+      } catch {
+        // Ignore errors for non-translation Vue files
       }
       continue;
     }

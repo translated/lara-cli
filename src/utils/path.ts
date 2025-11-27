@@ -9,8 +9,20 @@ import {
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
 import { SearchLocalePathsOptions } from '#modules/common/common.types.js';
+import { VueParser } from '../parsers/vue.parser.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
+
+/**
+ * Checks if a Vue file contains an i18n tag
+ *
+ * @param content - The Vue file content.
+ * @returns True if the file contains an i18n tag, false otherwise.
+ */
+function hasI18nTag(content: string): boolean {
+  const vueParser = new VueParser();
+  return vueParser.hasI18nTag(content);
+}
 
 /**
  * Checks if the path is relative
@@ -108,8 +120,36 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
  */
 async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
   const { source } = options;
-  const allJsonPaths = await searchPaths();
-  const filteredPaths = allJsonPaths.filter((path) => path.match(buildLocaleRegex([source])));
+  const allPaths = await searchPaths();
+  console.log('allPaths', allPaths);
+  
+  // First filter: basic pattern matching
+  const initiallyFilteredPaths = allPaths.filter((p) => {
+    if (p.endsWith('i18n.ts')) {
+      return true;
+    }
+    if (p.endsWith('.vue')) {
+      // Will be filtered further below
+      return true;
+    }
+    return p.match(buildLocaleRegex([source]));
+  });
+
+  // Second filter: check Vue files for i18n tags
+  const filteredPaths: string[] = [];
+  for (const p of initiallyFilteredPaths) {
+    if (p.endsWith('.vue')) {
+      // Check if Vue file has i18n tag using VueParser
+      const content = await readSafe(p);
+      if (hasI18nTag(content)) {
+        filteredPaths.push(p);
+      }
+    } else {
+      filteredPaths.push(p);
+    }
+  }
+  
+  console.log('filteredPaths', filteredPaths);
 
   const pathsWithLocales: string[] = [];
 
@@ -134,6 +174,11 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
  */
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
+  
+  if (relativeFilePath.endsWith('i18n.ts')) {
+    return relativeFilePath;
+  }
+  
   const parts = relativeFilePath.split('/');
 
   let currentLocale = '';
@@ -173,7 +218,7 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
-    if (normalizedPath.includes('i18n.ts')) {
+    if (normalizedPath.includes('i18n.ts') || normalizedPath.endsWith('.vue')) {
       return normalizedPath;
     }
     return null;
