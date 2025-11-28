@@ -1,6 +1,7 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { VueParserOptionsType } from './parser.types.js';
+import { deepMerge } from '#utils/parser.js';
 
 /**
  * Vue Single File Component parser that extracts and manages i18n blocks.
@@ -36,8 +37,8 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     let messagesObj: Record<string, unknown>;
     try {
       messagesObj = JSON.parse(i18nContent);
-    } catch (e) {
-      console.error('Failed to parse i18n JSON content in Vue file', e);
+    } catch (error) {
+      console.error('Failed to parse i18n JSON content in Vue file', error);
       return {};
     }
 
@@ -98,7 +99,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter });
 
     // Merge with existing messages
-    messagesObj = this.deepMerge(messagesObj, unflattenedData as Record<string, unknown>);
+    messagesObj = deepMerge(messagesObj, unflattenedData as Record<string, unknown>);
 
     // Serialize the object back to JSON string
     const serializedObj = JSON.stringify(messagesObj, null, 2);
@@ -185,36 +186,6 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       '\n' +
       content.substring(endIndex)
     );
-  }
-
-  /**
-   * Deep merges two objects, combining nested properties.
-   *
-   * @param target - The target object to merge into
-   * @param source - The source object to merge from
-   * @returns The merged object
-   */
-  private deepMerge(
-    target: Record<string, unknown>,
-    source: Record<string, unknown>
-  ): Record<string, unknown> {
-    if (typeof target !== 'object' || target === null) return source;
-    if (typeof source !== 'object' || source === null) return source;
-
-    const output = { ...target };
-    for (const key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        if (key in target && typeof target[key] === 'object' && typeof source[key] === 'object') {
-          output[key] = this.deepMerge(
-            target[key] as Record<string, unknown>,
-            source[key] as Record<string, unknown>
-          );
-        } else {
-          output[key] = source[key];
-        }
-      }
-    }
-    return output;
   }
 }
 

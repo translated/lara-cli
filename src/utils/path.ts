@@ -247,24 +247,13 @@ async function searchPaths(): Promise<string[]> {
   });
 }
 
-export {
-  getFileExtension,
-  isRelative,
-  readSafe,
-  ensureDirectoryExists,
-  buildLocalePath,
-  searchLocalePathsByPattern,
-  searchLocalePaths,
-  searchPaths,
-};
-
 /**
  * Extracts the locale code from a filename
  *
  * @param filename - The filename to extract the locale from. Example: 'en.json' or 'it-IT.json'
  * @returns The locale code if found, null otherwise. Example: 'en' or 'it-IT'
  */
-export function extractLocaleFromFilename(filename: string): string | null {
+function extractLocaleFromFilename(filename: string): string | null {
   // Ordered by length descending because we want to match the longest locale first.
   const sortedLocales = [...AVAILABLE_LOCALES].sort((a, b) => b.length - a.length);
   const match = filename.match(buildLocaleRegex(sortedLocales));
@@ -285,3 +274,15 @@ export function extractLocaleFromFilename(filename: string): string | null {
 function buildLocaleRegex(locales: string[] = AVAILABLE_LOCALES): RegExp {
   return new RegExp(`(^|[^a-zA-Z])(${locales.join('|')})(?=[^a-zA-Z]|$)`, 'i');
 }
+
+export {
+  getFileExtension,
+  isRelative,
+  readSafe,
+  ensureDirectoryExists,
+  buildLocalePath,
+  searchLocalePathsByPattern,
+  searchLocalePaths,
+  searchPaths,
+  extractLocaleFromFilename,
+};
