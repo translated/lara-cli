@@ -26,7 +26,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
 
   parse(content: string | Buffer, options?: VueParserOptionsType): Record<string, unknown> {
     const strContent = content.toString();
-    const i18nContent = this.extractI18nBlock(strContent);
+    const i18nContent = VueParser.extractI18nBlock(strContent);
 
     if (!i18nContent) {
       return {};
@@ -71,7 +71,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       throw new Error('Original content is required for Vue serialization');
     }
     const strContent = originalContent.toString();
-    const i18nContent = this.extractI18nBlock(strContent);
+    const i18nContent = VueParser.extractI18nBlock(strContent);
     let messagesObj: Record<string, unknown> = {};
 
     // Parse existing i18n content if it exists
@@ -117,8 +117,8 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
    * @param content - The Vue SFC file content
    * @returns True if the file contains an i18n tag, false otherwise
    */
-  hasI18nTag(content: string): boolean {
-    return this.extractI18nBlock(content) !== null;
+  static hasI18nTag(content: string): boolean {
+    return VueParser.extractI18nBlock(content) !== null;
   }
 
   /**
@@ -127,7 +127,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
    * @param content - The Vue SFC file content
    * @returns The content inside the i18n block, or null if not found
    */
-  private extractI18nBlock(content: string): string | null {
+  private static extractI18nBlock(content: string): string | null {
     const i18nTagRegex = /<i18n(?:\s[^>]*)?>/i;
     const match = content.match(i18nTagRegex);
     if (!match) return null;

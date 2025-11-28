@@ -20,8 +20,7 @@ const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
  * @returns True if the file contains an i18n tag, false otherwise.
  */
 function hasI18nTag(content: string): boolean {
-  const vueParser = new VueParser();
-  return vueParser.hasI18nTag(content);
+  return VueParser.hasI18nTag(content);
 }
 
 /**
