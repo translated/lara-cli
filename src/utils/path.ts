@@ -133,15 +133,20 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
 
   // Check Vue files for i18n tags
   const filteredPaths: string[] = [];
-  for (const path of initiallyFilteredPaths) {
-    if (path.endsWith('.vue')) {
-      const content = await readSafe(path);
+  const vueFileChecks = initiallyFilteredPaths.map(async (filePath) => {
+    if (filePath.endsWith('.vue')) {
+      const content = await readSafe(filePath);
       if (hasI18nTag(content)) {
-        filteredPaths.push(path);
+        return filePath;
       }
+      return null;
     } else {
-      filteredPaths.push(path);
+      return filePath;
     }
+  });
+  const checkedPaths = await Promise.all(vueFileChecks);
+  for (const p of checkedPaths) {
+    if (p) filteredPaths.push(p);
   }
 
   const pathsWithLocales: string[] = [];
