@@ -131,7 +131,7 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
     return path.match(buildLocaleRegex([source]));
   });
 
-  //Check Vue files for i18n tags
+  // Check Vue files for i18n tags
   const filteredPaths: string[] = [];
   for (const path of initiallyFilteredPaths) {
     if (path.endsWith('.vue')) {
