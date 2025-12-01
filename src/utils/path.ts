@@ -14,16 +14,6 @@ import { VueParser } from '../parsers/vue.parser.js';
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
 /**
- * Checks if a Vue file contains an i18n tag
- *
- * @param content - The Vue file content.
- * @returns True if the file contains an i18n tag, false otherwise.
- */
-function hasI18nTag(content: string): boolean {
-  return VueParser.hasI18nTag(content);
-}
-
-/**
  * Checks if the path is relative
  *
  * @param path - The path to check.
@@ -136,7 +126,7 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
   const vueFileChecks = initiallyFilteredPaths.map(async (filePath) => {
     if (filePath.endsWith('.vue')) {
       const content = await readSafe(filePath);
-      if (hasI18nTag(content)) {
+      if (VueParser.hasI18nTag(content)) {
         return filePath;
       }
       return null;
@@ -191,9 +181,9 @@ function normalizePath(filePath: string): string | null {
     // Handle the last part of the path (filename)
     if (i === parts.length - 1) {
       const locale = extractLocaleFromFilename(part);
-      if (!currentLocale && availableLocales.has(locale ?? '')) {
-        currentLocale = locale!;
-        normalizedPath += part.replace(locale!, '[locale]');
+      if (!currentLocale && locale && availableLocales.has(locale)) {
+        currentLocale = locale;
+        normalizedPath += part.replace(locale, '[locale]');
         continue;
       }
       normalizedPath += part;
