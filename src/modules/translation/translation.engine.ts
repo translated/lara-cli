@@ -16,7 +16,7 @@ export type TranslationEngineOptions = {
 
   inputPath: string;
 
-  force: boolean;
+  forceTranslation: boolean;
 
   lockedKeys: string[];
   ignoredKeys: string[];
@@ -78,7 +78,7 @@ function detectFormatting(jsonContent: string): {
  *  - sourceLocale: The locale to translate from
  *  - targetLocales: The locales to translate to
  *  - inputPath: The path to the input file
- *  - force: Whether to force translation even if the files have not changed
+ *  - forceTranslation: Whether to force translation even if the files have not changed
  *  - lockedKeys: The keys to lock
  *  - ignoredKeys: The keys to ignore
  */
@@ -88,7 +88,7 @@ export class TranslationEngine {
 
   private readonly inputPath: string;
 
-  private readonly force: boolean;
+  private readonly forceTranslation: boolean;
 
   private readonly lockedPatterns: Matcher[];
   private readonly ignoredPatterns: Matcher[];
@@ -113,7 +113,7 @@ export class TranslationEngine {
 
     this.inputPath = options.inputPath;
 
-    this.force = options.force;
+    this.forceTranslation = options.forceTranslation;
 
     this.lockedPatterns = options.lockedKeys.map((pattern) => picomatch(pattern));
     this.ignoredPatterns = options.ignoredKeys.map((pattern) => picomatch(pattern));
@@ -174,8 +174,8 @@ export class TranslationEngine {
                 return [key, sourceValue];
               }
 
-              // If the target value does not exists or the force flag is set, we should always translate the source value
-              if (!targetValue || this.force) {
+              // If the target value does not exists or the forceTranslation flag is set, we should always translate the source value
+              if (!targetValue || this.forceTranslation) {
                 const translatedValue = await this.translateKey(
                   key,
                   sourceValue,
