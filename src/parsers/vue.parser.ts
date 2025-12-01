@@ -33,7 +33,6 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       return {};
     }
 
-    // Parse the JSON content from the i18n block
     let messagesObj: Record<string, unknown>;
     try {
       messagesObj = JSON.parse(i18nContent);
@@ -42,20 +41,16 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       return {};
     }
 
-    // Flatten the whole object
     const flattened = flat(messagesObj, { delimiter: this.delimiter }) as Record<string, unknown>;
 
-    // If a specific locale is requested, filter and unprefix
     if (options?.targetLocale) {
       const localePrefix = options.targetLocale + this.delimiter;
       const filtered: Record<string, unknown> = {};
 
       for (const key in flattened) {
         if (key === options.targetLocale) {
-          // Exact match (unlikely for locale root but possible)
           filtered[key] = flattened[key];
         } else if (key.startsWith(localePrefix)) {
-          // Remove the locale prefix to make it relative to the locale
           const relativeKey = key.substring(localePrefix.length);
           filtered[relativeKey] = flattened[key];
         }
@@ -75,7 +70,6 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     const i18nContent = VueParser.extractI18nBlock(strContent);
     let messagesObj: Record<string, unknown> = {};
 
-    // Parse existing i18n content if it exists
     if (i18nContent) {
       try {
         messagesObj = JSON.parse(i18nContent);
@@ -123,37 +117,90 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
   }
 
   /**
+   * Checks if a position in the content is inside an HTML comment.
+   *
+   * @param content - The Vue SFC file content
+   * @param position - The position to check
+   * @returns True if the position is inside an HTML comment, false otherwise
+   */
+  private static isInsideComment(content: string, position: number): boolean {
+    const commentRegex = /<!--[\s\S]*?-->/g;
+    let commentMatch: RegExpExecArray | null;
+    
+    while ((commentMatch = commentRegex.exec(content)) !== null) {
+      const commentStart = commentMatch.index;
+      const commentEnd = commentMatch.index + commentMatch[0].length;
+      
+      if (position >= commentStart && position < commentEnd) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
    * Extracts the content between <i18n> and </i18n> tags.
+   * Skips i18n tags that appear inside HTML comments.
    *
    * @param content - The Vue SFC file content
    * @returns The content inside the i18n block, or null if not found
    */
   private static extractI18nBlock(content: string): string | null {
-    const i18nTagRegex = /<i18n(?:\s[^>]*)?>/i;
-    const match = content.match(i18nTagRegex);
-    if (!match) return null;
+    const i18nTagRegex = /<i18n(?:\s[^>]*)?>/gi;
+    let match: RegExpExecArray | null;
+    
+    while ((match = i18nTagRegex.exec(content)) !== null) {
+      const matchPosition = match.index!;
+      
+      if (VueParser.isInsideComment(content, matchPosition)) {
+        continue;
+      }
 
-    const startIndex = match.index! + match[0].length;
-    const endTagRegex = /<\/i18n>/i;
-    const endMatch = content.substring(startIndex).match(endTagRegex);
-    if (!endMatch) return null;
+      const startIndex = matchPosition + match[0].length;
+      const endTagRegex = /<\/i18n>/i;
+      const endMatch = content.substring(startIndex).match(endTagRegex);
+      if (!endMatch) continue;
 
-    const endIndex = startIndex + endMatch.index!;
-    const i18nContent = content.substring(startIndex, endIndex).trim();
-    return i18nContent || null;
+      const endIndex = startIndex + endMatch.index!;
+      const i18nContent = content.substring(startIndex, endIndex).trim();
+      return i18nContent || null;
+    }
+    
+    return null;
   }
 
   /**
    * Replaces the content inside the <i18n> block with new JSON content.
+   * Skips i18n tags that appear inside HTML comments.
    *
    * @param content - The original Vue SFC file content
    * @param newJsonContent - The new JSON content to insert
    * @returns The updated Vue SFC content
    */
   private replaceI18nBlock(content: string, newJsonContent: string): string {
-    const i18nTagRegex = /<i18n(?:\s[^>]*)?>/i;
-    const match = content.match(i18nTagRegex);
-    if (!match) {
+    const i18nTagRegex = /<i18n(?:\s[^>]*)?>/gi;
+    let match: RegExpExecArray | null;
+    let validMatch: RegExpExecArray | null = null;
+    
+    while ((match = i18nTagRegex.exec(content)) !== null) {
+      const matchPosition = match.index!;
+      
+      if (VueParser.isInsideComment(content, matchPosition)) {
+        continue;
+      }
+      
+      const startIndex = matchPosition + match[0].length;
+      const endTagRegex = /<\/i18n>/i;
+      const endMatch = content.substring(startIndex).match(endTagRegex);
+      
+      if (endMatch) {
+        validMatch = match;
+        break;
+      }
+    }
+    
+    if (!validMatch) {
       // If no i18n block exists, add one before </template> or at the end
       const templateEndMatch = content.match(/<\/template>/i);
       if (templateEndMatch) {
@@ -170,7 +217,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       return content + '\n\n<i18n>\n' + newJsonContent + '\n</i18n>\n';
     }
 
-    const startIndex = match.index! + match[0].length;
+    const startIndex = validMatch.index! + validMatch[0].length;
     const endTagRegex = /<\/i18n>/i;
     const endMatch = content.substring(startIndex).match(endTagRegex);
     if (!endMatch) {
