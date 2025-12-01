@@ -9,8 +9,19 @@ import {
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
 import { SearchLocalePathsOptions } from '#modules/common/common.types.js';
+import { VueParser } from '../parsers/vue.parser.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
+
+/**
+ * Checks if a Vue file contains an i18n tag
+ *
+ * @param content - The Vue file content.
+ * @returns True if the file contains an i18n tag, false otherwise.
+ */
+function hasI18nTag(content: string): boolean {
+  return VueParser.hasI18nTag(content);
+}
 
 /**
  * Checks if the path is relative
@@ -108,8 +119,35 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
  */
 async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
   const { source } = options;
-  const allJsonPaths = await searchPaths();
-  const filteredPaths = allJsonPaths.filter((path) => path.match(buildLocaleRegex([source])));
+  const allPaths = await searchPaths();
+  
+  const initiallyFilteredPaths = allPaths.filter((path) => {
+    if (path.endsWith('i18n.ts')) {
+      return true;
+    }
+    if (path.endsWith('.vue')) {
+      return true;
+    }
+    return path.match(buildLocaleRegex([source]));
+  });
+
+  // Check Vue files for i18n tags
+  const filteredPaths: string[] = [];
+  const vueFileChecks = initiallyFilteredPaths.map(async (filePath) => {
+    if (filePath.endsWith('.vue')) {
+      const content = await readSafe(filePath);
+      if (hasI18nTag(content)) {
+        return filePath;
+      }
+      return null;
+    } else {
+      return filePath;
+    }
+  });
+  const checkedPaths = await Promise.all(vueFileChecks);
+  for (const p of checkedPaths) {
+    if (p) filteredPaths.push(p);
+  }
 
   const pathsWithLocales: string[] = [];
 
@@ -134,6 +172,11 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
  */
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
+  
+  if (relativeFilePath.endsWith('i18n.ts')) {
+    return relativeFilePath;
+  }
+  
   const parts = relativeFilePath.split('/');
 
   let currentLocale = '';
@@ -173,7 +216,7 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
-    if (normalizedPath.includes('i18n.ts')) {
+    if (normalizedPath.includes('i18n.ts') || normalizedPath.endsWith('.vue')) {
       return normalizedPath;
     }
     return null;
@@ -209,24 +252,13 @@ async function searchPaths(): Promise<string[]> {
   });
 }
 
-export {
-  getFileExtension,
-  isRelative,
-  readSafe,
-  ensureDirectoryExists,
-  buildLocalePath,
-  searchLocalePathsByPattern,
-  searchLocalePaths,
-  searchPaths,
-};
-
 /**
  * Extracts the locale code from a filename
  *
  * @param filename - The filename to extract the locale from. Example: 'en.json' or 'it-IT.json'
  * @returns The locale code if found, null otherwise. Example: 'en' or 'it-IT'
  */
-export function extractLocaleFromFilename(filename: string): string | null {
+function extractLocaleFromFilename(filename: string): string | null {
   // Ordered by length descending because we want to match the longest locale first.
   const sortedLocales = [...AVAILABLE_LOCALES].sort((a, b) => b.length - a.length);
   const match = filename.match(buildLocaleRegex(sortedLocales));
@@ -247,3 +279,15 @@ export function extractLocaleFromFilename(filename: string): string | null {
 function buildLocaleRegex(locales: string[] = AVAILABLE_LOCALES): RegExp {
   return new RegExp(`(^|[^a-zA-Z])(${locales.join('|')})(?=[^a-zA-Z]|$)`, 'i');
 }
+
+export {
+  getFileExtension,
+  isRelative,
+  readSafe,
+  ensureDirectoryExists,
+  buildLocalePath,
+  searchLocalePathsByPattern,
+  searchLocalePaths,
+  searchPaths,
+  extractLocaleFromFilename,
+};

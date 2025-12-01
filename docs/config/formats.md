@@ -7,8 +7,9 @@ Lara Dev supports multiple internationalization file formats. The appropriate pa
 | Format | Extension | Description | Documentation |
 |--------|-----------|-------------|---------------|
 | **JSON** | `.json` | Nested or flat JSON structures commonly used in JavaScript/TypeScript applications | Built-in support |
-| **PO** | `.po` | Gettext Portable Object files commonly used in PHP, Python, and other platforms | [PO Files Guide](./po-files.md) |
-| **TS** | `.ts` | TypeScript files commonly used in Vue.js applications | [TS Files Guide](./ts-files.md) |
+| **PO** | `.po` | Gettext Portable Object files commonly used in PHP, Python, and other platforms | [PO Files Guide](./files/po-files.md) |
+| **TS** | `.ts` | TypeScript files commonly used in Vue.js applications | [TS Files Guide](./files/ts-files.md) |
+| **Vue** | `.vue` | Vue I18n single-file components | [Vue Files Guide](./files/vue-files.md) |
 
 ## How It Works
 
@@ -17,6 +18,7 @@ The file format is automatically detected based on the file extension:
 - Files ending with `.json` are parsed as JSON
 - Files ending with `.po` are parsed as PO (gettext) files
 - Files ending with `.ts` are parsed as TypeScript files
+- Files ending with `.vue` are parsed as Vue.js I18n single-file components
 
 You can configure multiple formats simultaneously in the same project by adding different format sections under the `files` configuration.
 
@@ -39,5 +41,6 @@ files:
 
 For detailed information about a specific format, see its dedicated documentation:
 
-- [PO Files Guide](./po-files.md) - Complete guide for gettext PO files
-- [TS Files Guide](./ts-files.md) - Complete guide for TypeScript files
+- [PO Files Guide](./files/po-files.md) - Complete guide for gettext PO files
+- [TS Files Guide](./files/ts-files.md) - Complete guide for TypeScript files
+- [Vue Files Guide](./files/vue-files.md) - Complete guide for Vue I18n single-file components

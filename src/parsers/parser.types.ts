@@ -20,6 +20,11 @@ export type TsParserOptionsType = {
   targetLocale: string;
 };
 
+export type VueParserOptionsType = {
+  originalContent: string | Buffer;
+  targetLocale: string;
+};
+
 export type ParserOptionsType = Partial<
-  PoParserOptionsType & JsonParserOptionsType & TsParserOptionsType
+  PoParserOptionsType & JsonParserOptionsType & TsParserOptionsType & VueParserOptionsType
 >;

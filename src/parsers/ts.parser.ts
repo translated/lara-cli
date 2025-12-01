@@ -1,6 +1,7 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { TsParserOptionsType } from './parser.types.js';
+import { deepMerge } from '#utils/parser.js';
 
 export class TsParser implements Parser<Record<string, unknown>, TsParserOptionsType> {
   private readonly fallbackContent = 'const messages = {};\n\nexport default messages;';
@@ -61,7 +62,7 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
     const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter });
 
     // Merge with existing messages
-    messagesObj = this.deepMerge(messagesObj, unflattenedData as Record<string, unknown>);
+    messagesObj = deepMerge(messagesObj, unflattenedData as Record<string, unknown>);
 
     // Serialize the object back to string
     const serializedObj = JSON.stringify(messagesObj, null, 4);
@@ -138,28 +139,5 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
     if (endIndex === -1) return content;
 
     return content.substring(0, startIndex) + newObjStr + content.substring(endIndex);
-  }
-
-  private deepMerge(
-    target: Record<string, unknown>,
-    source: Record<string, unknown>
-  ): Record<string, unknown> {
-    if (typeof target !== 'object' || target === null) return source;
-    if (typeof source !== 'object' || source === null) return source;
-
-    const output = { ...target };
-    for (const key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        if (key in target && typeof target[key] === 'object' && typeof source[key] === 'object') {
-          output[key] = this.deepMerge(
-            target[key] as Record<string, unknown>,
-            source[key] as Record<string, unknown>
-          );
-        } else {
-          output[key] = source[key];
-        }
-      }
-    }
-    return output;
   }
 }

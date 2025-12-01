@@ -5,6 +5,38 @@ import { ParserFactory } from '../parsers/parser.factory.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
+/**
+ * Extracts all locales found in the file.
+ *
+ * @param filePath - The path to the file to extract locales from.
+ * @param filterOutLocale - The locale to filter out.
+ * @returns A promise that resolves to an array of locales found in the file.
+ */
+async function extractLocalesFromFile(filePath: string, filterOutLocale?: string): Promise<string[]> {
+  try {
+    const content = await readSafe(filePath);
+    const parser = new ParserFactory(filePath);
+    const parsed = parser.parse(content);
+    const locales = new Set<string>();
+
+    for (const key of Object.keys(parsed)) {
+      const root = key.split('/')[0];
+      if (root && availableLocales.has(root) && (!filterOutLocale || root !== filterOutLocale)) {
+        locales.add(root);
+      }
+    }
+    return Array.from(locales);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Extracts all locales found in the path.
+ *
+ * @param source - The path to the file to extract locales from.
+ * @returns A promise that resolves to an array of locales found in the path.
+ */
 async function extractLocaleFromPath(source: string): Promise<string[]> {
   if (source.endsWith('i18n.ts')) {
     try {
@@ -31,19 +63,17 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
 
   for (const filePath of paths) {
     if (filePath.endsWith('.ts')) {
-      try {
-        const content = await readSafe(filePath);
-        const parser = new ParserFactory(filePath);
-        const parsed = parser.parse(content);
+      const locales = await extractLocalesFromFile(filePath, source);
+      for (const locale of locales) {
+        targetLocales.add(locale);
+      }
+      continue;
+    }
 
-        for (const key of Object.keys(parsed)) {
-          const root = key.split('/')[0];
-          if (root && availableLocales.has(root) && root !== source) {
-            targetLocales.add(root);
-          }
-        }
-      } catch {
-        // Ignore errors
+    if (filePath.endsWith('.vue')) {
+      const locales = await extractLocalesFromFile(filePath, source);
+      for (const locale of locales) {
+        targetLocales.add(locale);
       }
       continue;
     }
@@ -93,19 +123,17 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
 
   for (const filePath of paths) {
     if (filePath.endsWith('.ts')) {
-      try {
-        const content = await readSafe(filePath);
-        const parser = new ParserFactory(filePath);
-        const parsed = parser.parse(content);
+      const locales = await extractLocalesFromFile(filePath);
+      for (const locale of locales) {
+        foundLocales.add(locale);
+      }
+      continue;
+    }
 
-        for (const key of Object.keys(parsed)) {
-          const root = key.split('/')[0];
-          if (root && availableLocales.has(root)) {
-            foundLocales.add(root);
-          }
-        }
-      } catch {
-        // Ignore errors for non-translation TS files
+    if (filePath.endsWith('.vue')) {
+      const locales = await extractLocalesFromFile(filePath);
+      for (const locale of locales) {
+        foundLocales.add(locale);
       }
       continue;
     }
