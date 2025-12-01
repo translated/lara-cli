@@ -75,7 +75,7 @@ export default new Command()
 
       let hasErrors = false;
       for (const fileType of Object.keys(config.files)) {
-        hasErrors = await handleFileType(fileType, options, config);
+        hasErrors = hasErrors || await handleFileType(fileType, options, config);
       }
 
       if (hasErrors) {
