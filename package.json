@@ -20,6 +20,9 @@
     "lara-dev": "./build/index.js"
   },
   "dependencies": {
+    "@babel/parser": "^7.28.5",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5",
     "@inquirer/core": "^10.2.2",
     "@inquirer/prompts": "^7.8.4",
     "@translated/lara": "^1.6.5",
