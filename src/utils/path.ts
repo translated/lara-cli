@@ -8,7 +8,7 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
-import { SearchLocalePathsOptions } from '#modules/common/common.types.js';
+import { SearchLocalePathsOptions, SupportedExtensionEnum } from '#modules/common/common.types.js';
 import { VueParser } from '../parsers/vue.parser.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
@@ -112,10 +112,10 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
   const allPaths = await searchPaths();
   
   const initiallyFilteredPaths = allPaths.filter((path) => {
-    if (path.endsWith('i18n.ts')) {
+    if (path.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
       return true;
     }
-    if (path.endsWith('.vue')) {
+    if (path.endsWith(SupportedExtensionEnum.VUE)) {
       return true;
     }
     return path.match(buildLocaleRegex([source]));
@@ -163,7 +163,7 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
   
-  if (relativeFilePath.endsWith('i18n.ts')) {
+  if (relativeFilePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
     return relativeFilePath;
   }
   
@@ -206,7 +206,7 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
-    if (normalizedPath.includes('i18n.ts') || normalizedPath.endsWith('.vue')) {
+    if (normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) || normalizedPath.endsWith(SupportedExtensionEnum.VUE)) {
       return normalizedPath;
     }
     return null;

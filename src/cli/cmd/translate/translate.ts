@@ -119,7 +119,7 @@ async function handleFileType(
       sourceLocale,
       targetLocales,
       inputPath,
-      force: options.force,
+      forceTranslation: options.force,
       lockedKeys: fileConfig.lockedKeys,
       ignoredKeys: fileConfig.ignoredKeys,
       projectInstruction: config.project?.instruction,
