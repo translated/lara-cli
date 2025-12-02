@@ -11,6 +11,7 @@ export enum SupportedExtensionEnum {
   TS = 'ts',
   VUE = 'vue',
 }
+
 export type SearchLocalePathsOptions = {
   source: string;
 };

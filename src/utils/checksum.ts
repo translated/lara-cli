@@ -4,6 +4,12 @@ import crypto from 'crypto';
 import yaml from 'yaml';
 import { ParserFactory } from '../parsers/parser.factory.js';
 
+enum ChecksumState {
+  NEW = 'new',
+  UPDATED = 'updated',
+  UNCHANGED = 'unchanged',
+}
+
 type ChecksumChangelog = Record<
   string,
   {
@@ -33,8 +39,8 @@ let cachedChecksumFile: ChecksumFile | null = null;
  */
 function calculateChecksum(
   fileName: string,
-  parser?: ParserFactory,
-  locale?: string
+  parser: ParserFactory,
+  locale: string
 ): ChecksumChangelog {
   const checksumFile = getChecksumFile();
   const checksum = checksumFile.files[getHash(fileName)] || {};
@@ -44,7 +50,7 @@ function calculateChecksum(
   const fileParser = parser || new ParserFactory(fileName);
   const fileContent = fileParser.parse(
     fs.readFileSync(fileName, 'utf8'),
-    locale ? { targetLocale: locale } : undefined
+    { targetLocale: locale }
   );
 
   let changed: boolean = false;
@@ -53,7 +59,7 @@ function calculateChecksum(
     if (!checksum[key]) {
       changelog[key] = {
         value: fileContent[key],
-        state: 'new',
+        state: ChecksumState.NEW,
       };
       changed = true;
       continue;
@@ -65,14 +71,14 @@ function calculateChecksum(
     if (newHash === oldHash) {
       changelog[key] = {
         value: fileContent[key],
-        state: 'unchanged',
+        state: ChecksumState.UNCHANGED,
       };
       continue;
     }
 
     changelog[key] = {
       value: fileContent[key],
-      state: 'updated',
+      state: ChecksumState.UPDATED,
     };
     changed = true;
     continue;

@@ -75,7 +75,7 @@ export default new Command()
 
       let hasErrors = false;
       for (const fileType of Object.keys(config.files)) {
-        hasErrors = await handleFileType(fileType, options, config);
+        hasErrors = hasErrors || await handleFileType(fileType, options, config);
       }
 
       if (hasErrors) {
@@ -119,7 +119,7 @@ async function handleFileType(
       sourceLocale,
       targetLocales,
       inputPath,
-      force: options.force,
+      forceTranslation: options.force,
       lockedKeys: fileConfig.lockedKeys,
       ignoredKeys: fileConfig.ignoredKeys,
       projectInstruction: config.project?.instruction,

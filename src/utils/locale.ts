@@ -2,6 +2,7 @@ import { AVAILABLE_LOCALES } from '#modules/common/common.const.js';
 import { extractLocaleFromFilename, searchPaths, readSafe } from './path.js';
 import path from 'path';
 import { ParserFactory } from '../parsers/parser.factory.js';
+import { SupportedExtensionEnum } from '#modules/common/common.types.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
@@ -38,7 +39,7 @@ async function extractLocalesFromFile(filePath: string, filterOutLocale?: string
  * @returns A promise that resolves to an array of locales found in the path.
  */
 async function extractLocaleFromPath(source: string): Promise<string[]> {
-  if (source.endsWith('i18n.ts')) {
+  if (source.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
     try {
       const content = await readSafe(source);
       const parser = new ParserFactory(source);
@@ -62,7 +63,7 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
   const targetLocales: Set<string> = new Set();
 
   for (const filePath of paths) {
-    if (filePath.endsWith('.ts')) {
+    if (filePath.endsWith(SupportedExtensionEnum.TS)) {
       const locales = await extractLocalesFromFile(filePath, source);
       for (const locale of locales) {
         targetLocales.add(locale);
@@ -70,7 +71,7 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
       continue;
     }
 
-    if (filePath.endsWith('.vue')) {
+    if (filePath.endsWith(SupportedExtensionEnum.VUE)) {
       const locales = await extractLocalesFromFile(filePath, source);
       for (const locale of locales) {
         targetLocales.add(locale);
@@ -122,7 +123,7 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
   const foundLocales: Set<string> = new Set();
 
   for (const filePath of paths) {
-    if (filePath.endsWith('.ts')) {
+    if (filePath.endsWith(SupportedExtensionEnum.TS)) {
       const locales = await extractLocalesFromFile(filePath);
       for (const locale of locales) {
         foundLocales.add(locale);
@@ -130,7 +131,7 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
       continue;
     }
 
-    if (filePath.endsWith('.vue')) {
+    if (filePath.endsWith(SupportedExtensionEnum.VUE)) {
       const locales = await extractLocalesFromFile(filePath);
       for (const locale of locales) {
         foundLocales.add(locale);

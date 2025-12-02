@@ -71,11 +71,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     let messagesObj: Record<string, unknown> = {};
 
     if (i18nContent) {
-      try {
-        messagesObj = JSON.parse(i18nContent);
-      } catch (e) {
-        console.error('Failed to parse existing i18n JSON content', e);
-      }
+      messagesObj = JSON.parse(i18nContent);
     }
 
     // If options.locale is set, prefix keys back
@@ -151,7 +147,12 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     let match: RegExpExecArray | null;
     
     while ((match = i18nTagRegex.exec(content)) !== null) {
-      const matchPosition = match.index!;
+
+      if (match.index === undefined) {
+        continue;
+      }
+
+      const matchPosition = match.index;
       
       if (VueParser.isInsideComment(content, matchPosition)) {
         continue;
