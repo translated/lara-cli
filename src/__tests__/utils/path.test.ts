@@ -13,7 +13,6 @@ import {
   extractLocaleFromFilename,
 } from '#utils/path.js';
 import { VueParser } from '../../parsers/vue.parser.js';
-import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 
 // Mock dependencies
 vi.mock('fs/promises');
