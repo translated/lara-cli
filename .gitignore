@@ -16,3 +16,6 @@ lara.yaml
 
 # Test files
 i18n-test/
+
+# VSCode files
+.vscode/
