@@ -404,6 +404,11 @@ describe('locale utils', () => {
       const filePaths = ['src/components/Component.ts'];
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockRejectedValue(new Error('File not found'));
+      vi.mocked(ParserFactory).mockImplementation(function () {
+        return {
+          parse: vi.fn().mockReturnValue(undefined),
+        } as any;
+      });
 
       const result = await extractAllLocalesFromProject();
 
