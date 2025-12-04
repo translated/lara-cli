@@ -13,7 +13,10 @@ const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
  * @param filterOutLocale - The locale to filter out.
  * @returns A promise that resolves to an array of locales found in the file.
  */
-async function extractLocalesFromFile(filePath: string, filterOutLocale?: string): Promise<string[]> {
+async function extractLocalesFromFile(
+  filePath: string,
+  filterOutLocale?: string
+): Promise<string[]> {
   try {
     const content = await readSafe(filePath);
     const parser = new ParserFactory(filePath);
@@ -33,31 +36,12 @@ async function extractLocalesFromFile(filePath: string, filterOutLocale?: string
 }
 
 /**
- * Extracts all locales found in the path.
+ * Extracts all locales found in paths.
  *
- * @param source - The path to the file to extract locales from.
+ * @param source - The source locale.
  * @returns A promise that resolves to an array of locales found in the path.
  */
 async function extractLocaleFromPath(source: string): Promise<string[]> {
-  if (source.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
-    try {
-      const content = await readSafe(source);
-      const parser = new ParserFactory(source);
-      const parsed = parser.parse(content);
-      const locales = new Set<string>();
-
-      for (const key of Object.keys(parsed)) {
-        const root = key.split('/')[0];
-        if (root && availableLocales.has(root)) {
-          locales.add(root);
-        }
-      }
-      return Array.from(locales);
-    } catch {
-      return [];
-    }
-  }
-
   const paths = await searchPaths();
 
   const targetLocales: Set<string> = new Set();
