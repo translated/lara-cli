@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TsParser } from '../../parsers/ts.parser.js';
 import type { TsParserOptionsType } from '../../parsers/parser.types.js';
 
@@ -169,9 +169,14 @@ describe('TsParser', () => {
 
     it('should return empty object for invalid TypeScript', () => {
       const content = 'invalid typescript code {';
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
       const result = parser.parse(content);
 
       expect(result).toEqual({});
+
+      consoleSpy.mockRestore();
     });
 
     it('should filter by targetLocale when provided', () => {
