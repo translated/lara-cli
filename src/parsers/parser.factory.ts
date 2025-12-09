@@ -40,6 +40,9 @@ export class ParserFactory {
    */
   constructor(filePath: string) {
     // Step 1: Determine the extension (calculate if not provided)
+    if (!filePath) {
+      throw new Error('File path is required');
+    }
     const detectedExtension = getFileExtension(filePath).toLowerCase();
     if (!this.isSupportedExtension(detectedExtension)) {
       throw new Error(
