@@ -10,6 +10,8 @@ export enum SupportedExtensionEnum {
   PO = 'po',
   TS = 'ts',
   VUE = 'vue',
+  MD = 'md',
+  MDX = 'mdx',
 }
 
 export type SearchLocalePathsOptions = {
