@@ -96,12 +96,14 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
     }
   }
 
-  return localePaths;
+  return Array.from(new Set(localePaths));
 }
 
 /**
  * Searches and return for paths that are compatible with localisation purposes
  *
+ * @param options - The options for the search. Example: { source: 'en' }
+ * @param options.source - The source locale to search for. Example: 'en'
  * @returns {Promise<string[]>} - A promise that resolves to an array of paths. Example:
  * [
  *  'src/i18n/[locale].json',
@@ -110,7 +112,7 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
 async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
   const { source } = options;
   const allPaths = await searchPaths();
-  
+
   const initiallyFilteredPaths = allPaths.filter((path) => {
     if (path.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
       return true;
@@ -124,7 +126,7 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
   // Check Vue files for i18n tags
   const filteredPaths: string[] = [];
   const vueFileChecks = initiallyFilteredPaths.map(async (filePath) => {
-    if (filePath.endsWith('.vue')) {
+    if (filePath.endsWith(SupportedExtensionEnum.VUE)) {
       const content = await readSafe(filePath);
       if (VueParser.hasI18nTag(content)) {
         return filePath;
@@ -162,11 +164,11 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
  */
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
-  
+
   if (relativeFilePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
     return relativeFilePath;
   }
-  
+
   const parts = relativeFilePath.split('/');
 
   let currentLocale = '';
@@ -206,7 +208,10 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
-    if (normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) || normalizedPath.endsWith(SupportedExtensionEnum.VUE)) {
+    if (
+      normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.VUE)
+    ) {
       return normalizedPath;
     }
     return null;
