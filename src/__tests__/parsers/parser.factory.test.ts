@@ -13,17 +13,19 @@ describe('ParserFactory', () => {
       expect(() => new ParserFactory('/path/to/file.PO')).not.toThrow();
       expect(() => new ParserFactory('/path/to/file.TS')).not.toThrow();
       expect(() => new ParserFactory('/path/to/file.VUE')).not.toThrow();
+      expect(() => new ParserFactory('/path/to/file.MD')).not.toThrow();
+      expect(() => new ParserFactory('/path/to/file.MDX')).not.toThrow();
     });
 
     it('should throw error for unsupported file extension', () => {
       expect(() => new ParserFactory('/path/to/file.txt')).toThrow(
-        'Unsupported file extension: txt. Supported extensions: json, po, ts, vue'
+        'Unsupported file extension: txt. Supported extensions: json, po, ts, vue, md, mdx'
       );
     });
 
     it('should throw error for file without extension', () => {
       expect(() => new ParserFactory('/path/to/file')).toThrow(
-        'Unsupported file extension: /path/to/file. Supported extensions: json, po, ts, vue'
+        'Unsupported file extension: /path/to/file. Supported extensions: json, po, ts, vue, md, mdx'
       );
     });
 

@@ -120,23 +120,31 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
     if (path.endsWith(SupportedExtensionEnum.VUE)) {
       return true;
     }
+    if (path.endsWith(SupportedExtensionEnum.MD) || path.endsWith(SupportedExtensionEnum.MDX)) {
+      return true;
+    }
     return path.match(buildLocaleRegex([source]));
   });
 
-  // Check Vue files for i18n tags
+  // Check Vue and Markdown files for i18n tags
   const filteredPaths: string[] = [];
-  const vueFileChecks = initiallyFilteredPaths.map(async (filePath) => {
+  const fileChecks = initiallyFilteredPaths.map(async (filePath) => {
     if (filePath.endsWith(SupportedExtensionEnum.VUE)) {
       const content = await readSafe(filePath);
       if (VueParser.hasI18nTag(content)) {
         return filePath;
       }
       return null;
-    } else {
+    }
+    if (
+      filePath.endsWith(SupportedExtensionEnum.MD) ||
+      filePath.endsWith(SupportedExtensionEnum.MDX)
+    ) {
       return filePath;
     }
+    return filePath;
   });
-  const checkedPaths = await Promise.all(vueFileChecks);
+  const checkedPaths = await Promise.all(fileChecks);
   for (const p of checkedPaths) {
     if (p) filteredPaths.push(p);
   }
@@ -210,7 +218,9 @@ function normalizePath(filePath: string): string | null {
   if (!currentLocale) {
     if (
       normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) ||
-      normalizedPath.endsWith(SupportedExtensionEnum.VUE)
+      normalizedPath.endsWith(SupportedExtensionEnum.VUE) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.MD) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.MDX)
     ) {
       return normalizedPath;
     }
