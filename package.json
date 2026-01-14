@@ -63,7 +63,7 @@
     "@types/mdast": "^4.0.4",
     "@types/node": "^24.10.8",
     "@types/picomatch": "^4.0.2",
-    "@vitest/coverage-v8": "4.0.15",
+    "@vitest/coverage-v8": "^4.0.17",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
