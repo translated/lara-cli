@@ -142,7 +142,13 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
     ) {
       return filePath;
     }
-    return filePath;
+    if (
+      filePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`) ||
+      filePath.match(buildLocaleRegex([source]))
+    ) {
+      return filePath;
+    }
+    return null;
   });
   const checkedPaths = await Promise.all(fileChecks);
   for (const p of checkedPaths) {
