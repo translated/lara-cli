@@ -24,9 +24,7 @@ export type TsParserOptionsType = BaseContentParserOptionsType;
 
 export type VueParserOptionsType = BaseContentParserOptionsType;
 
-export type MarkdownParserOptionsType = {
-  originalContent: string | Buffer;
-};
+export type MarkdownParserOptionsType = BaseContentParserOptionsType;
 
 export type ParserOptionsType = Partial<
   PoParserOptionsType &

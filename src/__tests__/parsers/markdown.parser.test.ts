@@ -305,7 +305,7 @@ Regular paragraph.`;
       const originalContent = '# Hello World';
       const translatedData = { segment_0: 'Ciao Mondo' };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
 
       expect(result.toString()).toContain('Ciao Mondo');
       expect(result.toString()).not.toContain('Hello World');
@@ -325,7 +325,7 @@ This is a paragraph.
         segment_3: 'Elemento 2',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('# Titolo');
@@ -347,7 +347,7 @@ Text after code.`;
         segment_1: 'Testo dopo codice.',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('```javascript');
@@ -363,7 +363,7 @@ Text after code.`;
         segment_1: ' per installare.',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('`npm install`');
@@ -379,7 +379,7 @@ Text after code.`;
         segment_2: ' per altro.',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('[il nostro sito](https://example.com)');
@@ -395,7 +395,7 @@ Text after code.`;
         segment_2: ' testo.',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('**importante**');
@@ -409,7 +409,7 @@ Text after code.`;
         segment_2: ' testo.',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('*enfatizzato*');
@@ -419,7 +419,7 @@ Text after code.`;
       const originalContent = '# Hello World';
       const translatedData = {}; // No translations provided
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       // Should keep original content when translation is missing
@@ -435,7 +435,7 @@ Paragraph text.`;
         // segment_1 is missing
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('Titolo');
@@ -453,7 +453,7 @@ Paragraph text.`;
         segment_3: '30',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('Nome');
@@ -467,7 +467,7 @@ Paragraph text.`;
         segment_0: 'Questa è una citazione.',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('> Questa è una citazione.');
@@ -477,7 +477,7 @@ Paragraph text.`;
       const originalContent = Buffer.from('# Hello');
       const translatedData = { segment_0: 'Ciao' };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
 
       expect(result.toString()).toContain('Ciao');
     });
@@ -511,7 +511,7 @@ For help, contact [support](mailto:support@example.com).`;
         segment_10: '.',
       };
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       expect(resultStr).toContain('# Benvenuto nella Nostra App');
@@ -524,7 +524,7 @@ For help, contact [support](mailto:support@example.com).`;
       const originalContent = '# Hello World';
       const translatedData = { segment_0: 123 as unknown }; // Invalid type
 
-      const result = parser.serialize(translatedData, { originalContent });
+      const result = parser.serialize(translatedData, { originalContent, targetLocale: 'it' });
       const resultStr = result.toString();
 
       // Should keep original since translation is not a string
@@ -556,7 +556,7 @@ Introduction paragraph.
 Conclusion.`;
 
       const parsed = parser.parse(originalContent);
-      const serialized = parser.serialize(parsed, { originalContent });
+      const serialized = parser.serialize(parsed, { originalContent, targetLocale: 'en' });
       const reparsed = parser.parse(serialized);
 
       // Keys should match
@@ -583,7 +583,7 @@ Welcome to the app.
         segment_3: 'Funzione 2',
       };
 
-      const serialized = parser.serialize(translations, { originalContent });
+      const serialized = parser.serialize(translations, { originalContent, targetLocale: 'it' });
       const reparsed = parser.parse(serialized);
 
       expect(reparsed.segment_0).toBe('Ciao');
