@@ -14,8 +14,6 @@ export async function sourceInput(options: InitOptions): Promise<string> {
 
   const foundLocales = await extractAllLocalesFromProject();
 
-  console.log('LOCALES', foundLocales);
-
   if (foundLocales.length === 0) {
     spinner.fail(Messages.errors.noLocalesFound);
     Ora({
