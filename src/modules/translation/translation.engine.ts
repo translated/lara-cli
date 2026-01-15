@@ -231,9 +231,10 @@ export class TranslationEngine {
         this.parser.serialize(newContent, {
           ...formatting,
           targetLocale,
-          // Always use source content for originalContent to ensure the output
-          // structure matches the source (important when new segments are added)
-          originalContent: sourceContent,
+          // For i18n.ts files (where source and target paths are the same),
+          // use targetContent to preserve translations from previous iterations.
+          // For separate files, use sourceContent to ensure output structure matches source.
+          originalContent: sourcePath === targetPath ? targetContent : sourceContent,
         })
       );
       progressWithOra.tick(1);

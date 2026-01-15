@@ -320,6 +320,45 @@ describe('VueParser', () => {
       expect(parsed.es).toEqual({ hello: 'Hola' });
     });
 
+    it('should remove keys from target locale when they are removed from source', () => {
+      // Original content has 3 keys: hello, goodbye, and extra
+      const originalContent =
+        '<template></template>\n<i18n>\n{"en": {"hello": "Hello", "goodbye": "Goodbye", "extra": "Extra"}, "es": {"hello": "Hola", "goodbye": "Adiós", "extra": "Extra"}}\n</i18n>';
+      // New data only has 2 keys (extra was removed from source)
+      const data = { hello: 'Hello', goodbye: 'Goodbye' };
+      const result = parser.serialize(data, {
+        originalContent,
+        targetLocale: 'en',
+      } as VueParserOptionsType);
+
+      const resultStr = result.toString();
+      const i18nMatch = resultStr.match(/<i18n[^>]*>([\s\S]*?)<\/i18n>/i);
+      const parsed = JSON.parse(i18nMatch?.[1]?.trim() || '{}');
+      // en should only have the 2 keys from new data (extra is removed)
+      expect(parsed.en).toEqual({ hello: 'Hello', goodbye: 'Goodbye' });
+      // es should remain untouched
+      expect(parsed.es).toEqual({ hello: 'Hola', goodbye: 'Adiós', extra: 'Extra' });
+    });
+
+    it('should handle key removal with nested structures', () => {
+      const originalContent =
+        '<template></template>\n<i18n>\n{"en": {"dashboard": {"title": "Dashboard", "subtitle": "Welcome"}}, "es": {"dashboard": {"title": "Panel", "subtitle": "Bienvenido"}}}\n</i18n>';
+      // subtitle was removed from source
+      const data = { 'dashboard/title': 'Dashboard' };
+      const result = parser.serialize(data, {
+        originalContent,
+        targetLocale: 'en',
+      } as VueParserOptionsType);
+
+      const resultStr = result.toString();
+      const i18nMatch = resultStr.match(/<i18n[^>]*>([\s\S]*?)<\/i18n>/i);
+      const parsed = JSON.parse(i18nMatch?.[1]?.trim() || '{}');
+      // en should only have title (subtitle removed)
+      expect(parsed.en).toEqual({ dashboard: { title: 'Dashboard' } });
+      // es should remain untouched
+      expect(parsed.es).toEqual({ dashboard: { title: 'Panel', subtitle: 'Bienvenido' } });
+    });
+
     it('should handle arrays in serialization', () => {
       const originalContent = '<template></template>\n<i18n>\n{}\n</i18n>';
       const data = {
