@@ -56,10 +56,9 @@ export class MarkdownParser implements Parser<Record<string, unknown>, MarkdownP
 
     const strContent = originalContent.toString();
     const tree = this.processor.parse(strContent) as Root;
-    const textSegments = this.extractTextSegments(tree);
 
     // Replace text nodes with translated content using position-based matching
-    this.updateTextNodes(tree, textSegments, data);
+    this.updateTextNodes(tree, data);
 
     // Reconstruct markdown from AST
     return this.processor.stringify(tree);
@@ -112,14 +111,9 @@ export class MarkdownParser implements Parser<Record<string, unknown>, MarkdownP
    * Uses position-based matching to apply translations in order.
    *
    * @param tree - The markdown AST root node
-   * @param _segments - Array of text segments (unused, kept for interface consistency)
    * @param translatedData - Translated content keyed by segment index
    */
-  private updateTextNodes(
-    tree: Root,
-    _segments: TextSegment[],
-    translatedData: Record<string, unknown>
-  ): void {
+  private updateTextNodes(tree: Root, translatedData: Record<string, unknown>): void {
     let segmentIndex = 0;
 
     visit(tree, (node: Node) => {
