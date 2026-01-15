@@ -1,13 +1,12 @@
 import { remark } from 'remark';
 import remarkGfm from 'remark-gfm';
-import { visit } from 'unist-util-visit';
+import { visit, SKIP } from 'unist-util-visit';
 import type { Root, Node, Text } from 'mdast';
 import type { Parser } from '../interface/parser.js';
 import type { MarkdownParserOptionsType } from './parser.types.js';
 
 interface TextSegment {
   node: Text;
-  parentType: string;
 }
 
 /**
@@ -76,20 +75,15 @@ export class MarkdownParser implements Parser<Record<string, unknown>, MarkdownP
    */
   private extractTextSegments(tree: Root): TextSegment[] {
     const segments: TextSegment[] = [];
-    let parentType = 'root';
 
-    visit(tree, (node: Node, _index: number, parent: Node) => {
+    visit(tree, (node: Node): void | typeof SKIP => {
       if (
         node.type === 'code' ||
         node.type === 'inlineCode' ||
         node.type === 'html' ||
         node.type === 'yaml'
       ) {
-        return;
-      }
-
-      if (parent) {
-        parentType = parent.type;
+        return SKIP;
       }
 
       if (node.type === 'text') {
@@ -97,7 +91,6 @@ export class MarkdownParser implements Parser<Record<string, unknown>, MarkdownP
         if (textNode.value.trim().length > 0) {
           segments.push({
             node: textNode,
-            parentType,
           });
         }
       }
@@ -116,7 +109,7 @@ export class MarkdownParser implements Parser<Record<string, unknown>, MarkdownP
   private updateTextNodes(tree: Root, translatedData: Record<string, unknown>): void {
     let segmentIndex = 0;
 
-    visit(tree, (node: Node) => {
+    visit(tree, (node: Node): void | typeof SKIP => {
       // Skip code blocks, inline code, HTML, and frontmatter
       if (
         node.type === 'code' ||
@@ -124,7 +117,7 @@ export class MarkdownParser implements Parser<Record<string, unknown>, MarkdownP
         node.type === 'html' ||
         node.type === 'yaml'
       ) {
-        return;
+        return SKIP;
       }
 
       // Update text nodes
