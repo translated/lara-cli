@@ -86,10 +86,15 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       dataToMerge = prefixed;
     }
 
-    const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter });
+    const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter }) as Record<string, unknown>;
 
-    // Merge with existing messages
-    messagesObj = deepMerge(messagesObj, unflattenedData as Record<string, unknown>);
+    // If a locale is specified, replace that locale's content entirely (to handle key removal)
+    // Otherwise, merge with existing messages
+    if (locale && unflattenedData[locale] !== undefined) {
+      messagesObj[locale] = unflattenedData[locale];
+    } else {
+      messagesObj = deepMerge(messagesObj, unflattenedData);
+    }
 
     // Serialize the object back to JSON string
     const serializedObj = JSON.stringify(messagesObj, null, 2);

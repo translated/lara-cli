@@ -148,6 +148,9 @@ export class TranslationEngine {
     const changelog = calculateChecksum(sourcePath, this.parser, this.sourceLocale);
     const keysCount = Object.keys(changelog).length;
 
+    // Read source content to use as structure template when target is empty
+    const sourceContent = await readSafe(sourcePath, '');
+
     for (const targetLocale of this.targetLocales) {
       progressWithOra.setText(
         Messages.info.translatingFileProgress(inputPath, targetLocale, keysCount)
@@ -157,8 +160,15 @@ export class TranslationEngine {
 
       const fallback = this.parser.getFallback();
       const targetContent = await readSafe(targetPath, fallback);
+
+      // Check if target file is empty (either matches fallback or is empty string)
+      const isTargetEmpty = targetContent === fallback || targetContent.trim() === '';
+
+      // Use source content structure when target is empty, otherwise use target content
+      const contentForStructure = isTargetEmpty ? sourceContent : targetContent;
+      const formatting = detectFormatting(contentForStructure);
+
       const target = this.parser.parse(targetContent, { targetLocale });
-      const formatting = detectFormatting(targetContent);
 
       const entries = (
         await Promise.all(
@@ -221,7 +231,10 @@ export class TranslationEngine {
         this.parser.serialize(newContent, {
           ...formatting,
           targetLocale,
-          originalContent: targetContent,
+          // For i18n.ts files (where source and target paths are the same),
+          // use targetContent to preserve translations from previous iterations.
+          // For separate files, use sourceContent to ensure output structure matches source.
+          originalContent: sourcePath === targetPath ? targetContent : sourceContent,
         })
       );
       progressWithOra.tick(1);

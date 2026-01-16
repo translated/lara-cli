@@ -6,6 +6,11 @@ export interface PoKey {
   order?: number;
 }
 
+type BaseContentParserOptionsType = {
+  originalContent: string | Buffer;
+  targetLocale: string;
+};
+
 export type PoParserOptionsType = {
   targetLocale: string;
 };
@@ -15,16 +20,16 @@ export type JsonParserOptionsType = {
   trailingNewline: string;
 };
 
-export type TsParserOptionsType = {
-  originalContent: string | Buffer;
-  targetLocale: string;
-};
+export type TsParserOptionsType = BaseContentParserOptionsType;
 
-export type VueParserOptionsType = {
-  originalContent: string | Buffer;
-  targetLocale: string;
-};
+export type VueParserOptionsType = BaseContentParserOptionsType;
+
+export type MarkdownParserOptionsType = BaseContentParserOptionsType;
 
 export type ParserOptionsType = Partial<
-  PoParserOptionsType & JsonParserOptionsType & TsParserOptionsType & VueParserOptionsType
+  PoParserOptionsType &
+    JsonParserOptionsType &
+    TsParserOptionsType &
+    VueParserOptionsType &
+    MarkdownParserOptionsType
 >;

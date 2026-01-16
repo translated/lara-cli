@@ -278,6 +278,39 @@ describe('TsParser', () => {
       expect(parsed.es).toEqual({ hello: 'Hola' });
     });
 
+    it('should remove keys from target locale when they are removed from source', () => {
+      // Original content has 3 keys: hello, goodbye, and extra
+      const originalContent =
+        'const messages = { en: { hello: "Hello", goodbye: "Goodbye", extra: "Extra" }, es: { hello: "Hola", goodbye: "Adiós", extra: "Extra" } };\n\nexport default messages;';
+      // New data only has 2 keys (extra was removed from source)
+      const data = { hello: 'Hello', goodbye: 'Goodbye' };
+      const result = parser.serialize(data, { originalContent, targetLocale: 'en' });
+
+      const resultStr = result.toString();
+      const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
+      const parsed = JSON.parse(match?.[1] || '{}');
+      // en should only have the 2 keys from new data (extra is removed)
+      expect(parsed.en).toEqual({ hello: 'Hello', goodbye: 'Goodbye' });
+      // es should remain untouched
+      expect(parsed.es).toEqual({ hello: 'Hola', goodbye: 'Adiós', extra: 'Extra' });
+    });
+
+    it('should handle key removal with nested structures', () => {
+      const originalContent =
+        'const messages = { en: { dashboard: { title: "Dashboard", subtitle: "Welcome" } }, es: { dashboard: { title: "Panel", subtitle: "Bienvenido" } } };\n\nexport default messages;';
+      // subtitle was removed from source
+      const data = { 'dashboard/title': 'Dashboard' };
+      const result = parser.serialize(data, { originalContent, targetLocale: 'en' });
+
+      const resultStr = result.toString();
+      const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
+      const parsed = JSON.parse(match?.[1] || '{}');
+      // en should only have title (subtitle removed)
+      expect(parsed.en).toEqual({ dashboard: { title: 'Dashboard' } });
+      // es should remain untouched
+      expect(parsed.es).toEqual({ dashboard: { title: 'Panel', subtitle: 'Bienvenido' } });
+    });
+
     it('should handle arrays in serialization', () => {
       const originalContent = 'const messages = {};\n\nexport default messages;';
       const data = {
