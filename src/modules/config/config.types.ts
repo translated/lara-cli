@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 
-import { LocalesEnum, SupportedFileTypesEnum } from '../common/common.types.js';
+import { LocalesEnum, SupportedExtensionEnum, SupportedFileTypesEnum } from '../common/common.types.js';
 import { SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { getFileExtension, isRelative } from '#utils/path.js';
 
@@ -21,13 +21,17 @@ const IncludeFilePath = z
   .refine(
     (path) => {
       const hasDirectoryPattern = path.includes('/[locale]/');
-      const hasFilenamePattern = /\[locale\]\.[a-zA-Z0-9]+$/.test(path);
+      const hasFilenamePattern = new RegExp(
+        `[^/]*\\[locale\\][^/]*\\.(${SUPPORTED_FILE_TYPES.join('|')})$`
+      ).test(path);
+      const isI18nFile = path.endsWith(`i18n.${SupportedExtensionEnum.TS}`);
+      const isVueFile = path.endsWith(SupportedExtensionEnum.VUE);
 
-      return hasDirectoryPattern || hasFilenamePattern;
+      return hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile;
     },
     {
       message:
-        'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension)',
+        'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension), or be a Vue file, or be named i18n.ts',
     }
   );
 
@@ -63,7 +67,7 @@ const Config = z
 
     glossaries: z.array(z.string()).default([]),
 
-    files: z.record(
+    files: z.partialRecord(
       SupportedFileTypesEnum,
       z.object({
         include: z.array(IncludeFilePath),
@@ -99,7 +103,15 @@ const Config = z
   })
   .refine(
     (data) => {
+      if (Object.keys(data.files).length === 0) {
+        return false;
+      }
+
       for (const [fileType, fileConfig] of Object.entries(data.files)) {
+        if (!fileConfig) {
+          return false;
+        }
+
         for (const includePath of fileConfig.include) {
           const fileExtension = getFileExtension(includePath);
 

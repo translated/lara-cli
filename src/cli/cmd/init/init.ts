@@ -13,6 +13,7 @@ import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { Messages } from '#messages/messages.js';
 import { setCredentials, resolveProjectInstruction } from './init.utils.js';
+import { getFileExtension } from '#utils/path.js';
 
 export default new Command()
   .command('init')
@@ -99,6 +100,34 @@ export default new Command()
     spinner.succeed(Messages.success.configCreated);
   });
 
+/**
+ * Groups paths by file extension and returns a files object for the config
+ * @param paths - Array of paths to group by extension
+ * @returns Files object grouped by extension
+ */
+function groupPathsByExtension(paths: string[]): ConfigType['files'] {
+  const filesByExtension: ConfigType['files'] = {};
+
+  for (const path of paths) {
+    const extension = getFileExtension(path);
+
+    if (!filesByExtension[extension]) {
+      filesByExtension[extension] = {
+        include: [],
+        exclude: [],
+        fileInstructions: [],
+        keyInstructions: [],
+        lockedKeys: [],
+        ignoredKeys: [],
+      };
+    }
+
+    filesByExtension[extension]!.include.push(path);
+  }
+
+  return filesByExtension;
+}
+
 function handleNonInteractiveMode(options: InitOptions): ConfigType {
   if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
     Ora({
@@ -122,16 +151,7 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     },
     memories: options.translationMemories,
     glossaries: options.glossaries,
-    files: {
-      json: {
-        include: options.paths,
-        exclude: [],
-        fileInstructions: [],
-        keyInstructions: [],
-        lockedKeys: [],
-        ignoredKeys: [],
-      },
-    },
+    files: groupPathsByExtension(options.paths),
   };
 }
 
@@ -164,6 +184,9 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
 
   const inputSource = await sourceInput(options);
   const inputTarget = await targetInput(inputSource, options.target);
+
+  // Update the source in the options object so pathsInput can use it to search for files matching the source locale patterns
+  options.source = inputSource;
   const inputPaths = await pathsInput(options);
 
   if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
@@ -189,15 +212,6 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     },
     memories: [],
     glossaries: [],
-    files: {
-      json: {
-        include: inputPaths,
-        exclude: [],
-        fileInstructions: [],
-        keyInstructions: [],
-        lockedKeys: [],
-        ignoredKeys: [],
-      },
-    },
+    files: groupPathsByExtension(inputPaths),
   };
 }

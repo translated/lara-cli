@@ -2,13 +2,13 @@ import picomatch, { Matcher } from 'picomatch';
 
 import { TranslationService } from './translation.service.js';
 import { calculateChecksum } from '#utils/checksum.js';
-import { parseFlattened, unflatten } from '#utils/json.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
+import { ParserFactory } from '../../parsers/parser.factory.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -16,7 +16,7 @@ export type TranslationEngineOptions = {
 
   inputPath: string;
 
-  force: boolean;
+  forceTranslation: boolean;
 
   lockedKeys: string[];
   ignoredKeys: string[];
@@ -31,9 +31,11 @@ export type TranslationEngineOptions = {
 };
 
 /**
- * Detects the formatting used in a JSON string
+ * Detects the formatting used in a JSON string by analyzing indentation patterns
+ * and trailing newlines.
+ *
  * @param jsonContent - The JSON string to analyze
- * @returns Object with indentation and trailing newline information
+ * @returns Object containing detected indentation (tabs or number of spaces) and trailing newline
  */
 function detectFormatting(jsonContent: string): {
   indentation: string | number;
@@ -76,7 +78,7 @@ function detectFormatting(jsonContent: string): {
  *  - sourceLocale: The locale to translate from
  *  - targetLocales: The locales to translate to
  *  - inputPath: The path to the input file
- *  - force: Whether to force translation even if the files have not changed
+ *  - forceTranslation: Whether to force translation even if the files have not changed
  *  - lockedKeys: The keys to lock
  *  - ignoredKeys: The keys to ignore
  */
@@ -86,7 +88,7 @@ export class TranslationEngine {
 
   private readonly inputPath: string;
 
-  private readonly force: boolean;
+  private readonly forceTranslation: boolean;
 
   private readonly lockedPatterns: Matcher[];
   private readonly ignoredPatterns: Matcher[];
@@ -101,13 +103,17 @@ export class TranslationEngine {
 
   private readonly translatorService: TranslationService;
 
+  // Parser instance used to parse and serialize translation files.
+  // Automatically detects the file format based on the input path extension.
+  private readonly parser: ParserFactory;
+
   constructor(options: TranslationEngineOptions) {
     this.sourceLocale = options.sourceLocale;
     this.targetLocales = options.targetLocales;
 
     this.inputPath = options.inputPath;
 
-    this.force = options.force;
+    this.forceTranslation = options.forceTranslation;
 
     this.lockedPatterns = options.lockedKeys.map((pattern) => picomatch(pattern));
     this.ignoredPatterns = options.ignoredKeys.map((pattern) => picomatch(pattern));
@@ -129,6 +135,8 @@ export class TranslationEngine {
     this.glossaryIds = options.glossaryIds;
 
     this.translatorService = TranslationService.getInstance();
+
+    this.parser = new ParserFactory(this.inputPath);
   }
 
   public async translate() {
@@ -137,8 +145,11 @@ export class TranslationEngine {
 
   private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
-    const changelog = calculateChecksum(sourcePath);
+    const changelog = calculateChecksum(sourcePath, this.parser, this.sourceLocale);
     const keysCount = Object.keys(changelog).length;
+
+    // Read source content to use as structure template when target is empty
+    const sourceContent = await readSafe(sourcePath, '');
 
     for (const targetLocale of this.targetLocales) {
       progressWithOra.setText(
@@ -146,9 +157,18 @@ export class TranslationEngine {
       );
 
       const targetPath = buildLocalePath(inputPath, targetLocale);
-      const targetContent = await readSafe(targetPath, '{}');
-      const targetJson = parseFlattened(targetContent);
-      const formatting = detectFormatting(targetContent);
+
+      const fallback = this.parser.getFallback();
+      const targetContent = await readSafe(targetPath, fallback);
+
+      // Check if target file is empty (either matches fallback or is empty string)
+      const isTargetEmpty = targetContent === fallback || targetContent.trim() === '';
+
+      // Use source content structure when target is empty, otherwise use target content
+      const contentForStructure = isTargetEmpty ? sourceContent : targetContent;
+      const formatting = detectFormatting(contentForStructure);
+
+      const target = this.parser.parse(targetContent, { targetLocale });
 
       const entries = (
         await Promise.all(
@@ -157,15 +177,15 @@ export class TranslationEngine {
             .map(async ([key, value]) => {
               const state = value.state;
               const sourceValue = value.value;
-              const targetValue = targetJson[key];
+              const targetValue = target[key];
 
               // If the key is locked, we should NOT elaborate it and therefore return the source value
               if (this.isLocked(key)) {
                 return [key, sourceValue];
               }
 
-              // If the target value does not exists or the force flag is set, we should always translate the source value
-              if (!targetValue || this.force) {
+              // If the target value does not exists or the forceTranslation flag is set, we should always translate the source value
+              if (!targetValue || this.forceTranslation) {
                 const translatedValue = await this.translateKey(
                   key,
                   sourceValue,
@@ -208,8 +228,14 @@ export class TranslationEngine {
       await ensureDirectoryExists(targetPath);
       await writeFile(
         targetPath,
-        JSON.stringify(unflatten(newContent), null, formatting.indentation) +
-          formatting.trailingNewline
+        this.parser.serialize(newContent, {
+          ...formatting,
+          targetLocale,
+          // For i18n.ts files (where source and target paths are the same),
+          // use targetContent to preserve translations from previous iterations.
+          // For separate files, use sourceContent to ensure output structure matches source.
+          originalContent: sourcePath === targetPath ? targetContent : sourceContent,
+        })
       );
       progressWithOra.tick(1);
     }

@@ -8,6 +8,8 @@ import {
   SUPPORTED_FILE_TYPES,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
+import { SearchLocalePathsOptions, SupportedExtensionEnum } from '#modules/common/common.types.js';
+import { VueParser } from '../parsers/vue.parser.js';
 
 const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
 
@@ -94,27 +96,73 @@ async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
     }
   }
 
-  return localePaths;
+  return Array.from(new Set(localePaths));
 }
 
 /**
  * Searches and return for paths that are compatible with localisation purposes
  *
+ * @param options - The options for the search. Example: { source: 'en' }
+ * @param options.source - The source locale to search for. Example: 'en'
  * @returns {Promise<string[]>} - A promise that resolves to an array of paths. Example:
  * [
  *  'src/i18n/[locale].json',
  * ]
  */
-async function searchLocalePaths(): Promise<string[]> {
-  const allJsonPaths = await searchPaths();
+async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
+  const { source } = options;
+  const allPaths = await searchPaths();
+
+  const initiallyFilteredPaths = allPaths.filter((path) => {
+    if (path.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+      return true;
+    }
+    if (path.endsWith(SupportedExtensionEnum.VUE)) {
+      return true;
+    }
+    if (path.endsWith(SupportedExtensionEnum.MD) || path.endsWith(SupportedExtensionEnum.MDX)) {
+      return true;
+    }
+    return path.match(buildLocaleRegex([source]));
+  });
+
+  // Check Vue and Markdown files for i18n tags
+  const filteredPaths: string[] = [];
+  const fileChecks = initiallyFilteredPaths.map(async (filePath) => {
+    if (filePath.endsWith(SupportedExtensionEnum.VUE)) {
+      const content = await readSafe(filePath);
+      if (VueParser.hasI18nTag(content)) {
+        return filePath;
+      }
+      return null;
+    }
+    if (
+      filePath.endsWith(SupportedExtensionEnum.MD) ||
+      filePath.endsWith(SupportedExtensionEnum.MDX)
+    ) {
+      return filePath;
+    }
+    if (
+      filePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`) ||
+      filePath.match(buildLocaleRegex([source]))
+    ) {
+      return filePath;
+    }
+    return null;
+  });
+  const checkedPaths = await Promise.all(fileChecks);
+  for (const p of checkedPaths) {
+    if (p) filteredPaths.push(p);
+  }
 
   const pathsWithLocales: string[] = [];
 
-  for (const jsonPath of allJsonPaths) {
+  for (const jsonPath of filteredPaths) {
     const normalizedPath = normalizePath(jsonPath);
-    if (normalizedPath !== null) {
-      pathsWithLocales.push(normalizedPath);
+    if (!normalizedPath) {
+      continue;
     }
+    pathsWithLocales.push(normalizedPath);
   }
 
   return Array.from(new Set(pathsWithLocales));
@@ -130,6 +178,11 @@ async function searchLocalePaths(): Promise<string[]> {
  */
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
+
+  if (relativeFilePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+    return relativeFilePath;
+  }
+
   const parts = relativeFilePath.split('/');
 
   let currentLocale = '';
@@ -143,12 +196,10 @@ function normalizePath(filePath: string): string | null {
 
     // Handle the last part of the path (filename)
     if (i === parts.length - 1) {
-      const [filename, extension] = part.split('.');
-      if (!currentLocale && availableLocales.has(filename ?? '')) {
-        currentLocale = filename!;
-      }
-      if (filename === currentLocale) {
-        normalizedPath += `[locale].${extension}`;
+      const locale = extractLocaleFromFilename(part);
+      if (!currentLocale && locale && availableLocales.has(locale)) {
+        currentLocale = locale;
+        normalizedPath += part.replace(locale, '[locale]');
         continue;
       }
       normalizedPath += part;
@@ -171,6 +222,14 @@ function normalizePath(filePath: string): string | null {
   }
 
   if (!currentLocale) {
+    if (
+      normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.VUE) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.MD) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.MDX)
+    ) {
+      return normalizedPath;
+    }
     return null;
   }
   return normalizedPath;
@@ -204,6 +263,34 @@ async function searchPaths(): Promise<string[]> {
   });
 }
 
+/**
+ * Extracts the locale code from a filename
+ *
+ * @param filename - The filename to extract the locale from. Example: 'en.json' or 'it-IT.json'
+ * @returns The locale code if found, null otherwise. Example: 'en' or 'it-IT'
+ */
+function extractLocaleFromFilename(filename: string): string | null {
+  // Ordered by length descending because we want to match the longest locale first.
+  const sortedLocales = [...AVAILABLE_LOCALES].sort((a, b) => b.length - a.length);
+  const match = filename.match(buildLocaleRegex(sortedLocales));
+
+  if (!match || !match[2]) {
+    return null;
+  }
+
+  return match[2];
+}
+
+/**
+ * Builds a regular expression to match locale codes in text
+ *
+ * @param locales - Array of locale codes to match. Defaults to AVAILABLE_LOCALES if not provided
+ * @returns A RegExp that matches locale codes when they appear as whole words
+ */
+function buildLocaleRegex(locales: string[] = AVAILABLE_LOCALES): RegExp {
+  return new RegExp(`(^|[^a-zA-Z])(${locales.join('|')})(?=[^a-zA-Z]|$)`, 'i');
+}
+
 export {
   getFileExtension,
   isRelative,
@@ -213,4 +300,5 @@ export {
   searchLocalePathsByPattern,
   searchLocalePaths,
   searchPaths,
+  extractLocaleFromFilename,
 };

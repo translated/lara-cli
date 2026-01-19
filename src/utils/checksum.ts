@@ -2,8 +2,13 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import yaml from 'yaml';
+import { ParserFactory } from '../parsers/parser.factory.js';
 
-import { parseFlattened } from './json.js';
+enum ChecksumState {
+  NEW = 'new',
+  UPDATED = 'updated',
+  UNCHANGED = 'unchanged',
+}
 
 type ChecksumChangelog = Record<
   string,
@@ -28,16 +33,25 @@ let cachedChecksumFile: ChecksumFile | null = null;
  * Calculates the checksum of a file. And saves the checksum.
  *
  * @param fileName - The name of the file.
- * @param fileContent - The content of the file.
+ * @param parser - Optional ParserFactory instance to reuse (preserves metadata like PO headers)
+ * @param locale - Optional locale to filter keys (for multi-locale files like TS)
  * @returns The changelog of the file.
  */
-function calculateChecksum(fileName: string): ChecksumChangelog {
+function calculateChecksum(
+  fileName: string,
+  parser: ParserFactory,
+  locale: string
+): ChecksumChangelog {
   const checksumFile = getChecksumFile();
   const checksum = checksumFile.files[getHash(fileName)] || {};
 
   const changelog: ChecksumChangelog = {};
 
-  const fileContent = parseFlattened(fs.readFileSync(fileName, 'utf8'));
+  const fileParser = parser || new ParserFactory(fileName);
+  const fileContent = fileParser.parse(
+    fs.readFileSync(fileName, 'utf8'),
+    { targetLocale: locale }
+  );
 
   let changed: boolean = false;
 
@@ -45,7 +59,7 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
     if (!checksum[key]) {
       changelog[key] = {
         value: fileContent[key],
-        state: 'new',
+        state: ChecksumState.NEW,
       };
       changed = true;
       continue;
@@ -57,14 +71,14 @@ function calculateChecksum(fileName: string): ChecksumChangelog {
     if (newHash === oldHash) {
       changelog[key] = {
         value: fileContent[key],
-        state: 'unchanged',
+        state: ChecksumState.UNCHANGED,
       };
       continue;
     }
 
     changelog[key] = {
       value: fileContent[key],
-      state: 'updated',
+      state: ChecksumState.UPDATED,
     };
     changed = true;
     continue;

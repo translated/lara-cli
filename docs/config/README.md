@@ -30,11 +30,16 @@ files:
     ignoredKeys: []
 ```
 
+## Supported File Formats
+
+Lara Dev supports multiple file formats. See [Supported Formats](./formats.md) for a complete list and format-specific guides like [PO Files](./po-files.md).
+
 ## Configuration Sections
 
 The configuration is divided into several sections:
 
 - **[Configuration Schema](./structure.md)** - Schema structure and organization of the configuration file
+- **[Supported Formats](./formats.md)** - List of supported file formats
 - **[Locales](./locales.md)** - Source and target language configuration
 - **[Files](./files.md)** - File paths and exclusion patterns
 - **[File Structure and Formats](./supported_formats.md)** - Supported file formats, JSON structure, and file discovery
