@@ -123,6 +123,9 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
     if (path.endsWith(SupportedExtensionEnum.MD) || path.endsWith(SupportedExtensionEnum.MDX)) {
       return true;
     }
+    if (path.endsWith(SupportedExtensionEnum.XML)) {
+      return true;
+    }
     return path.match(buildLocaleRegex([source]));
   });
 
@@ -140,6 +143,9 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
       filePath.endsWith(SupportedExtensionEnum.MD) ||
       filePath.endsWith(SupportedExtensionEnum.MDX)
     ) {
+      return filePath;
+    }
+    if (filePath.endsWith(SupportedExtensionEnum.XML)) {
       return filePath;
     }
     if (
@@ -226,7 +232,8 @@ function normalizePath(filePath: string): string | null {
       normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) ||
       normalizedPath.endsWith(SupportedExtensionEnum.VUE) ||
       normalizedPath.endsWith(SupportedExtensionEnum.MD) ||
-      normalizedPath.endsWith(SupportedExtensionEnum.MDX)
+      normalizedPath.endsWith(SupportedExtensionEnum.MDX) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.XML)
     ) {
       return normalizedPath;
     }

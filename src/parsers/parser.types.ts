@@ -26,10 +26,13 @@ export type VueParserOptionsType = BaseContentParserOptionsType;
 
 export type MarkdownParserOptionsType = BaseContentParserOptionsType;
 
+export type AndroidXmlParserOptionsType = BaseContentParserOptionsType;
+
 export type ParserOptionsType = Partial<
   PoParserOptionsType &
     JsonParserOptionsType &
     TsParserOptionsType &
     VueParserOptionsType &
-    MarkdownParserOptionsType
+    MarkdownParserOptionsType &
+    AndroidXmlParserOptionsType
 >;
