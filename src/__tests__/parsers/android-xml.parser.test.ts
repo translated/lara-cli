@@ -366,6 +366,213 @@ describe('AndroidXmlParser', () => {
     });
   });
 
+  describe('round-trip (parse -> serialize -> parse)', () => {
+    it('should preserve simple string resources through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My App</string>
+    <string name="hello">Hello World</string>
+    <string name="empty"></string>
+</resources>`;
+
+      // First parse
+      const firstParse = parser.parse(originalContent);
+      
+      // Serialize back
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      
+      // Parse again
+      const secondParse = parser.parse(serialized);
+
+      // Verify data is unchanged
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        app_name: 'My App',
+        hello: 'Hello World',
+        empty: '',
+      });
+    });
+
+    it('should preserve plural resources through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="item_count">
+        <item quantity="zero">No items</item>
+        <item quantity="one">%d item</item>
+        <item quantity="two">%d items</item>
+        <item quantity="few">%d items</item>
+        <item quantity="many">%d items</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        'item_count/zero': 'No items',
+        'item_count/one': '%d item',
+        'item_count/two': '%d items',
+        'item_count/few': '%d items',
+        'item_count/many': '%d items',
+        'item_count/other': '%d items',
+      });
+    });
+
+    it('should preserve mixed string and plural resources through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My App</string>
+    <plurals name="item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="goodbye">Goodbye</string>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        app_name: 'My App',
+        'item_count/one': '%d item',
+        'item_count/other': '%d items',
+        goodbye: 'Goodbye',
+      });
+    });
+
+    it('should preserve special characters through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="message">Hello &amp; Welcome</string>
+    <string name="quoted">Say &quot;Hello&quot;</string>
+    <string name="less_than">A &lt; B</string>
+    <string name="greater_than">C &gt; D</string>
+    <string name="apostrophe">Don&apos;t worry</string>
+    <string name="all_special">A &lt; B &gt; C &quot;quote&quot; &apos;apos&apos; &amp; more</string>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        message: 'Hello & Welcome',
+        quoted: 'Say "Hello"',
+        less_than: 'A < B',
+        greater_than: 'C > D',
+        apostrophe: "Don't worry",
+        all_special: 'A < B > C "quote" \'apos\' & more',
+      });
+    });
+
+    it('should preserve special characters in plural resources through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="special_plural">
+        <item quantity="one">One &amp; item</item>
+        <item quantity="other">Many &lt; items &gt;</item>
+    </plurals>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        'special_plural/one': 'One & item',
+        'special_plural/other': 'Many < items >',
+      });
+    });
+
+    it('should preserve non-translatable strings through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">My App</string>
+    <string name="hello">Hello World</string>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      // Non-translatable strings should not appear in parsed data
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        hello: 'Hello World',
+      });
+      
+      // But they should be preserved in the serialized XML
+      expect(serialized.toString()).toContain('translatable="false"');
+      expect(serialized.toString()).toContain('app_name');
+    });
+
+    it('should preserve empty values through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="empty"></string>
+    <string name="hello">Hello World</string>
+    <plurals name="empty_plural">
+        <item quantity="one"></item>
+        <item quantity="other">Some items</item>
+    </plurals>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        empty: '',
+        hello: 'Hello World',
+        'empty_plural/one': '',
+        'empty_plural/other': 'Some items',
+      });
+    });
+
+    it('should preserve complex mixed content through round-trip', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">My App</string>
+    <string name="welcome">Welcome &amp; Hello</string>
+    <plurals name="item_count">
+        <item quantity="one">%d item &lt; 10</item>
+        <item quantity="other">%d items &gt; 1</item>
+    </plurals>
+    <string name="message">Say &quot;Hello&quot; &amp; &apos;Hi&apos;</string>
+    <plurals name="special">
+        <item quantity="zero">No &amp; items</item>
+        <item quantity="one">One &lt; item</item>
+        <item quantity="other">Many &gt; items</item>
+    </plurals>
+    <string name="empty"></string>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(secondParse).toEqual({
+        welcome: 'Welcome & Hello',
+        'item_count/one': '%d item < 10',
+        'item_count/other': '%d items > 1',
+        message: 'Say "Hello" & \'Hi\'',
+        'special/zero': 'No & items',
+        'special/one': 'One < item',
+        'special/other': 'Many > items',
+        empty: '',
+      });
+    });
+  });
+
   describe('getFallback', () => {
     it('should return default XML structure', () => {
       const result = parser.getFallback();
