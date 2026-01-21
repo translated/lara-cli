@@ -73,6 +73,27 @@ describe('AndroidXmlParser', () => {
       });
     });
 
+    it('should handle attributes in any order (name attribute not immediately after tag)', () => {
+      const content = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string translatable="false" name="app_name">My App</string>
+    <string name="hello">Hello World</string>
+    <plurals translatable="true" name="item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="goodbye">Goodbye</string>
+</resources>`;
+      const result = parser.parse(content);
+
+      expect(result).toEqual({
+        hello: 'Hello World',
+        'item_count/one': '%d item',
+        'item_count/other': '%d items',
+        goodbye: 'Goodbye',
+      });
+    });
+
     it('should handle empty string values', () => {
       const content = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
@@ -204,6 +225,38 @@ describe('AndroidXmlParser', () => {
 
       expect(result).toContain('<string name="app_name" translatable="false">My App</string>');
       expect(result).toContain('<string name="hello">Hola Mundo</string>');
+    });
+
+    it('should preserve order when attributes appear before name attribute', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string translatable="false" name="app_name">My App</string>
+    <string name="hello">Hello World</string>
+    <plurals translatable="true" name="item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="goodbye">Goodbye</string>
+</resources>`;
+      const data = {
+        hello: 'Hola Mundo',
+        'item_count/one': '%d artículo',
+        'item_count/other': '%d artículos',
+        goodbye: 'Adiós',
+      };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+
+      // Verify that resources are preserved in the correct order
+      const helloIndex = result.toString().indexOf('hello');
+      const itemCountIndex = result.toString().indexOf('item_count');
+      const goodbyeIndex = result.toString().indexOf('goodbye');
+
+      expect(helloIndex).toBeLessThan(itemCountIndex);
+      expect(itemCountIndex).toBeLessThan(goodbyeIndex);
+      
+      // Verify non-translatable string is preserved
+      expect(result).toContain('app_name');
+      expect(result).toContain('translatable="false"');
     });
 
     it('should preserve order of resources', () => {

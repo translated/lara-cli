@@ -125,7 +125,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     const map = new Map<string, number>();
     let orderIndex = 0;
 
-    const resourceRegex = /<(string|plurals)\s+name=["']([^"']+)["'][^>]*>/g;
+    const resourceRegex = /<(string|plurals)\b[^>]*\bname=["']([^"']+)["'][^>]*>/g;
     let match: RegExpExecArray | null;
     while ((match = resourceRegex.exec(content)) !== null) {
       const tag = match[1];
