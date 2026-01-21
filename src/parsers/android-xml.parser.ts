@@ -161,7 +161,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
   private escapeTextContent(value: string): string {
     return value
       .replace(/&/g, '&amp;')   // The ampersand (&) must be escaped first before other entities,
-      .replace(/</g, '&lt;')    // otherwise already-escaped entities like "<" will be double-escaped to "&lt;".
+      .replace(/</g, '&lt;')    // otherwise already-escaped entities like "&lt;" will be double-escaped to "&amp;lt;".
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
