@@ -28,7 +28,7 @@ files:
 ```
 
 > **Note:** The configuration key is `xml` (matching the file extension), but this parser is specifically designed for Android XML string resource files. Other XML formats are not supported.
-> 
+>
 > **Important:** Lara Dev uses `res/[locale]/strings.xml` structure (e.g., `res/en/strings.xml`, `res/es/strings.xml`), not the standard Android `values-[locale]` structure. The `[locale]` placeholder is replaced directly with the locale code.
 
 ### File Path Patterns
