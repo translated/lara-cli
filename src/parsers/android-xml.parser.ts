@@ -86,7 +86,9 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         const name = plural['@_name'];
         if (!name) continue;
 
-        const items = Array.isArray(plural.item) ? plural.item : [plural.item];
+        const items = plural.item
+          ? (Array.isArray(plural.item) ? plural.item : [plural.item])
+          : [];
         for (const item of items) {
           const quantity = item['@_quantity'];
           if (!quantity) continue;
@@ -106,7 +108,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
    * @param value - The attribute value to escape
    * @returns The escaped attribute value
    */
-  private escapeAttributeValue(value: string): string {
+  private escapeTextContent(value: string): string {
     return value
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -191,7 +193,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       const plurals = Array.isArray(resources.plurals) ? resources.plurals : [resources.plurals];
       for (const plural of plurals) {
         const name = plural['@_name'];
-        if (!name) continue;
+        if (!name || !plural.item) continue;
 
         const items = Array.isArray(plural.item) ? plural.item : [plural.item];
         for (const item of items) {
@@ -249,16 +251,8 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         const translatable = str['@_translatable'];
         const value = str['#text'] || '';
         
-        // Escape XML special characters in attribute values
-        const escapedName = this.escapeAttributeValue(String(name));
-        
-        // Escape XML special characters in text content
-        const escapedValue = value
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&apos;');
+        const escapedName = this.escapeTextContent(String(name));
+        const escapedValue = this.escapeTextContent(value);
         
         let attrs = `name="${escapedName}"`;
         if (translatable === 'false') {
@@ -269,10 +263,11 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       } else {
         const plural = entry.resource;
         const name = plural['@_name'];
-        const items = Array.isArray(plural.item) ? plural.item : [plural.item];
+        const items = plural.item
+          ? (Array.isArray(plural.item) ? plural.item : [plural.item])
+          : [];
         
-        // Escape XML special characters in attribute values
-        const escapedName = this.escapeAttributeValue(String(name));
+        const escapedName = this.escapeTextContent(String(name));
         
         lines.push(`${indent}<plurals name="${escapedName}">`);
         
@@ -281,17 +276,9 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
           if (!quantity) continue;
           
           const value = item['#text'] || '';
-          
-          // Escape XML special characters in attribute values
-          const escapedQuantity = this.escapeAttributeValue(String(quantity));
-          
-          // Escape XML special characters in text content
-          const escapedValue = value
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;');
+
+          const escapedQuantity = this.escapeTextContent(String(quantity));
+          const escapedValue = this.escapeTextContent(value);
           
           lines.push(`${indent}${indent}<item quantity="${escapedQuantity}">${escapedValue}</item>`);
         }
