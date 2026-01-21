@@ -43,7 +43,6 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
    * Plural forms are mapped as: "item_count/one" -> "%d item", "item_count/other" -> "%d items"
    *
    * @param content - The XML content as string or Buffer
-   * @param options - Optional parsing options (unused in Android XML parser)
    * @returns A record mapping resource keys to their values
    */
   parse(content: string | Buffer): Record<string, unknown> {
@@ -103,15 +102,15 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
   }
 
   /**
-   * Escapes XML attribute values to prevent malformed XML.
+   * Escapes XML special characters for use in both attributes and text content.
    *
-   * @param value - The attribute value to escape
-   * @returns The escaped attribute value
+   * @param value - The XML content to escape
+   * @returns The escaped XML content
    */
   private escapeTextContent(value: string): string {
     return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
+      .replace(/&/g, '&amp;')   // The ampersand (&) must be escaped first before other entities,
+      .replace(/</g, '&lt;')    // otherwise already-escaped entities like "<" will be double-escaped to "&lt;".
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
@@ -293,7 +292,8 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     const xml = lines.join('\n');
 
     // Ensure proper XML declaration
-    if (!xml.includes('<?xml')) {
+    const trimmedXml = xml.trimStart();
+    if (!trimmedXml.startsWith('<?xml')) {
       return '<?xml version="1.0" encoding="utf-8"?>\n' + xml;
     }
 
