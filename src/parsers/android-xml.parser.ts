@@ -3,6 +3,46 @@ import type { Parser } from '../interface/parser.js';
 import type { AndroidXmlParserOptionsType } from './parser.types.js';
 
 /**
+ * Represents a parsed Android XML string resource.
+ */
+interface AndroidXmlString {
+  '@_name': string;
+  '@_translatable'?: string;
+  '#text'?: string;
+}
+
+/**
+ * Represents a parsed Android XML plural item.
+ */
+interface AndroidXmlPluralItem {
+  '@_quantity': string;
+  '#text'?: string;
+}
+
+/**
+ * Represents a parsed Android XML plurals resource.
+ */
+interface AndroidXmlPlurals {
+  '@_name': string;
+  item?: AndroidXmlPluralItem | AndroidXmlPluralItem[];
+}
+
+/**
+ * Represents the resources section of a parsed Android XML file.
+ */
+interface AndroidXmlResources {
+  string?: AndroidXmlString | AndroidXmlString[];
+  plurals?: AndroidXmlPlurals | AndroidXmlPlurals[];
+}
+
+/**
+ * Represents the root structure of a parsed Android XML file.
+ */
+interface AndroidXmlParsed {
+  resources?: AndroidXmlResources;
+}
+
+/**
  * Android XML parser for handling Android string resource files.
  *
  * This parser extracts string resources from Android XML files (typically located
@@ -37,6 +77,17 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
   }
 
   /**
+   * Type guard to check if the parsed object has the expected Android XML structure.
+   */
+  private isAndroidXmlParsed(value: unknown): value is AndroidXmlParsed {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      (!('resources' in value) || typeof (value as AndroidXmlParsed).resources === 'object')
+    );
+  }
+
+  /**
    * Parses Android XML string resources into a flat key-value structure.
    *
    * Simple strings are mapped as: "string_name" -> "value"
@@ -49,7 +100,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     const strContent = content.toString();
     this.orderMap = this.buildOrderMap(strContent);
 
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = this.parser.parse(strContent);
     } catch (error) {
@@ -57,7 +108,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       return {};
     }
 
-    if (!parsed.resources) {
+    if (!this.isAndroidXmlParsed(parsed) || !parsed.resources) {
       return {};
     }
 
@@ -158,11 +209,15 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     const strContent = originalContent.toString();
     this.orderMap = this.buildOrderMap(strContent);
 
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = this.parser.parse(strContent);
     } catch (error) {
       console.error('Failed to parse original Android XML content', error);
+      return strContent;
+    }
+
+    if (!this.isAndroidXmlParsed(parsed)) {
       return strContent;
     }
 
@@ -207,11 +262,9 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     }
 
     // Sort resources by order
-    type ResourceEntry = {
-      type: 'string' | 'plurals';
-      resource: any;
-      order: number;
-    };
+    type ResourceEntry =
+      | { type: 'string'; resource: AndroidXmlString; order: number }
+      | { type: 'plurals'; resource: AndroidXmlPlurals; order: number };
     const resourceEntries: ResourceEntry[] = [];
 
     if (resources.string) {
