@@ -1,4 +1,4 @@
-import { XMLParser, XMLBuilder } from 'fast-xml-parser';
+import { XMLParser } from 'fast-xml-parser';
 import type { Parser } from '../interface/parser.js';
 import type { AndroidXmlParserOptionsType } from './parser.types.js';
 
@@ -23,7 +23,6 @@ import type { AndroidXmlParserOptionsType } from './parser.types.js';
 export class AndroidXmlParser implements Parser<Record<string, unknown>, AndroidXmlParserOptionsType> {
   private readonly fallbackContent = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>';
   private readonly parser: XMLParser;
-  private readonly builder: XMLBuilder;
   private orderMap: Map<string, number> = new Map();
 
   constructor() {
@@ -34,16 +33,6 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       preserveOrder: false,
       parseAttributeValue: false,
       trimValues: false,
-    });
-
-    this.builder = new XMLBuilder({
-      ignoreAttributes: false,
-      attributeNamePrefix: '@_',
-      textNodeName: '#text',
-      preserveOrder: false,
-      format: true,
-      indentBy: '    ',
-      suppressEmptyNode: false,
     });
   }
 
@@ -121,25 +110,16 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     const map = new Map<string, number>();
     let orderIndex = 0;
 
-    // Match <string name="..."> and <plurals name="...">
-    const stringRegex = /<string\s+name=["']([^"']+)["'][^>]*>/g;
-    const pluralsRegex = /<plurals\s+name=["']([^"']+)["'][^>]*>/g;
-
+    const resourceRegex = /<(string|plurals)\s+name=["']([^"']+)["'][^>]*>/g;
     let match: RegExpExecArray | null;
-
-    // Process strings
-    while ((match = stringRegex.exec(content)) !== null) {
-      const name = match[1];
-      if (name && !map.has(`string:${name}`)) {
-        map.set(`string:${name}`, orderIndex++);
-      }
-    }
-
-    // Process plurals
-    while ((match = pluralsRegex.exec(content)) !== null) {
-      const name = match[1];
-      if (name && !map.has(`plurals:${name}`)) {
-        map.set(`plurals:${name}`, orderIndex++);
+    while ((match = resourceRegex.exec(content)) !== null) {
+      const tag = match[1];
+      const name = match[2];
+      if (name) {
+        const key = `${tag}:${name}`;
+        if (!map.has(key)) {
+          map.set(key, orderIndex++);
+        }
       }
     }
 
@@ -243,30 +223,63 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     // Sort by order
     resourceEntries.sort((a, b) => a.order - b.order);
 
-    // Rebuild resources object
-    const sortedResources: any = {};
-
-    const sortedStrings: any[] = [];
-    const sortedPlurals: any[] = [];
+    // Manually build XML to preserve interleaved order
+    const indent = '    ';
+    const lines: string[] = ['<resources>'];
 
     for (const entry of resourceEntries) {
       if (entry.type === 'string') {
-        sortedStrings.push(entry.resource);
+        const str = entry.resource;
+        const name = str['@_name'];
+        const translatable = str['@_translatable'];
+        const value = str['#text'] || '';
+        
+        // Escape XML special characters
+        const escapedValue = value
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+        
+        let attrs = `name="${name}"`;
+        if (translatable === 'false') {
+          attrs += ` translatable="false"`;
+        }
+        
+        lines.push(`${indent}<string ${attrs}>${escapedValue}</string>`);
       } else {
-        sortedPlurals.push(entry.resource);
+        const plural = entry.resource;
+        const name = plural['@_name'];
+        const items = Array.isArray(plural.item) ? plural.item : [plural.item];
+        
+        lines.push(`${indent}<plurals name="${name}">`);
+        
+        for (const item of items) {
+          const quantity = item['@_quantity'];
+          if (!quantity) continue;
+          
+          const value = item['#text'] || '';
+          
+          // Escape XML special characters
+          const escapedValue = value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+          
+          lines.push(`${indent}${indent}<item quantity="${quantity}">${escapedValue}</item>`);
+        }
+        
+        lines.push(`${indent}</plurals>`);
       }
     }
 
-    if (sortedStrings.length > 0) {
-      sortedResources.string = sortedStrings.length === 1 ? sortedStrings[0] : sortedStrings;
-    }
-
-    if (sortedPlurals.length > 0) {
-      sortedResources.plurals = sortedPlurals.length === 1 ? sortedPlurals[0] : sortedPlurals;
-    }
+    lines.push('</resources>');
 
     // Build XML
-    const xml = this.builder.build({ resources: sortedResources });
+    const xml = lines.join('\n');
 
     // Ensure proper XML declaration
     if (!xml.includes('<?xml')) {

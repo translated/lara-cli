@@ -228,6 +228,32 @@ describe('AndroidXmlParser', () => {
       expect(secondIndex).toBeLessThan(thirdIndex);
     });
 
+    it('should preserve order of resources with string and plural resources', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World</string>
+    <plurals name="item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="goodbye">Goodbye</string>
+</resources>`;
+      const data = {
+        hello: 'Hello World',
+        'item_count/one': '%d item',
+        'item_count/other': '%d items',
+        goodbye: 'Goodbye',
+      };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+      
+      const helloIndex = result.toString().indexOf('hello');
+      const itemCountIndex = result.toString().indexOf('item_count');
+      const goodbyeIndex = result.toString().indexOf('goodbye');
+
+      expect(helloIndex).toBeLessThan(itemCountIndex);
+      expect(itemCountIndex).toBeLessThan(goodbyeIndex);
+    });
+
     it('should handle empty values', () => {
       const originalContent = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
