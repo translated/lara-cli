@@ -40,7 +40,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
    * Parses Android XML string resources into a flat key-value structure.
    *
    * Simple strings are mapped as: "string_name" -> "value"
-   * Plural forms are mapped as: "plural_name/quantity_one" -> "value"
+   * Plural forms are mapped as: "item_count/one" -> "%d item", "item_count/other" -> "%d items"
    *
    * @param content - The XML content as string or Buffer
    * @param options - Optional parsing options (unused in Android XML parser)
