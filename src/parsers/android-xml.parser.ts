@@ -101,6 +101,21 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
   }
 
   /**
+   * Escapes XML attribute values to prevent malformed XML.
+   *
+   * @param value - The attribute value to escape
+   * @returns The escaped attribute value
+   */
+  private escapeAttributeValue(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  /**
    * Builds an order map to preserve the original order of resources in the XML file.
    *
    * @param content - The original XML content
@@ -234,7 +249,10 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         const translatable = str['@_translatable'];
         const value = str['#text'] || '';
         
-        // Escape XML special characters
+        // Escape XML special characters in attribute values
+        const escapedName = this.escapeAttributeValue(String(name));
+        
+        // Escape XML special characters in text content
         const escapedValue = value
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
@@ -242,7 +260,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&apos;');
         
-        let attrs = `name="${name}"`;
+        let attrs = `name="${escapedName}"`;
         if (translatable === 'false') {
           attrs += ` translatable="false"`;
         }
@@ -253,7 +271,10 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         const name = plural['@_name'];
         const items = Array.isArray(plural.item) ? plural.item : [plural.item];
         
-        lines.push(`${indent}<plurals name="${name}">`);
+        // Escape XML special characters in attribute values
+        const escapedName = this.escapeAttributeValue(String(name));
+        
+        lines.push(`${indent}<plurals name="${escapedName}">`);
         
         for (const item of items) {
           const quantity = item['@_quantity'];
@@ -261,7 +282,10 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
           
           const value = item['#text'] || '';
           
-          // Escape XML special characters
+          // Escape XML special characters in attribute values
+          const escapedQuantity = this.escapeAttributeValue(String(quantity));
+          
+          // Escape XML special characters in text content
           const escapedValue = value
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -269,7 +293,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;');
           
-          lines.push(`${indent}${indent}<item quantity="${quantity}">${escapedValue}</item>`);
+          lines.push(`${indent}${indent}<item quantity="${escapedQuantity}">${escapedValue}</item>`);
         }
         
         lines.push(`${indent}</plurals>`);

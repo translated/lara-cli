@@ -267,6 +267,70 @@ describe('AndroidXmlParser', () => {
       expect(result).toContain('<string name="hello"></string>');
     });
 
+    it('should escape XML special characters in string resources', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ampersand&amp;">Text with &amp;</string>
+    <string name="less_than">Text with &lt;</string>
+    <string name="greater_than">Text with &gt;</string>
+    <string name="quotes">Text with &quot;</string>
+    <string name="apostrophe">Text with &apos;</string>
+    <string name="all_special">A &lt; B &gt; C &quot;quote&quot; &apos;apos&apos;</string>
+</resources>`;
+      const data = {
+        'ampersand&': 'Text with &',
+        less_than: 'Text with <',
+        greater_than: 'Text with >',
+        quotes: 'Text with "',
+        apostrophe: "Text with '",
+        all_special: 'A < B > C "quote" \'apos\'',
+      };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+
+      // Verify each special character is properly escaped
+      expect(result).toContain('<string name="ampersand&amp;">Text with &amp;</string>');
+      expect(result).toContain('<string name="less_than">Text with &lt;</string>');
+      expect(result).toContain('<string name="greater_than">Text with &gt;</string>');
+      expect(result).toContain('<string name="quotes">Text with &quot;</string>');
+      expect(result).toContain("<string name=\"apostrophe\">Text with &apos;</string>");
+      expect(result).toContain('<string name="all_special">A &lt; B &gt; C &quot;quote&quot; &apos;apos&apos;</string>');
+      
+      // Verify the XML is valid by checking it doesn't contain unescaped special characters
+      const resultStr = result.toString();
+      expect(resultStr).not.toMatch(/<string[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/string>/);
+    });
+
+    it('should escape XML special characters in plural resources', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="special_plural">
+        <item quantity="one">One &amp; item</item>
+        <item quantity="other">Many &lt; items &gt;</item>
+    </plurals>
+    <plurals name="&quot;quotes_plural&quot;">
+        <item quantity="&quot;one&quot;">Say &quot;hello&quot;</item>
+        <item quantity="other">Say &apos;hi&apos;</item>
+    </plurals>
+</resources>`;
+      const data = {
+        'special_plural/one': 'One & item',
+        'special_plural/other': 'Many < items >',
+        '"quotes_plural"/"one"': 'Say "hello"',
+        '"quotes_plural"/other': "Say 'hi'",
+      };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+
+      // Verify special characters are properly escaped in plural items
+      expect(result).toContain('<item quantity="one">One &amp; item</item>');
+      expect(result).toContain('<item quantity="other">Many &lt; items &gt;</item>');
+      expect(result).toContain('<item quantity="&quot;one&quot;">Say &quot;hello&quot;</item>');
+      expect(result).toContain("<item quantity=\"other\">Say &apos;hi&apos;</item>");
+      
+      // Verify the XML is valid by checking it doesn't contain unescaped special characters
+      const resultStr = result.toString();
+      expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/item>/);
+    });
+
     it('should throw error when originalContent is missing', () => {
       const data = {
         hello: 'Hello',
