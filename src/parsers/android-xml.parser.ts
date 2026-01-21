@@ -62,8 +62,9 @@ interface AndroidXmlParsed {
 /**
  * Android XML parser for handling Android string resource files.
  *
- * This parser extracts string resources from Android XML files (typically located
- * in res/values/strings.xml) and handles simple strings, plural forms, and string arrays.
+ * This parser extracts string resources from Android XML files. This parser is intended for files
+ * organized by locale in paths like res/[locale]/strings.xml and handles simple strings,
+ * plural forms, and string arrays.
  *
  * @example
  * ```xml
