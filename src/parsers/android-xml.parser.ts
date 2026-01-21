@@ -28,11 +28,28 @@ interface AndroidXmlPlurals {
 }
 
 /**
+ * Represents a parsed Android XML string-array item.
+ */
+interface AndroidXmlStringArrayItem {
+  '#text'?: string;
+}
+
+/**
+ * Represents a parsed Android XML string-array resource.
+ */
+interface AndroidXmlStringArray {
+  '@_name': string;
+  '@_translatable'?: string;
+  item?: AndroidXmlStringArrayItem | AndroidXmlStringArrayItem[];
+}
+
+/**
  * Represents the resources section of a parsed Android XML file.
  */
 interface AndroidXmlResources {
   string?: AndroidXmlString | AndroidXmlString[];
   plurals?: AndroidXmlPlurals | AndroidXmlPlurals[];
+  'string-array'?: AndroidXmlStringArray | AndroidXmlStringArray[];
 }
 
 /**
@@ -46,7 +63,7 @@ interface AndroidXmlParsed {
  * Android XML parser for handling Android string resource files.
  *
  * This parser extracts string resources from Android XML files (typically located
- * in res/values/strings.xml) and handles both simple strings and plural forms.
+ * in res/values/strings.xml) and handles simple strings, plural forms, and string arrays.
  *
  * @example
  * ```xml
@@ -57,6 +74,11 @@ interface AndroidXmlParsed {
  *     <item quantity="one">%d item</item>
  *     <item quantity="other">%d items</item>
  *   </plurals>
+ *   <string-array name="colors">
+ *     <item>Red</item>
+ *     <item>Green</item>
+ *     <item>Blue</item>
+ *   </string-array>
  * </resources>
  * ```
  */
@@ -73,6 +95,9 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       preserveOrder: false,
       parseAttributeValue: false,
       trimValues: false,
+      isArray: (name) => {
+        return name === 'item';
+      },
     });
   }
 
@@ -92,6 +117,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
    *
    * Simple strings are mapped as: "string_name" -> "value"
    * Plural forms are mapped as: "item_count/one" -> "%d item", "item_count/other" -> "%d items"
+   * String arrays are mapped as: "colors/0" -> "Red", "colors/1" -> "Green", "colors/2" -> "Blue"
    *
    * @param content - The XML content as string or Buffer
    * @returns A record mapping resource keys to their values
@@ -149,6 +175,31 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       }
     }
 
+    // Process string-array resources
+    if (resources['string-array']) {
+      const stringArrays = Array.isArray(resources['string-array'])
+        ? resources['string-array']
+        : [resources['string-array']];
+      for (const stringArray of stringArrays) {
+        const name = stringArray['@_name'];
+        if (!name) continue;
+        // Skip non-translatable string arrays
+        if (stringArray['@_translatable'] === 'false') continue;
+
+        const items = stringArray.item
+          ? (Array.isArray(stringArray.item) ? stringArray.item : [stringArray.item])
+          : [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item === undefined) continue;
+          // Handle both object format ({'#text': 'value'}) and string format ('value')
+          const value = typeof item === 'string' ? item : (item['#text'] || '');
+          const key = `${name}/${i}`;
+          translations[key] = value;
+        }
+      }
+    }
+
     return translations;
   }
 
@@ -177,7 +228,8 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
     const map = new Map<string, number>();
     let orderIndex = 0;
 
-    const resourceRegex = /<(string|plurals)\b[^>]*\bname=["']([^"']+)["'][^>]*>/g;
+    // Order matters: string-array must come before string to avoid partial matches
+    const resourceRegex = /<(string-array|plurals|string)\b[^>]*\bname=["']([^"']+)["'][^>]*>/g;
     let match: RegExpExecArray | null;
     while ((match = resourceRegex.exec(content)) !== null) {
       const tag = match[1];
@@ -261,10 +313,46 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       }
     }
 
+    // Update string-array resources
+    if (resources['string-array']) {
+      const stringArrays = Array.isArray(resources['string-array'])
+        ? resources['string-array']
+        : [resources['string-array']];
+      for (const stringArray of stringArrays) {
+        const name = stringArray['@_name'];
+        if (!name) continue;
+        // Skip non-translatable string arrays
+        if (stringArray['@_translatable'] === 'false') continue;
+
+        const items = stringArray.item
+          ? (Array.isArray(stringArray.item) ? stringArray.item : [stringArray.item])
+          : [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item === undefined) continue;
+          const key = `${name}/${i}`;
+          if (data[key] !== undefined) {
+            // Handle both object format and string format
+            if (typeof item === 'string') {
+              // Convert string to object format
+              items[i] = { '#text': String(data[key] || '') };
+            } else if (item && typeof item === 'object') {
+              item['#text'] = String(data[key] || '');
+            }
+          }
+        }
+        // Update the items array back to the stringArray
+        if (items.length > 0) {
+          stringArray.item = items.length === 1 ? items[0] : items;
+        }
+      }
+    }
+
     // Sort resources by order
     type ResourceEntry =
       | { type: 'string'; resource: AndroidXmlString; order: number }
-      | { type: 'plurals'; resource: AndroidXmlPlurals; order: number };
+      | { type: 'plurals'; resource: AndroidXmlPlurals; order: number }
+      | { type: 'string-array'; resource: AndroidXmlStringArray; order: number };
     const resourceEntries: ResourceEntry[] = [];
 
     if (resources.string) {
@@ -285,6 +373,19 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         if (name) {
           const order = this.orderMap.get(`plurals:${name}`) ?? Number.MAX_SAFE_INTEGER;
           resourceEntries.push({ type: 'plurals', resource: plural, order });
+        }
+      }
+    }
+
+    if (resources['string-array']) {
+      const stringArrays = Array.isArray(resources['string-array'])
+        ? resources['string-array']
+        : [resources['string-array']];
+      for (const stringArray of stringArrays) {
+        const name = stringArray['@_name'];
+        if (name) {
+          const order = this.orderMap.get(`string-array:${name}`) ?? Number.MAX_SAFE_INTEGER;
+          resourceEntries.push({ type: 'string-array', resource: stringArray, order });
         }
       }
     }
@@ -312,7 +413,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         }
         
         lines.push(`${indent}<string ${attrs}>${escapedValue}</string>`);
-      } else {
+      } else if (entry.type === 'plurals') {
         const plural = entry.resource;
         const name = plural['@_name'];
         const items = plural.item
@@ -336,6 +437,32 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         }
         
         lines.push(`${indent}</plurals>`);
+      } else if (entry.type === 'string-array') {
+        const stringArray = entry.resource;
+        const name = stringArray['@_name'];
+        const translatable = stringArray['@_translatable'];
+        const items = stringArray.item
+          ? (Array.isArray(stringArray.item) ? stringArray.item : [stringArray.item])
+          : [];
+        
+        const escapedName = this.escapeTextContent(String(name));
+        
+        let attrs = `name="${escapedName}"`;
+        if (translatable === 'false') {
+          attrs += ` translatable="false"`;
+        }
+        
+        lines.push(`${indent}<string-array ${attrs}>`);
+        
+        for (const item of items) {
+          // Handle both object format ({'#text': 'value'}) and string format ('value')
+          const value = typeof item === 'string' ? item : (item['#text'] || '');
+          const escapedValue = this.escapeTextContent(value);
+          
+          lines.push(`${indent}${indent}<item>${escapedValue}</item>`);
+        }
+        
+        lines.push(`${indent}</string-array>`);
       }
     }
 

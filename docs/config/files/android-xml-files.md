@@ -10,6 +10,7 @@ Lara Dev supports Android XML files that follow the standard Android string reso
 
 - Simple string resources (`<string>`)
 - Plural resources (`<plurals>`)
+- String array resources (`<string-array>`)
 - Non-translatable strings (`translatable="false"`)
 
 ## Configuration
@@ -134,6 +135,28 @@ Plural resources handle singular and plural forms for different quantities:
 - `many` - Many items
 - `other` - Other (default/fallback)
 
+### String Array Resources
+
+String array resources contain an ordered list of string values:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="colors">
+        <item>Red</item>
+        <item>Green</item>
+        <item>Blue</item>
+    </string-array>
+    <string-array name="sizes">
+        <item>Small</item>
+        <item>Medium</item>
+        <item>Large</item>
+    </string-array>
+</resources>
+```
+
+String arrays are mapped with index-based keys: `colors/0`, `colors/1`, `colors/2`, etc.
+
 ### Non-Translatable Strings
 
 Strings marked with `translatable="false"` are preserved but not translated:
@@ -148,7 +171,7 @@ Strings marked with `translatable="false"` are preserved but not translated:
 
 ### Mixed Resources
 
-You can combine strings and plurals in the same file:
+You can combine strings, plurals, and string arrays in the same file:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -159,6 +182,11 @@ You can combine strings and plurals in the same file:
         <item quantity="one">%d item</item>
         <item quantity="other">%d items</item>
     </plurals>
+    <string-array name="colors">
+        <item>Red</item>
+        <item>Green</item>
+        <item>Blue</item>
+    </string-array>
     <string name="goodbye">Goodbye</string>
 </resources>
 ```
@@ -189,6 +217,7 @@ Lara Dev automatically:
 - ✅ Extracts string resources from `<resources>` elements
 - ✅ Preserves the original XML structure and formatting
 - ✅ Handles plural resources with quantity-specific keys
+- ✅ Handles string array resources with index-based keys
 - ✅ Maintains resource order from the original file
 - ✅ Preserves non-translatable strings (`translatable="false"`)
 - ✅ Handles XML entity encoding/decoding
@@ -206,6 +235,10 @@ When using `lockedKeys` or `ignoredKeys` with Android XML files, use the resourc
 
 - Use the format `plural_name/quantity`: `item_count/one`, `item_count/other`
 
+**String array resources:**
+
+- Use the format `array_name/index`: `colors/0`, `colors/1`, `colors/2`
+
 ```yaml
 files:
   xml:
@@ -214,6 +247,7 @@ files:
     lockedKeys:
       - "app_name"              # Specific string resource
       - "item_count/one"        # Specific plural quantity
+      - "colors/0"              # Specific string array item
       - "api_*"                 # Wildcard pattern
     ignoredKeys:
       - "debug_*"               # Ignore all debug keys
@@ -290,9 +324,9 @@ If your Android XML files don't exist yet:
 
 - ✅ Must contain `<resources>` root element
 - ✅ Must use valid XML syntax
-- ✅ Supports `<string>` and `<plurals>` elements
+- ✅ Supports `<string>`, `<plurals>`, and `<string-array>` elements
 - ✅ Supports `translatable` attribute
-- ❌ Does not support other resource types (arrays, string arrays, etc.)
+- ❌ Does not support other resource types (generic arrays, etc.)
 - ❌ Does not support resource references (`@string/...`)
 
 ### Supported Patterns
@@ -310,11 +344,11 @@ If your Android XML files don't exist yet:
 
 - `<string>` - Simple string resources
 - `<plurals>` - Plural resources with quantity items
+- `<string-array>` - String array resources with indexed items
 
 **Not Supported:**
 
-- `<string-array>` - String arrays
-- `<array>` - Generic arrays
+- `<array>` - Generic arrays (non-string arrays)
 - Resource references (`@string/...`, `@color/...`, etc.)
 - Other Android resource types
 
