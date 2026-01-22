@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdir, writeFile, readFile, rm } from 'fs/promises';
+import { mkdir, writeFile, readFile, rm, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -50,6 +50,14 @@ describe('JSON Repository Integration Tests', () => {
     // Clean up test directory
     if (existsSync(testDir)) {
       await rm(testDir, { recursive: true, force: true });
+    }
+
+    // Clean up lara.lock file from project root if it was created during tests
+    const lockFilePath = path.join(originalCwd, 'lara.lock');
+    if (existsSync(lockFilePath)) {
+      await unlink(lockFilePath).catch(() => {
+        // Ignore errors if file doesn't exist or can't be deleted
+      });
     }
 
     // Reset ConfigProvider singleton
