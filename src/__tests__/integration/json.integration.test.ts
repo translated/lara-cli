@@ -211,4 +211,85 @@ describe('JSON Repository Integration Tests', () => {
     expect(newFrContent.title).toBe('[fr] Hello, world!');
     expect(newFrContent.subtitle).toBeUndefined();
   });
+
+  it('should maintain the same order of keys in existing locales', async () => {
+    // Set up JSON repository structure
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        subtitle: "Welcome to MyApp"
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it,fr',
+      '--paths',
+      'i18n/locales/[locale].json',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // Translate
+    await executeCommand(translateCommand, []);
+
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        secondaryTitle: "Secondary Title",
+        subtitle: "Welcome to MyApp"
+      }, null, 2)
+    );
+
+    // Translate
+    await executeCommand(translateCommand, []);
+
+    // Verify translations
+    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const frContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+
+    expect(Object.keys(itContent)[0]).toBe('title');
+    expect(Object.keys(itContent)[1]).toBe('secondaryTitle');
+    expect(Object.keys(itContent)[2]).toBe('subtitle');
+    expect(Object.keys(frContent)[0]).toBe('title');
+    expect(Object.keys(frContent)[1]).toBe('secondaryTitle');
+    expect(Object.keys(frContent)[2]).toBe('subtitle');
+  });
+
+  it('should handle empty JSON files', async () => {
+    // Set up JSON repository structure
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      '{}'
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it,fr',
+      '--paths',
+      'i18n/locales/[locale].json',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // Translate
+    await executeCommand(translateCommand, []);
+
+    // Verify translations
+    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const frContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+
+    expect(itContent).toEqual({});
+    expect(frContent).toEqual({});
+  });  
 });
