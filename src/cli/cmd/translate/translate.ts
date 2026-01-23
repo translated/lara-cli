@@ -148,7 +148,16 @@ async function handleFileType(
       }
 
       const message = error instanceof Error ? error.message : String(error);
-      progressWithOra.stop(Messages.errors.translatingFile(inputPath, message), 'fail');
+      const errorMessage = Messages.errors.translatingFile(inputPath, message);
+      console.error(errorMessage, message);
+      progressWithOra.stop(errorMessage, 'fail');
+      
+      // For parsing errors (like invalid JSON), continue processing other files
+      // but don't mark as having errors to prevent process exit
+      if (message.includes('Invalid JSON syntax') || message.includes('Failed to parse')) {
+        continue;
+      }
+      
       return true;
     }
   }
