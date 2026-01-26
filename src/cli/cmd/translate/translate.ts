@@ -148,8 +148,13 @@ async function handleFileType(
       }
 
       const message = error instanceof Error ? error.message : String(error);
-      progressWithOra.stop(Messages.errors.translatingFile(inputPath, message), 'fail');
-      return true;
+      const errorMessage = Messages.errors.translatingFile(inputPath, message);
+      console.error(errorMessage);
+      progressWithOra.stop(errorMessage, 'fail');
+      // For non-API errors (including parsing errors), continue processing other files
+      // but mark as having errors so the overall result reflects the failure
+      hasErrors = true;
+      continue;
     }
   }
 
