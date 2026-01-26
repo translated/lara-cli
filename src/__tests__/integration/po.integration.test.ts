@@ -399,8 +399,7 @@ msgstr "Cancel"
 
     // Verify error and console output
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Error translating locales/[locale]/messages.po'),
-      expect.any(String)
+      expect.stringContaining('Error translating locales/[locale]/messages.po')
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();

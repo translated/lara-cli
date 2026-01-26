@@ -116,6 +116,7 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Failed to parse messages object in TS file', errorMessage);
+      return null;
     }
   }
 
