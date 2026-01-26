@@ -152,42 +152,6 @@ export default messages;`
     expect(content).toContain('"es"');
     expect(content).toContain('Bienvenido');
   });
-  
-//   it('should handle ts files with locales in different files', async () => {
-//     // Set up TypeScript repository with existing locales
-//     await mkdir(path.join(testDir, 'src', 'i18n', 'en'), { recursive: true });
-//     await writeFile(
-//       path.join(testDir, 'src', 'i18n', 'en', 'example.ts'),
-//       `const messages = {
-//   welcome: 'Welcome',
-//   goodbye: 'Goodbye'
-// };
-// export default messages;`
-//     );
-
-//     await executeCommand(initCommand, [
-//       '--non-interactive',
-//       '--source',
-//       'en',
-//       '--target',
-//       'it,fr',
-//       '--paths',
-//       'src/i18n/[locale]/example.ts',
-//     ]);
-
-//     (ConfigProvider as any).instance = null;
-
-//     // Translate
-//     await executeCommand(translateCommand, []);
-
-//     // Verify translations
-//     const itContent = await readFile(path.join(testDir, 'src', 'i18n', 'it', 'example.ts'), 'utf-8');
-//     const frContent = await readFile(path.join(testDir, 'src', 'i18n', 'fr', 'example.ts'), 'utf-8');
-//     expect(itContent).toContain('[it] Welcome');
-//     expect(itContent).toContain('[it] Goodbye');
-//     expect(frContent).toContain('[fr] Welcome');
-//     expect(frContent).toContain('[fr] Goodbye');
-//   });
 
   it('should add keys to existing locales when source is changed in single file', async () => {
     // Set up TypeScript repository with existing locales
@@ -245,60 +209,6 @@ export default messages;`
     expect(newContent).toContain('[fr] Goodbye');
   });
 
-  // TODO: Add multiple files feature
-//   it('should add keys to existing locales when source is changed in multiple files', async () => {
-//     // Set up TypeScript repository with existing locales
-//     await mkdir(path.join(testDir, 'src', 'i18n', 'en'), { recursive: true });
-//     await writeFile(
-//       path.join(testDir, 'src', 'i18n', 'en', 'example.ts'),
-//       `const messages = {
-//     welcome: 'Welcome',
-//   };
-// export default messages;`
-//     );
-
-//     await executeCommand(initCommand, [
-//       '--non-interactive',
-//       '--source', 
-//       'en',
-//       '--target',
-//       'it,fr',
-//       '--paths',
-//       'src/i18n/[locale]/example.ts', 
-//     ]);
-
-//     (ConfigProvider as any).instance = null;
-
-//     // Translate
-//     await executeCommand(translateCommand, []);
-
-//     // Verify translations
-//     const itContent = await readFile(path.join(testDir, 'src', 'i18n', 'it', 'example.ts'), 'utf-8');
-//     const frContent = await readFile(path.join(testDir, 'src', 'i18n', 'fr', 'example.ts'), 'utf-8');
-//     expect(itContent).not.toContain('[it] Goodbye');
-//     expect(frContent).not.toContain('[fr] Goodbye');
-
-//     await writeFile(
-//       path.join(testDir, 'src', 'i18n', 'en', 'example.ts'),
-//       `const messages = {
-//     welcome: 'Welcome',
-//     goodbye: 'Goodbye'
-//   };
-// export default messages;`
-//     );
-
-//     // Translate
-//     await executeCommand(translateCommand, []);
-
-//     // Verify translations
-//     const newItContent = await readFile(path.join(testDir, 'src', 'i18n', 'it', 'example.ts'), 'utf-8');
-//     const newFrContent = await readFile(path.join(testDir, 'src', 'i18n', 'fr', 'example.ts'), 'utf-8');
-//     expect(newItContent).toContain('[it] Welcome');
-//     expect(newItContent).toContain('[it] Goodbye');
-//     expect(newFrContent).toContain('[fr] Welcome');
-//     expect(newFrContent).toContain('[fr] Goodbye');
-//   });
-
   it('should remove keys from existing locales when source is changed in single file', async () => {
     // Set up TypeScript repository with existing locales
     await mkdir(path.join(testDir, 'src'), { recursive: true });
@@ -355,60 +265,6 @@ export default messages;`
     expect(newContent).toContain('[fr] Welcome');
     expect(newContent).not.toContain('[fr] Goodbye');
   });
-
-  // TODO: Add multiple files feature
-//   it('should remove keys from existing locales when source is changed in multiple files', async () => {
-//     // Set up TypeScript repository with existing locales
-//     await mkdir(path.join(testDir, 'src', 'i18n', 'en'), { recursive: true });
-//     await writeFile(
-//       path.join(testDir, 'src', 'i18n', 'en', 'example.ts'),
-//       `const messages = {
-//     welcome: 'Welcome',
-//     goodbye: 'Goodbye'
-//   };
-// export default messages;`
-//     );
-
-//     await executeCommand(initCommand, [
-//       '--non-interactive',
-//       '--source', 
-//       'en',
-//       '--target',
-//       'it,fr',
-//       '--paths',
-//       'src/i18n/[locale]/example.ts', 
-//     ]);
-
-//     (ConfigProvider as any).instance = null;
-
-//     // Translate
-//     await executeCommand(translateCommand, []);
-
-//     // Verify translations
-//     const itContent = await readFile(path.join(testDir, 'src', 'i18n', 'it', 'example.ts'), 'utf-8');
-//     const frContent = await readFile(path.join(testDir, 'src', 'i18n', 'fr', 'example.ts'), 'utf-8');
-//     expect(itContent).toContain('[it] Goodbye');
-//     expect(frContent).toContain('[fr] Goodbye');
-
-//     await writeFile(
-//       path.join(testDir, 'src', 'i18n', 'en', 'example.ts'),
-//       `const messages = {
-//     welcome: 'Welcome'
-//   };
-// export default messages;`
-//     );
-
-//     // Translate
-//     await executeCommand(translateCommand, []);
-
-//     // Verify translations
-//     const newItContent = await readFile(path.join(testDir, 'src', 'i18n', 'it', 'example.ts'), 'utf-8');
-//     const newFrContent = await readFile(path.join(testDir, 'src', 'i18n', 'fr', 'example.ts'), 'utf-8');
-//     expect(newItContent).toContain('[it] Welcome');
-//     expect(newItContent).not.toContain('[it] Goodbye');
-//     expect(newFrContent).toContain('[fr] Welcome');
-//     expect(newFrContent).not.toContain('[fr] Goodbye');
-//   });
 
   it('should maintain the same order of keys in existing locales', async () => {
     // Set up TypeScript repository with existing locales
@@ -495,35 +351,6 @@ export default messages;`
     expect(content).toEqual('const messages = {}');
 
   });
-
-  // TODO: Fix empty file handling
-  // it('should handle gracefully empty files', async () => {
-
-  //   await mkdir(path.join(testDir, 'src'), { recursive: true });
-  //   await writeFile(
-  //     path.join(testDir, 'src', 'i18n.ts'),
-  //     ''
-  //   );
-
-  //   await executeCommand(initCommand, [
-  //     '--non-interactive',
-  //     '--source',
-  //     'en',
-  //     '--target',
-  //     'it,fr',
-  //     '--paths',
-  //     'src/i18n.ts',
-  //   ]);
-
-  //   (ConfigProvider as any).instance = null;
-
-  //   // Translate
-  //   await executeCommand(translateCommand, []);
-
-  //   // Verify translations
-  //   const content = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
-  //   expect(content).toEqual('const messages = {}');
-  // });
 
   it('should handle invalid json syntax', async () => {
     // Spy on console.error
