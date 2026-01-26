@@ -432,10 +432,10 @@ describe('Vue Repository Integration Tests', () => {
     // Translate
     await executeCommand(translateCommand, []);
 
-    // Verify error and console output
+    // Verify error is logged but translation completes gracefully
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Error translating src/components/HelloWorld.vue'),
-      expect.any(String)
+      'Failed to parse i18n JSON content in Vue file',
+      expect.any(Error)
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
