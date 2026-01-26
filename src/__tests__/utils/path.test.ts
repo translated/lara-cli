@@ -307,6 +307,36 @@ describe('path utils', () => {
         expect(result.some((p) => p === 'src/components/Other.vue')).toBe(false);
       });
 
+      it('should include .md and .mdx files', async () => {
+        const options = { source: 'en' };
+        const mockPaths = ['src/docs/en.md', 'src/docs/en.mdx'];
+        vi.mocked(glob).mockResolvedValue(mockPaths);
+        vi.mocked(fs.readFile).mockResolvedValue('');
+
+        const result = await searchLocalePaths(options);
+        expect(result.some((p) => p.endsWith('.md'))).toBe(true);
+      });
+
+      it('should include .xml files', async () => {
+        const options = { source: 'en' };
+        const mockPaths = ['src/res/en/strings.xml'];
+        vi.mocked(glob).mockResolvedValue(mockPaths);
+        vi.mocked(fs.readFile).mockResolvedValue('');
+
+        const result = await searchLocalePaths(options);
+        expect(result.some((p) => p.endsWith('.xml'))).toBe(true);
+      });
+
+      it('should include android xml files', async () => {
+        const options = { source: 'en' };
+        const mockPaths = ['src/android/app/src/main/res/en/strings.xml'];
+        vi.mocked(glob).mockResolvedValue(mockPaths);
+        vi.mocked(fs.readFile).mockResolvedValue('');
+
+        const result = await searchLocalePaths(options);
+        expect(result.some((p) => p.endsWith('.xml'))).toBe(true);
+      });
+
       it('should return unique paths', async () => {
         const options = { source: 'en' };
         const mockPaths = ['src/i18n/en.json', 'src/i18n/en.json'];
