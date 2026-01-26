@@ -440,7 +440,4 @@ describe('Vue Repository Integration Tests', () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
-
-  
-
 });

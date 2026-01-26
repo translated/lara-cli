@@ -151,15 +151,10 @@ async function handleFileType(
       const errorMessage = Messages.errors.translatingFile(inputPath, message);
       console.error(errorMessage);
       progressWithOra.stop(errorMessage, 'fail');
-      
-      // For parsing errors (like invalid JSON), continue processing other files
+      // For non-API errors (including parsing errors), continue processing other files
       // but mark as having errors so the overall result reflects the failure
-      if (message.includes('Invalid JSON syntax') || message.includes('Failed to parse')) {
-        hasErrors = true;
-        continue;
-      }
-      
-      return true;
+      hasErrors = true;
+      continue;
     }
   }
 
