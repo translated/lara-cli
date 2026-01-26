@@ -394,12 +394,13 @@ msgstr "Cancel"
 
     (ConfigProvider as any).instance = null;
 
-    // Translate - expect it to throw an error due to invalid PO file
-    await expect(executeCommand(translateCommand, [])).rejects.toThrow('Process exited with code 1');
+    // Translate - expect it to complete gracefully despite invalid PO file
+    await executeCommand(translateCommand, []);
 
-    // Verify error and console output
+    // Verify error is logged but translation completes gracefully
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Error translating locales/[locale]/messages.po')
+      'Failed to parse PO file content',
+      expect.any(Error)
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
