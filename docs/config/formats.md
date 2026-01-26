@@ -4,13 +4,14 @@ Lara Dev supports multiple internationalization file formats. The appropriate pa
 
 ## Available Formats
 
-| Format           | Extension     | Description                                                                        | Documentation                               |
-| ---------------- | ------------- | ---------------------------------------------------------------------------------- | ------------------------------------------- |
-| **JSON**         | `.json`       | Nested or flat JSON structures commonly used in JavaScript/TypeScript applications | Built-in support                            |
-| **PO**           | `.po`         | Gettext Portable Object files commonly used in PHP, Python, and other platforms    | [PO Files Guide](./files/po-files.md)       |
-| **TS**           | `.ts`         | TypeScript files commonly used in Vue.js applications                              | [TS Files Guide](./files/ts-files.md)       |
-| **Vue**          | `.vue`        | Vue I18n single-file components                                                    | [Vue Files Guide](./files/vue-files.md)     |
-| **Markdown/MDX** | `.md`, `.mdx` | Markdown and MDX files for documentation, blogs, and content sites                 | [Markdown Files Guide](./files/md-files.md) |
+| Format           | Extension     | Description                                                                        | Documentation                                    |
+| ---------------- | ------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **JSON**         | `.json`       | Nested or flat JSON structures commonly used in JavaScript/TypeScript applications | Built-in support                                 |
+| **PO**           | `.po`         | Gettext Portable Object files commonly used in PHP, Python, and other platforms    | [PO Files Guide](./files/po-files.md)            |
+| **TS**           | `.ts`         | TypeScript files commonly used in Vue.js applications                              | [TS Files Guide](./files/ts-files.md)            |
+| **Vue**          | `.vue`        | Vue I18n single-file components                                                    | [Vue Files Guide](./files/vue-files.md)          |
+| **Markdown/MDX** | `.md`, `.mdx` | Markdown and MDX files for documentation, blogs, and content sites                 | [Markdown Files Guide](./files/md-files.md)      |
+| **Android XML**  | `.xml`        | Android string resource files commonly used in Android applications                | [Android XML Files Guide](./files/android-xml-files.md) |
 
 ## How It Works
 
@@ -21,6 +22,7 @@ The file format is automatically detected based on the file extension:
 - Files ending with `.ts` are parsed as TypeScript files
 - Files ending with `.vue` are parsed as Vue.js I18n single-file components
 - Files ending with `.md` or `.mdx` are parsed as Markdown/MDX files
+- Files ending with `.xml` are parsed as Android XML string resource files
 
 You can configure multiple formats simultaneously in the same project by adding different format sections under the `files` configuration.
 
@@ -40,6 +42,9 @@ files:
   md:
     include:
       - 'docs/[locale]/*.md'
+  xml:
+    include:
+      - 'res/[locale]/strings.xml'
 ```
 
 ## Format-Specific Documentation
@@ -50,3 +55,4 @@ For detailed information about a specific format, see its dedicated documentatio
 - [TS Files Guide](./files/ts-files.md) - Complete guide for TypeScript files
 - [Vue Files Guide](./files/vue-files.md) - Complete guide for Vue I18n single-file components
 - [Markdown Files Guide](./files/md-files.md) - Complete guide for Markdown and MDX files
+- [Android XML Files Guide](./files/android-xml-files.md) - Complete guide for Android XML string resource files

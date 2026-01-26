@@ -85,7 +85,13 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
    * @returns A record mapping serialized keys to their translated strings
    */
   parse(content: Buffer | string): Record<string, unknown> {
-    const parsed = gettextParser.po.parse(content);
+    let parsed;
+    try {
+      parsed = gettextParser.po.parse(content);
+    } catch (error) {
+      console.error('Failed to parse PO file content', error);
+      return {};
+    }
 
     // Preserve existing headers if parsed headers are empty or undefined
     if (parsed.headers && Object.keys(parsed.headers).length > 0) {

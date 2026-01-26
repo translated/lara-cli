@@ -71,7 +71,13 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     let messagesObj: Record<string, unknown> = {};
 
     if (i18nContent) {
-      messagesObj = JSON.parse(i18nContent);
+      try {
+        messagesObj = JSON.parse(i18nContent);
+      } catch (error) {
+        console.error('Failed to parse i18n JSON content in Vue file', error);
+        // Fall back to an empty messages object to mirror parse() behavior
+        messagesObj = {};
+      }
     }
 
     // If options.locale is set, prefix keys back

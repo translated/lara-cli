@@ -12,6 +12,7 @@ export enum SupportedExtensionEnum {
   VUE = 'vue',
   MD = 'md',
   MDX = 'mdx',
+  XML = 'xml',
 }
 
 export type SearchLocalePathsOptions = {

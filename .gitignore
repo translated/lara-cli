@@ -22,3 +22,6 @@ i18n-test/
 
 # Coverage files
 coverage/
+
+# tmp files
+tmp/
