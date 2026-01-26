@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🚀 Lara Dev – A Powerful CLI Tool for Instant i18n Localization
+# 🚀 Lara Cli – A Powerful CLI Tool for Instant i18n Localization
 
-Lara Dev automates translation of your i18n files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n files.
+Lara Cli automates translation of your i18n files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n files.
 
 Supports multiple file formats including JSON and PO (gettext). See [Supported Formats](docs/config/formats.md) for details.
 
@@ -10,7 +10,7 @@ Supports multiple file formats including JSON and PO (gettext). See [Supported F
 
 </div>
 
-> **⚠️ Development Mode Only:** This tool is currently available in development mode. The full release is coming soon! 🚀
+> **⚠️ Clielopment Mode Only:** This tool is currently available in Clielopment mode. The full release is coming soon! 🚀
 
 ## 📑 Table of Contents
 
@@ -31,13 +31,13 @@ Supports multiple file formats including JSON and PO (gettext). See [Supported F
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/translated/lara-dev.git
+git clone https://github.com/translated/lara-cli.git
 ```
 
 2. **Navigate to the cloned repository**
 
 ```bash
-cd lara-dev
+cd lara-cli
 ```
 
 3. **Install dependencies and build**
