@@ -6,7 +6,7 @@ Lara Dev automates translation of your i18n files with a single command, preserv
 
 Supports multiple file formats including JSON and PO (gettext). See [Supported Formats](docs/config/formats.md) for details.
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/translated/lara-dev)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/translated/lara-dev)
 
 </div>
 
