@@ -3,7 +3,11 @@
   "type": "module",
   "version": "0.2.1",
   "description": "Lara CLI",
-  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/translated/lara-cli"
+  },
+  "main": "./build/index.js",
   "keywords": [
     "laratranslate",
     "lara",
@@ -13,12 +17,18 @@
     "translate",
     "translated"
   ],
-  "author": "CristianBelli01K",
+  "author": {
+    "name": "Lara Translate",
+    "email": "info@laratranslate.com"
+  },
   "license": "ISC",
   "packageManager": "pnpm@10.11.1",
   "bin": {
     "lara-cli": "./build/index.js"
   },
+  "files": [
+    "build"
+  ],
   "dependencies": {
     "@babel/parser": "^7.28.6",
     "@babel/traverse": "^7.28.6",
