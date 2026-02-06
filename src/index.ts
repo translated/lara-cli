@@ -2,18 +2,22 @@
 
 import { Command, Option } from 'commander';
 import dotenv from 'dotenv';
+
 dotenv.config({ debug: false, quiet: true });
 
 import initCommand from './cli/cmd/init/init.js';
 import translateCommand from './cli/cmd/translate/translate.js';
 import memoryCommand from './cli/cmd/memory/memory.js';
 import glossaryCommand from './cli/cmd/glossary/glossary.js';
+import packageJson from '../package.json' with { type: 'json' };
+
+const version = packageJson.version;
 
 const program = new Command()
   .name('lara-cli')
   .description('Lara CLI')
   .helpOption('-h, --help', 'Show help')
-  .version('0.0.1')
+  .version(version)
   .addOption(new Option('-y --non-interactive', 'Run in non-interactive mode').default(false))
   .addCommand(initCommand)
   .addCommand(translateCommand)
