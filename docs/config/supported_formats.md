@@ -4,7 +4,7 @@ This document describes the file structure supported by Lara CLI.
 
 ## Supported File Format
 
-Lara CLI supports only **`.json`** files.
+Lara CLI supports multiple file formats. See [Supported Formats](./formats.md) for a complete list and format-specific guides.
 
 ## Supported Locales
 

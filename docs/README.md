@@ -38,4 +38,9 @@ The `lara.yaml` configuration file controls how Lara CLI works with your project
 
 ## Format-Specific Guides
 
-- [PO Files Guide](config/po-files.md) - Complete guide for gettext PO files
+- [JSON Files Guide](config/files/json-files.md) - Complete guide for JSON files
+- [TS Files Guide](config/files/ts-files.md) - Complete guide for TypeScript files
+- [PO Files Guide](config/files/po-files.md) - Complete guide for gettext PO files
+- [Vue Files Guide](config/files/vue-files.md) - Complete guide for Vue I18n single-file components
+- [Markdown Files Guide](config/files/md-files.md) - Complete guide for Markdown and MDX files
+- [Android XML Files Guide](config/files/android-xml-files.md) - Complete guide for Android XML string resource files
