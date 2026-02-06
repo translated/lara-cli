@@ -182,7 +182,7 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
     this.headers['PO-Revision-Date'] = dateStr;
 
     // Update generator
-    this.headers['X-Generator'] = 'Lara-Dev';
+    this.headers['X-Generator'] = 'Lara-CLI';
 
     // Clear plural forms to avoid inheriting incorrect rules for new language
     // unless we specifically knew them. Safer to clear than to be wrong.

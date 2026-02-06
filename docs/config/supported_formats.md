@@ -1,24 +1,25 @@
 # File Structure
 
-This document describes the file structure supported by Lara Dev.
+This document describes the file structure supported by Lara CLI.
 
 ## Supported File Format
 
-Lara Dev supports only **`.json`** files.
+Lara CLI supports multiple file formats. See [Supported Formats](./formats.md) for a complete list and format-specific guides.
 
 ## Supported Locales
 
-Lara Dev supports **ISO 639-1**, **ISO 639-3**, and **BCP-47** locale codes for naming folders and files.
+Lara CLI supports **ISO 639-1**, **ISO 639-3**, and **BCP-47** locale codes for naming folders and files.
 
 **[See all supported locales →](/docs/config/locales.md)**
 
 Use these locale codes as:
+
 - **File names**: `en.json`, `es.json`, `en-US.json`, `it-IT.json`
 - **Directory names**: `en/`, `es/`, `en-US/`, `it-IT/`
 
 ## Supported Structure
 
-Lara Dev follows the standard **i18n structure**, where translation files are organized by locale.
+Lara CLI follows the standard **i18n structure**, where translation files are organized by locale.
 
 ## Structure Examples
 
@@ -55,7 +56,7 @@ project/
 
 ## Multiple Files Per Locale
 
-Lara Dev supports multiple translation files per locale, allowing you to organize your translations by feature, module, or domain.
+Lara CLI supports multiple translation files per locale, allowing you to organize your translations by feature, module, or domain.
 
 ### Example: Multiple Files
 
@@ -103,6 +104,7 @@ Each JSON file contains your translations in a nested key-value structure:
 **Other file formats**: Only `.json` files are supported. Formats like YAML, XML, PO, or properties files are not supported.
 
 **Locale with suffixes or prefixes**: The locale code must be the exact filename (without extension) or directory name, without additional text.
+
 ```
 # NOT SUPPORTED
 en.default.json
@@ -118,6 +120,7 @@ es/common.json
 ```
 
 **Underscore format for region codes**: Use hyphens for region-specific locales.
+
 ```
 # NOT SUPPORTED
 en_US.json
@@ -158,6 +161,7 @@ You don't need to manually exclude these in your configuration.
 ### Common Mistakes to Avoid
 
 **Mixing file and directory patterns**:
+
 ```yaml
 # Avoid mixing these patterns without clear organization
 include:
@@ -166,6 +170,7 @@ include:
 ```
 
 **Forgetting the [locale] placeholder**:
+
 ```yaml
 # This will not work
 include:

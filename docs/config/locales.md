@@ -27,7 +27,8 @@ locales:
 - **Type**: Array of strings (locale codes)
 - **Required**: Yes
 - **Description**: Lists the target locales to which content will be translated
-- **Example**: 
+- **Example**:
+
   ```yaml
   target:
     - es
@@ -71,9 +72,10 @@ locales:
 
 ## Supported Locales
 
-Lara Dev supports translations using different locale codes, following three main standards:
+Lara CLI supports translations using different locale codes, following three main standards:
 
 ### ISO 639-1 Language Codes
+
 These are two-letter language identifiers (e.g., `en` for English, `fr` for French) that apply to all regions where the language is spoken.
 
 | Code  | Language            | Code  | Language            |
@@ -143,8 +145,8 @@ These are two-letter language identifiers (e.g., `en` for English, `fr` for Fren
 | yo    | Yoruba              | zh    | Chinese             |
 | zu    | Zulu                |       |                     |
 
-
 ### ISO 639-3 Language Codes
+
 These are three-letter language identifiers that provide more specific language classification.
 
 | Code  | Language                | Code  | Language                |
@@ -184,8 +186,8 @@ These are three-letter language identifiers that provide more specific language 
 | vec   | Venetian                | vls   | West Flemish            |
 | war   | Waray                   | ydd   | Yiddish                 |
 
-
 ### BCP 47 Language Tags
+
 These are standardized language tags defined by BCP 47, combining ISO 639-1 language codes with ISO 3166-1 country codes (e.g., `en-US` for English in the United States, `fr-CA` for French in Canada). They provide more precise regional context.
 
 | Code        | Language & Region                    | Code        | Language & Region                    |

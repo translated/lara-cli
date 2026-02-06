@@ -5,7 +5,7 @@ The `glossary` command lists all Glossaries available in your Lara account. Glos
 ## Usage
 
 ```bash
-lara-dev glossary [options]
+lara-cli glossary [options]
 ```
 
 ## Options
@@ -34,6 +34,7 @@ lara-dev glossary [options]
 Before using the glossary command:
 
 1. Set up your Lara API credentials in a `.env` file:
+
    ```
    LARA_ACCESS_KEY_ID=your_access_key_id
    LARA_ACCESS_KEY_SECRET=your_access_key_secret
@@ -45,18 +46,21 @@ Before using the glossary command:
 
 After identifying available Glossaries, you can:
 
-1. **During initialization**: Add glossaries when running `lara-dev init`
+1. **During initialization**: Add glossaries when running `lara-cli init`
+
    ```bash
-   lara-dev init
+   lara-cli init
    # You'll be prompted to select Glossaries
    ```
 
 2. **Non-interactive initialization**: Specify glossaries directly
+
    ```bash
-   lara-dev init --glossaries "gls_abc123, gls_def456" --non-interactive
+   lara-cli init --glossaries "gls_abc123, gls_def456" --non-interactive
    ```
 
 3. **Manual configuration**: Add to your `lara.yaml` file
+
    ```yaml
    glossaries:
      - gls_abc123

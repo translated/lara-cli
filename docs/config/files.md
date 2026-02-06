@@ -4,7 +4,7 @@ The `files` section defines which files should be translated and how they should
 
 ## Supported Formats
 
-Lara Dev supports multiple file formats (JSON, PO, etc.). Each format is configured separately under the `files` section. See [Supported Formats](./formats.md) for a complete list and format-specific documentation like [PO Files Guide](./po-files.md).
+Lara CLI supports multiple file formats (JSON, PO, etc.). Each format is configured separately under the `files` section. See [Supported Formats](./formats.md) for a complete list and format-specific documentation.
 
 The parser is automatically selected based on the file extension.
 > **See also**: [File Structure and Formats](./supported_formats.md) for detailed information about supported file formats, JSON structure, file discovery, and best practices.
@@ -61,7 +61,9 @@ files:
 Understanding the difference between `lockedKeys` and `ignoredKeys`:
 
 ### Locked Keys
+
 Keys marked as locked are **copied** from source to target files without translation. Use this for:
+
 - IDs, codes, and identifiers
 - URLs and API endpoints
 - Configuration values that shouldn't change
@@ -69,6 +71,7 @@ Keys marked as locked are **copied** from source to target files without transla
 **Example:**
 
 Source file (`en.json`):
+
 ```json
 {
   "user": {
@@ -80,6 +83,7 @@ Source file (`en.json`):
 ```
 
 Configuration:
+
 ```yaml
 lockedKeys:
   - "**/id"
@@ -87,6 +91,7 @@ lockedKeys:
 ```
 
 Target file (`es.json`):
+
 ```json
 {
   "user": {
@@ -98,7 +103,9 @@ Target file (`es.json`):
 ```
 
 ### Ignored Keys
+
 Keys marked as ignored are **excluded** from target files entirely. Use this for:
+
 - Development-only messages
 - Internal debugging information
 - Keys not relevant to other locales
@@ -106,6 +113,7 @@ Keys marked as ignored are **excluded** from target files entirely. Use this for
 **Example:**
 
 Source file (`en.json`):
+
 ```json
 {
   "app": {
@@ -117,12 +125,14 @@ Source file (`en.json`):
 ```
 
 Configuration:
+
 ```yaml
 ignoredKeys:
   - "**/debug"
 ```
 
 Target file (`es.json`):
+
 ```json
 {
   "app": {

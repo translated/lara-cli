@@ -1,9 +1,13 @@
 {
-  "name": "lara-dev",
+  "name": "@translated/lara-cli",
   "type": "module",
   "version": "0.2.1",
-  "description": "Lara Dev",
-  "main": "index.js",
+  "description": "CLI tool for automated i18n file translation using Lara Translate",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/translated/lara-cli"
+  },
+  "main": "./build/index.js",
   "keywords": [
     "laratranslate",
     "lara",
@@ -13,12 +17,22 @@
     "translate",
     "translated"
   ],
-  "author": "CristianBelli01K",
+  "author": {
+    "name": "Lara Translate",
+    "email": "info@laratranslate.com"
+  },
   "license": "ISC",
   "packageManager": "pnpm@10.11.1",
-  "bin": {
-    "lara-dev": "./build/index.js"
+  "engines": {
+    "node": ">=18"
   },
+  "bin": {
+    "lara-cli": "./build/index.js"
+  },
+  "files": [
+    "build",
+    "!build/__tests__"
+  ],
   "dependencies": {
     "@babel/parser": "^7.28.6",
     "@babel/traverse": "^7.28.6",

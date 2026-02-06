@@ -586,7 +586,7 @@ describe('PoParser', () => {
       const result = parser.serialize(data, { targetLocale: 'fr' });
       const resultStr = result.toString();
 
-      expect(resultStr).toContain('X-Generator: Lara-Dev');
+      expect(resultStr).toContain('X-Generator: Lara-CLI');
     });
 
     it('should remove Plural-Forms header', () => {

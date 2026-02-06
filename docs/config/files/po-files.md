@@ -1,6 +1,6 @@
 # PO Files Configuration
 
-This guide explains how to use Lara Dev with PO (Portable Object) files, the standard gettext format used in PHP, Python, and many other platforms.
+This guide explains how to use Lara CLI with PO (Portable Object) files, the standard gettext format used in PHP, Python, and many other platforms.
 
 ## What are PO Files?
 
@@ -39,6 +39,7 @@ files:
 ```
 
 This follows the traditional gettext structure:
+
 ```
 locales/
   ├── en/
@@ -62,6 +63,7 @@ files:
 ```
 
 This uses a simpler directory structure:
+
 ```
 i18n/
   ├── en.po
@@ -105,17 +107,17 @@ msgstr[0] "campo"
 msgstr[1] "campi"
 ```
 
-## How Lara Dev Handles PO Files
+## How Lara CLI Handles PO Files
 
 ### Automatic Processing
 
-Lara Dev automatically:
+Lara CLI automatically:
 
 - ✅ Preserves message order from the original file
 - ✅ Maintains all metadata and headers
 - ✅ Handles contexts and plural forms correctly
 - ✅ Updates `PO-Revision-Date` automatically
-- ✅ Sets `X-Generator` to "Lara-Dev"
+- ✅ Sets `X-Generator` to "Lara-CLI"
 
 ### Header Management
 
@@ -126,7 +128,7 @@ msgid ""
 msgstr ""
 "Language: es\n"
 "PO-Revision-Date: 2024-01-15 10:30:00+0000\n"
-"X-Generator: Lara-Dev\n"
+"X-Generator: Lara-CLI\n"
 ```
 
 ### Locked and Ignored Keys
@@ -191,9 +193,9 @@ files:
 
 If you already have PO files with translations:
 
-1. **Run `lara-dev init`** to create your configuration
-2. **Run `lara-dev translate`** for the first time - only missing or changed translations will be processed
-3. **Continue developing** - Lara Dev tracks changes via checksums and only translates what's new or modified
+1. **Run `lara-cli init`** to create your configuration
+2. **Run `lara-cli translate`** for the first time - only missing or changed translations will be processed
+3. **Continue developing** - Lara CLI tracks changes via checksums and only translates what's new or modified
 
 ## Best Practices
 
@@ -246,19 +248,18 @@ files:
 
 ### Message Order Changes
 
-Lara Dev preserves the original message order. If you notice changes, ensure your source PO file is properly formatted.
+Lara CLI preserves the original message order. If you notice changes, ensure your source PO file is properly formatted.
 
 ### Plural Forms
 
-Lara Dev handles plural forms automatically. Ensure your source file correctly defines plural forms for proper translation.
+Lara CLI handles plural forms automatically. Ensure your source file correctly defines plural forms for proper translation.
 
 ### Character Encoding
 
-PO files should use UTF-8 encoding. Lara Dev respects the charset specified in the PO file headers.
+PO files should use UTF-8 encoding. Lara CLI respects the charset specified in the PO file headers.
 
 ## Related Documentation
 
 - [Supported Formats](./formats.md) - Overview of all supported file formats
 - [Files Configuration](./files.md) - General file configuration options
 - [Instructions](./instructions.md) - How to use translation instructions
-

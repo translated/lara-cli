@@ -6,11 +6,11 @@ Lara Cli automates translation of your i18n files with a single command, preserv
 
 Supports multiple file formats including JSON and PO (gettext). See [Supported Formats](docs/config/formats.md) for details.
 
-[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/translated/lara-dev)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/translated/lara-cli)
 
 </div>
 
-> **⚠️ Clielopment Mode Only:** This tool is currently available in Clielopment mode. The full release is coming soon! 🚀
+> **⚠️ Development Mode Only:** This tool is currently available in Development mode. The full release is coming soon! 🚀
 
 ## 📑 Table of Contents
 
@@ -82,22 +82,22 @@ After running this command, the project will be successfully linked to the pnpm 
 
 ```bash
 /Users/username/Library/pnpm/global/5:
-+ lara-dev version <- ../../../../Projects/translated/lara-dev
++ lara-cli version <- ../../../../Projects/translated/lara-cli
 ```
 
 6. **Installation Complete - Use anywhere**
 
-Now that Lara Dev is installed globally, you can use it from any directory on your system:
+Now that Lara CLI is installed globally, you can use it from any directory on your system:
 
 ```bash
 # Get help with available commands
-lara-dev --help
+lara-cli --help
 
 # Initialize a new Lara project
-lara-dev init --help
+lara-cli init --help
 
 # Translate your localization files
-lara-dev translate --help
+lara-cli translate --help
 ```
 
 **Note:** After making changes to the source code, run `pnpm run build` to update the global command.
@@ -110,7 +110,6 @@ Create a `.env` file (or add the following lines to an existing `.env`) in the p
 
 💡 **Tip:** If you don't have API keys yet, visit [Lara's API key documentation](https://support.laratranslate.com/en/api-key-for-laras-api).
 
-
 ```bash
 LARA_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
 LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
@@ -118,14 +117,14 @@ LARA_ACCESS_KEY_SECRET=<YOUR_ACCESS_KEY_SECRET>
 
 Replace the placeholders with your **actual credentials**.
 
-> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-dev init --reset-credentials` to safely update them in your `.env` file.
+> **🔑 Need to update credentials?** If your API keys expire or need updating, run `lara-cli init --reset-credentials` to safely update them in your `.env` file.
 
 ### Initialize Your Project
 
 In your project directory, run:
 
 ```bash
-lara-dev init
+lara-cli init
 ```
 
 This will start the interactive initialization process.
@@ -153,22 +152,21 @@ Lara's glossary system lets you define exactly how specific terms should be tran
 
 💡 **Tip:** For more information about glossaries, visit [Lara's Glossary documentation](https://support.laratranslate.com/en/how-glossaries-work-in-lara).
 
-### Translate Your Files!
+### Translate Your Files
 
 To translate your files into the target locales, run:
 
 ```bash
-lara-dev translate
+lara-cli translate
 ```
 
 That's it – you're ready to go!
 
 > **📖 Documentation:** For detailed information about commands, see [Init Command](docs/commands/init.md) and [Translate Command](docs/commands/translate.md).
 
-
 ## Technology Stack
 
-Lara Dev is built with modern technologies to ensure reliability, performance, and maintainability:
+Lara CLI is built with modern technologies to ensure reliability, performance, and maintainability:
 
 - **TypeScript** - For type safety and developer experience
 - **Commander.js** - For CLI argument parsing and command structure
@@ -180,21 +178,23 @@ The codebase follows a modular architecture with clear separation of concerns, m
 
 ## Supported Locales
 
-Lara Dev supports translations using different locale codes, following two main standards:
+Lara CLI supports translations using different locale codes, following two main standards:
 
 See the [full list of supported locales](docs/config/locales.md#supported-locales).
 
 ## Documentation
 
-For detailed documentation on using Lara Dev:
+For detailed documentation on using Lara CLI:
 
 ### Commands
+
 - [Init Command](docs/commands/init.md) - Initialize your project
 - [Translate Command](docs/commands/translate.md) - Translate your files
 - [Memory Command](docs/commands/memory.md) - List available Translation Memories
 - [Glossary Command](docs/commands/glossary.md) - List available Glossaries
 
 ### Configuration
+
 - [Configuration Overview](docs/config/README.md) - Configuration system overview
 - [Supported Formats](docs/config/formats.md) - Supported file formats (JSON, PO, etc.)
 - [Locales Configuration](docs/config/locales.md) - Configure source and target languages
@@ -204,4 +204,5 @@ For detailed documentation on using Lara Dev:
 - [Glossaries](docs/config/glossaries.md) - Configure Glossaries
 
 ### Format-Specific Guides
+
 - [PO Files Guide](docs/config/po-files.md) - Complete guide for gettext PO files

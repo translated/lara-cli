@@ -7,12 +7,12 @@ export const Messages = {
     sourceLocaleInTarget: 'Source locale cannot be included in the target locales',
     noTargetLocales:
       'No target locales specified. Please add target locales in config or use -t option.',
-    configNotFound: 'Config file not found. Please run `lara-dev init` to create a config file.',
+    configNotFound: 'Config file not found. Please run `lara-cli init` to create a config file.',
     invalidConfig: (issues: string) => `Invalid configuration file. Issues found:\n${issues}`,
     noApiCredentials:
-      'No API credentials found. Please run `lara-dev init` to set the API credentials.',
+      'No API credentials found. Please run `lara-cli init` to set the API credentials.',
     apiAuthFailed: (context: string) =>
-      `${context}: Authentication failed. Your API credentials are invalid or expired. Run 'lara-dev init --reset-credentials' to update them.`,
+      `${context}: Authentication failed. Your API credentials are invalid or expired. Run 'lara-cli init --reset-credentials' to update them.`,
     serviceUnavailable: (context: string, statusCode: number) =>
       `${context}: Service unavailable (${statusCode}). Please try again later.`,
     translationFailed: (context: string, message: string) =>
@@ -46,7 +46,7 @@ export const Messages = {
 
   success: {
     configCreated:
-      'Config file created successfully! You can run `lara-dev translate` to start translating your files.',
+      'Config file created successfully! You can run `lara-cli translate` to start translating your files.',
     apiCredentialsSet: 'API credentials set successfully',
     localizationCompleted: 'Localization completed! Happy coding!',
     allFilesTranslated: 'All files translated successfully!',
@@ -102,7 +102,7 @@ export const Messages = {
   },
 
   warnings: {
-    noApiCredentials: `No API credentials found on machine. Without API credentials, Lara Dev will not be able to translate your files. You can insert them anytime later by modifying your system environment variables or your .env file. You can find more info at https://support.laratranslate.com/en/about-lara`,
+    noApiCredentials: `No API credentials found on machine. Without API credentials, Lara CLI will not be able to translate your files. You can insert them anytime later by modifying your system environment variables or your .env file. You can find more info at https://support.laratranslate.com/en/about-lara`,
     noMemoriesLinked: (url: string) =>
       `No Translation Memories linked. Visit ${url} to learn more.`,
     noGlossariesLinked: (url: string) => `No Glossaries linked. Visit ${url} to learn more.`,
