@@ -1,5 +1,5 @@
 {
-  "name": "lara-cli",
+  "name": "@translated/lara-cli",
   "type": "module",
   "version": "0.2.1",
   "description": "Lara CLI",
