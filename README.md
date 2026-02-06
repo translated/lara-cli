@@ -34,13 +34,13 @@ Supports multiple file formats including JSON and PO (gettext). See [Supported F
 git clone https://github.com/translated/lara-cli.git
 ```
 
-1. **Navigate to the cloned repository**
+2. **Navigate to the cloned repository**
 
 ```bash
 cd lara-cli
 ```
 
-1. **Install dependencies and build**
+3. **Install dependencies and build**
 
 > **Note:** This project uses pnpm. If you don't have it installed, run: `npm install -g pnpm`. Verify the installation with `pnpm -v` before proceeding with the following commands.
 
@@ -49,7 +49,7 @@ pnpm install
 pnpm run build
 ```
 
-1. **Setup pnpm global bin directory (first time only)**
+4. **Setup pnpm global bin directory (first time only)**
 
 ```bash
 pnpm setup
@@ -70,7 +70,7 @@ esac
 
 Add these lines to your shell profile (`.zshrc`, `.bashrc`, etc.) or restart your terminal to apply the changes. This ensures you can run globally installed pnpm packages.
 
-1. **Link globally**
+5. **Link globally**
 
 ```bash
 pnpm link --global
@@ -85,7 +85,7 @@ After running this command, the project will be successfully linked to the pnpm 
 + lara-cli version <- ../../../../Projects/translated/lara-cli
 ```
 
-1. **Installation Complete - Use anywhere**
+6. **Installation Complete - Use anywhere**
 
 Now that Lara CLI is installed globally, you can use it from any directory on your system:
 
