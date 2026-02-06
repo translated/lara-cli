@@ -10,7 +10,7 @@ Supports multiple file formats including JSON and PO (gettext). See [Supported F
 
 </div>
 
-> **⚠️ Clielopment Mode Only:** This tool is currently available in Clielopment mode. The full release is coming soon! 🚀
+> **⚠️ Development Mode Only:** This tool is currently available in Development mode. The full release is coming soon! 🚀
 
 ## 📑 Table of Contents
 
