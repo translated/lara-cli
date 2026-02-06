@@ -1,10 +1,10 @@
 # Vue Files Configuration
 
-This guide explains how to use Lara Dev with Vue Single File Components (`.vue` files) that contain i18n blocks for internationalization.
+This guide explains how to use Lara CLI with Vue Single File Components (`.vue` files) that contain i18n blocks for internationalization.
 
 ## What are Vue Files?
 
-Vue Single File Components (SFCs) are `.vue` files that contain template, script, and style blocks. Lara Dev supports Vue files that include `<i18n>` blocks for storing translation messages directly within component files.
+Vue Single File Components (SFCs) are `.vue` files that contain template, script, and style blocks. Lara CLI supports Vue files that include `<i18n>` blocks for storing translation messages directly within component files.
 
 This approach is commonly used with:
 
@@ -13,7 +13,7 @@ This approach is commonly used with:
 - Component-scoped translations
 - Vue I18n single-file component support
 
-Lara Dev extracts and manages the JSON content from `<i18n>` blocks in Vue SFC files while preserving the rest of the component structure.
+Lara CLI extracts and manages the JSON content from `<i18n>` blocks in Vue SFC files while preserving the rest of the component structure.
 
 ## Configuration
 
@@ -64,7 +64,7 @@ files:
 
 ### Required Format
 
-Lara Dev expects Vue files to contain an `<i18n>` block with valid JSON:
+Lara CLI expects Vue files to contain an `<i18n>` block with valid JSON:
 
 ```vue
 <template>
@@ -171,7 +171,7 @@ const { t } = useI18n()
 
 ### Nested Structure
 
-Lara Dev supports deeply nested translation structures:
+Lara CLI supports deeply nested translation structures:
 
 ```vue
 <i18n>
@@ -198,11 +198,11 @@ Lara Dev supports deeply nested translation structures:
 </i18n>
 ```
 
-## How Lara Dev Handles Vue Files
+## How Lara CLI Handles Vue Files
 
 ### Automatic Processing
 
-Lara Dev automatically:
+Lara CLI automatically:
 
 - ✅ Extracts the JSON content from `<i18n>` blocks
 - ✅ Preserves the Vue SFC structure (template, script, style blocks)
@@ -231,7 +231,7 @@ The delimiter `/` is used to separate nested keys, and locale prefixes are inclu
 
 ### i18n Block Placement
 
-The `<i18n>` block can be placed anywhere in the Vue file. Lara Dev will:
+The `<i18n>` block can be placed anywhere in the Vue file. Lara CLI will:
 
 - Extract content from existing `<i18n>` blocks
 - Create new `<i18n>` blocks if they don't exist (placed after `</template>` or at the end of the file)
@@ -286,14 +286,14 @@ files:
 
 If you already have Vue files with i18n blocks:
 
-1. **Run `lara-dev init`** to create your configuration
+1. **Run `lara-cli init`** to create your configuration
 2. **Ensure your Vue files contain `<i18n>` blocks with valid JSON**
-3. **Run `lara-dev translate`**
-4. **Continue developing** - Lara Dev tracks changes via checksums and only translates what's new or modified
+3. **Run `lara-cli translate`**
+4. **Continue developing** - Lara CLI tracks changes via checksums and only translates what's new or modified
 
 If your Vue files don't have i18n blocks yet:
 
-1. **Run `lara-dev translate`** - Lara Dev will create `<i18n>` blocks automatically
+1. **Run `lara-cli translate`** - Lara CLI will create `<i18n>` blocks automatically
 2. **The blocks will be added with the appropriate structure**
 
 ## Best Practices
@@ -397,7 +397,7 @@ files:
 
 ### 6. Preserve Component Structure
 
-Lara Dev preserves everything outside the `<i18n>` block. You can safely include:
+Lara CLI preserves everything outside the `<i18n>` block. You can safely include:
 
 - Template markup
 - Script logic (Composition API, Options API)
@@ -454,7 +454,7 @@ const { t } = useI18n()
 
 ### Fallback Content
 
-If Lara Dev needs to create a new i18n block and cannot find an existing one, it will use this fallback:
+If Lara CLI needs to create a new i18n block and cannot find an existing one, it will use this fallback:
 
 ```vue
 <i18n>
@@ -468,12 +468,12 @@ The block will be placed after the `</template>` tag or at the end of the file i
 
 ### i18n Block Not Found
 
-If Lara Dev cannot find the `<i18n>` block:
+If Lara CLI cannot find the `<i18n>` block:
 
 - Ensure your file contains `<i18n>` tags (case-insensitive)
 - Check that the block has both opening `<i18n>` and closing `</i18n>` tags
 - Verify the JSON content inside is valid
-- Lara Dev will create the block automatically if it doesn't exist
+- Lara CLI will create the block automatically if it doesn't exist
 
 ### Invalid JSON in i18n Block
 
@@ -486,7 +486,7 @@ If you get JSON parsing errors:
 
 ### Formatting Changes
 
-Lara Dev preserves your original formatting for non-i18n content. If you notice changes:
+Lara CLI preserves your original formatting for non-i18n content. If you notice changes:
 
 - The i18n block content is formatted with 2-space indentation
 - Template, script, and style blocks remain unchanged
@@ -503,7 +503,7 @@ If translations aren't being applied:
 
 ### Nested Keys
 
-Lara Dev uses `/` as the delimiter for nested keys. When specifying `lockedKeys` or `ignoredKeys`, use this format:
+Lara CLI uses `/` as the delimiter for nested keys. When specifying `lockedKeys` or `ignoredKeys`, use this format:
 
 ```yaml
 lockedKeys:
@@ -516,7 +516,7 @@ lockedKeys:
 
 If a Vue file contains multiple `<i18n>` blocks:
 
-- Lara Dev processes the **first** `<i18n>` block found
+- Lara CLI processes the **first** `<i18n>` block found
 - Subsequent i18n blocks are preserved but not processed
 - Consider consolidating translations into a single i18n block
 

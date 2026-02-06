@@ -1,6 +1,6 @@
 # TS Files Configuration
 
-This guide explains how to use Lara Dev with TypeScript (`.ts`) files, commonly used in Vue.js, React, and other TypeScript/JavaScript applications for internationalization.
+This guide explains how to use Lara CLI with TypeScript (`.ts`) files, commonly used in Vue.js, React, and other TypeScript/JavaScript applications for internationalization.
 
 ## What are TS Files?
 
@@ -12,7 +12,7 @@ TypeScript files are used to store translation messages in JavaScript/TypeScript
 - Next.js applications
 - Any TypeScript/JavaScript project
 
-Lara Dev supports TypeScript files that follow the standard pattern where translations are stored in a `const messages = {...}` object structure.
+Lara CLI supports TypeScript files that follow the standard pattern where translations are stored in a `const messages = {...}` object structure.
 
 ## Configuration
 
@@ -88,7 +88,7 @@ src/i18n/
 
 ### Required Format
 
-Lara Dev expects TypeScript files to follow this structure:
+Lara CLI expects TypeScript files to follow this structure:
 
 ```typescript
 const messages = {
@@ -146,7 +146,7 @@ export default i18n
 
 ### Nested Structure
 
-Lara Dev supports deeply nested translation structures:
+Lara CLI supports deeply nested translation structures:
 
 ```typescript
 const messages = {
@@ -169,11 +169,11 @@ const messages = {
 }
 ```
 
-## How Lara Dev Handles TS Files
+## How Lara CLI Handles TS Files
 
 ### Automatic Processing
 
-Lara Dev automatically:
+Lara CLI automatically:
 
 - ✅ Extracts the `messages` object from your TypeScript file
 - ✅ Preserves the original file structure and formatting
@@ -246,10 +246,10 @@ files:
 
 If you already have TypeScript files with translations:
 
-1. **Run `lara-dev init`** to create your configuration
+1. **Run `lara-cli init`** to create your configuration
 2. **Ensure your file follows the `const messages = {...}` pattern**
-3. **Run `lara-dev translate`**
-4. **Continue developing** - Lara Dev tracks changes via checksums and only translates what's new or modified
+3. **Run `lara-cli translate`**
+4. **Continue developing** - Lara CLI tracks changes via checksums and only translates what's new or modified
 
 ## Best Practices
 
@@ -322,7 +322,7 @@ files:
 
 ### 5. Preserve Code Structure
 
-Lara Dev preserves everything outside the `messages` object. You can safely include:
+Lara CLI preserves everything outside the `messages` object. You can safely include:
 
 - Import statements
 - Type definitions
@@ -366,7 +366,7 @@ export default i18n
 
 ### Fallback Content
 
-If Lara Dev needs to create a new TS file and cannot find an existing one, it will use this fallback:
+If Lara CLI needs to create a new TS file and cannot find an existing one, it will use this fallback:
 
 ```typescript
 const messages = {};
@@ -378,7 +378,7 @@ export default messages;
 
 ### Messages Object Not Found
 
-If Lara Dev cannot find the `messages` object:
+If Lara CLI cannot find the `messages` object:
 
 - Ensure your file contains `const messages =` (exact pattern)
 - Check that the object syntax is valid JavaScript/TypeScript
@@ -386,7 +386,7 @@ If Lara Dev cannot find the `messages` object:
 
 ### Formatting Changes
 
-Lara Dev preserves your original formatting. If you notice changes:
+Lara CLI preserves your original formatting. If you notice changes:
 
 - Ensure your source file is properly formatted
 - The parser uses JSON.stringify with 4-space indentation for the messages object
@@ -402,7 +402,7 @@ If translations aren't being applied:
 
 ### Nested Keys
 
-Lara Dev uses `/` as the delimiter for nested keys. When specifying `lockedKeys` or `ignoredKeys`, use this format:
+Lara CLI uses `/` as the delimiter for nested keys. When specifying `lockedKeys` or `ignoredKeys`, use this format:
 
 ```yaml
 lockedKeys:

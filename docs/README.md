@@ -1,22 +1,22 @@
-# Lara Dev Documentation
+# Lara CLI Documentation
 
-Welcome to the Lara Dev documentation. This guide will help you set up and use Lara Dev to manage your application's internationalization.
+Welcome to the Lara CLI documentation. This guide will help you set up and use Lara CLI to manage your application's internationalization.
 
 ## Overview
 
-Lara Dev is a command-line tool that simplifies the management of your application's internationalization (i18n) files. It automates translation of your i18n JSON files with a single command, preserving structure and formatting while integrating with a professional translation API.
+Lara CLI is a command-line tool that simplifies the management of your application's internationalization (i18n) files. It automates translation of your i18n JSON files with a single command, preserving structure and formatting while integrating with a professional translation API.
 
 ## Getting Started
 
-To get started with Lara Dev, follow these steps:
+To get started with Lara CLI, follow these steps:
 
 1. **Set up your project**: Configure your environment with API credentials
-2. **Initialize your project**: Run `lara-dev init` to create a configuration file
-3. **Translate your files**: Run `lara-dev translate` to process translations
+2. **Initialize your project**: Run `lara-cli init` to create a configuration file
+3. **Translate your files**: Run `lara-cli translate` to process translations
 
 ## Command Reference
 
-Lara Dev provides several commands to manage your internationalization:
+Lara CLI provides several commands to manage your internationalization:
 
 - [Init Command](commands/init.md) - Initialize your project
 - [Translate Command](commands/translate.md) - Translate your files
@@ -25,7 +25,7 @@ Lara Dev provides several commands to manage your internationalization:
 
 ## Configuration Reference
 
-The `lara.yaml` configuration file controls how Lara Dev works with your project:
+The `lara.yaml` configuration file controls how Lara CLI works with your project:
 
 - [Configuration Overview](config/README.md) - Configuration system overview
 - [Supported Formats](config/formats.md) - Supported file formats (JSON, PO, etc.)

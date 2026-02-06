@@ -5,7 +5,7 @@ The `init` command initializes a new Lara project by creating a configuration fi
 ## Usage
 
 ```bash
-lara-dev init [options]
+lara-cli init [options]
 ```
 
 ## Options
@@ -30,10 +30,11 @@ lara-dev init [options]
 Running without `--non-interactive` prompts for information:
 
 ```bash
-lara-dev init
+lara-cli init
 ```
 
 The command guides you through:
+
 - Source locale selection
 - Target locales detection and selection
 - Translation file path configuration
@@ -47,7 +48,7 @@ The command guides you through:
 Generates configuration file using provided options:
 
 ```bash
-lara-dev init --source "en" --target "es, fr" --paths "./src/i18n/[locale].json" --force --non-interactive
+lara-cli init --source "en" --target "es, fr" --paths "./src/i18n/[locale].json" --force --non-interactive
 ```
 
 ## Examples
@@ -55,31 +56,31 @@ lara-dev init --source "en" --target "es, fr" --paths "./src/i18n/[locale].json"
 ### Basic Interactive Initialization
 
 ```bash
-lara-dev init
+lara-cli init
 ```
 
 ### Force Overwrite Existing Configuration
 
 ```bash
-lara-dev init --force
+lara-cli init --force
 ```
 
 ### Specify Source and Target Languages
 
 ```bash
-lara-dev init --source "es" --target "en, fr"
+lara-cli init --source "es" --target "en, fr"
 ```
 
 ### Custom Path Configuration
 
 ```bash
-lara-dev init --paths "src/locales/[locale]/messages.json, public/i18n/[locale].json"
+lara-cli init --paths "src/locales/[locale]/messages.json, public/i18n/[locale].json"
 ```
 
 ### Complete Non-Interactive Setup
 
 ```bash
-lara-dev init --source "en" --target "de, fr, it" \
+lara-cli init --source "en" --target "de, fr, it" \
   --paths "src/i18n/[locale]/common.json" \
   --instruction "E-commerce app, formal tone" \
   --force --non-interactive
@@ -88,12 +89,12 @@ lara-dev init --source "en" --target "de, fr, it" \
 ### Reset API Credentials
 
 ```bash
-lara-dev init --reset-credentials
+lara-cli init --reset-credentials
 ```
 
 ## Related
 
 - [Configuration Reference](../config/README.md)
 - [Translate Command](./translate.md)
-- [Memory Command](./memory.md) 
+- [Memory Command](./memory.md)
 - [Glossary Command](./glossary.md)

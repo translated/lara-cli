@@ -1,6 +1,6 @@
 # Markdown/MDX Files Configuration
 
-This guide explains how to use Lara Dev with Markdown (`.md`) and MDX (`.mdx`) files for internationalization.
+This guide explains how to use Lara CLI with Markdown (`.md`) and MDX (`.mdx`) files for internationalization.
 
 ## Configuration
 
@@ -75,7 +75,7 @@ This matches files like:
 
 ### Basic Structure
 
-Lara Dev extracts text content from markdown files while preserving structure:
+Lara CLI extracts text content from markdown files while preserving structure:
 
 ```markdown
 # Welcome to Our Documentation
@@ -97,7 +97,7 @@ For more information, visit [our website](https://example.com).
 
 ### Supported Markdown Elements
 
-Lara Dev extracts text from:
+Lara CLI extracts text from:
 
 - ✅ Headings (`#`, `##`, `###`, etc.)
 - ✅ Paragraphs
@@ -121,11 +121,11 @@ The following elements are **not** translated and preserved as-is:
 - ❌ URLs (in links and autolinks)
 - ❌ Image alt text (stored as attributes, not extracted)
 
-## How Lara Dev Handles Markdown Files
+## How Lara CLI Handles Markdown Files
 
 ### Automatic Processing
 
-Lara Dev automatically:
+Lara CLI automatically:
 
 - ✅ Extracts text segments from markdown content
 - ✅ Preserves markdown syntax and structure
@@ -137,7 +137,7 @@ Lara Dev automatically:
 
 ### Text Segment Extraction
 
-Lara Dev extracts text segments sequentially and assigns them keys:
+Lara CLI extracts text segments sequentially and assigns them keys:
 
 - `segment_0` - First text segment
 - `segment_1` - Second text segment
@@ -220,16 +220,16 @@ files:
 
 If you already have markdown files organized by locale:
 
-1. **Run `lara-dev init`** to create your configuration
+1. **Run `lara-cli init`** to create your configuration
 2. **Ensure your file paths match the `include` patterns**
-3. **Run `lara-dev translate`**
-4. **Continue developing** - Lara Dev tracks changes via checksums and only translates what's new or modified
+3. **Run `lara-cli translate`**
+4. **Continue developing** - Lara CLI tracks changes via checksums and only translates what's new or modified
 
 If your markdown files aren't organized by locale yet:
 
 1. **Organize files** into locale-based directories or use locale prefixes
 2. **Update your `lara.yaml`** to match your file structure
-3. **Run `lara-dev translate`**
+3. **Run `lara-cli translate`**
 
 ## Best Practices
 

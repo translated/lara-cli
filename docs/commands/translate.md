@@ -5,7 +5,7 @@ The `translate` command processes internationalization files specified in your `
 ## Usage
 
 ```bash
-lara-dev translate [options]
+lara-cli translate [options]
 ```
 
 ## Options
@@ -22,7 +22,7 @@ lara-dev translate [options]
 ### Translate All Configured Locales
 
 ```bash
-lara-dev translate
+lara-cli translate
 ```
 
 Translates content to all target locales specified in your `lara.yaml` configuration file.
@@ -30,49 +30,51 @@ Translates content to all target locales specified in your `lara.yaml` configura
 ### Translate Specific Locales
 
 ```bash
-lara-dev translate --target "es, fr"
+lara-cli translate --target "es, fr"
 ```
 
 ### Force Retranslation of All Content
 
 ```bash
-lara-dev translate --force
+lara-cli translate --force
 ```
 
 ### Force Translation of a Specific Locale
 
 ```bash
-lara-dev translate --target "es" --force
+lara-cli translate --target "es" --force
 ```
 
 ### Translate Specific Files
 
 ```bash
-lara-dev translate --paths "src/i18n/[locale]/common.json"
+lara-cli translate --paths "src/i18n/[locale]/common.json"
 ```
 
 ### Translate Multiple Specific Files
 
 ```bash
-lara-dev translate --paths "src/i18n/[locale]/common.json, src/i18n/[locale]/errors.json"
+lara-cli translate --paths "src/i18n/[locale]/common.json, src/i18n/[locale]/errors.json"
 ```
 
 ### Combine Specific Files and Locales
 
 ```bash
-lara-dev translate --paths "src/i18n/[locale]/common.json" --target "es, fr"
+lara-cli translate --paths "src/i18n/[locale]/common.json" --target "es, fr"
 ```
 
 ## Prerequisites
 
 Before using the translate command:
 
-1. Initialize your project with `lara-dev init`
+1. Initialize your project with `lara-cli init`
 2. Configure API credentials in a `.env` file:
+
    ```
    LARA_ACCESS_KEY_ID=your_access_key_id
    LARA_ACCESS_KEY_SECRET=your_access_key_secret
    ```
+
 3. Create source locale files with content to translate
 
 ## Specifying Files to Translate
@@ -97,19 +99,20 @@ files:
 Use the `--paths` option to translate specific files, overriding the configuration file:
 
 ```bash
-lara-dev translate --paths "src/i18n/[locale]/common.json"
+lara-cli translate --paths "src/i18n/[locale]/common.json"
 ```
 
 **Important**: Paths must include the `[locale]` placeholder, just like in the configuration file.
 
 **Benefits**:
+
 - Translate only the files you're currently working on
 - Faster iteration during development
 - Reduced API costs by translating only what's needed
 
 ## Change Detection
 
-Lara Dev uses checksums to determine what content needs translation:
+Lara CLI uses checksums to determine what content needs translation:
 
 - **First run**: All content is translated
 - **Subsequent runs**: Only changed or new keys are translated
@@ -120,6 +123,7 @@ When you modify source locale files, the tool automatically detects changes and 
 ### When to Use Force Mode
 
 Use `--force` when you need to:
+
 - Retranslate content after updating instructions
 - Apply new Translation Memories or Glossaries to existing content
 - Fix translation errors by regenerating all translations

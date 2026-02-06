@@ -44,9 +44,9 @@ glossaries:
 
 To use Glossaries:
 
-1. **Find available glossaries**: Run `lara-dev glossary` to list available glossaries
+1. **Find available glossaries**: Run `lara-cli glossary` to list available glossaries
 2. **Add to configuration**: Add glossary IDs to the `glossaries` section of `lara.yaml`
-3. **Translate**: When you run `lara-dev translate`, these glossaries will be used automatically
+3. **Translate**: When you run `lara-cli translate`, these glossaries will be used automatically
 
 ## Best Practices
 
@@ -57,6 +57,6 @@ To use Glossaries:
 
 ## Finding Glossary IDs
 
-- Run `lara-dev glossary` to list available Glossaries
+- Run `lara-cli glossary` to list available Glossaries
 - Check the Lara platform dashboard
 - Contact Lara support for assistance

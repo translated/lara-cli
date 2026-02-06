@@ -1,6 +1,6 @@
 # Lara Configuration Overview
 
-Lara Dev uses a configuration file (`lara.yaml`) to define your internationalization settings. This file is created when you run `lara-dev init` and defines how translations are handled in your project.
+Lara CLI uses a configuration file (`lara.yaml`) to define your internationalization settings. This file is created when you run `lara-cli init` and defines how translations are handled in your project.
 
 ## Configuration File Location
 
@@ -32,7 +32,7 @@ files:
 
 ## Supported File Formats
 
-Lara Dev supports multiple file formats. See [Supported Formats](./formats.md) for a complete list and format-specific guides like [PO Files](./po-files.md).
+Lara CLI supports multiple file formats. See [Supported Formats](./formats.md) for a complete list and format-specific guides like [PO Files](./po-files.md).
 
 ## Configuration Sections
 
@@ -52,7 +52,7 @@ The configuration is divided into several sections:
 The simplest way to create a `lara.yaml` file is to run the [init command](../commands/init.md):
 
 ```bash
-lara-dev init
+lara-cli init
 ```
 
 This will guide you through creating your configuration interactively, or you can use command-line options for a non-interactive setup.

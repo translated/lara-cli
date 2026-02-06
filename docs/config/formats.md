@@ -1,6 +1,6 @@
 # Supported File Formats
 
-Lara Dev supports multiple internationalization file formats. The appropriate parser is automatically selected based on the file extension.
+Lara CLI supports multiple internationalization file formats. The appropriate parser is automatically selected based on the file extension.
 
 ## Available Formats
 

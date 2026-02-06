@@ -10,8 +10,8 @@ import memoryCommand from './cli/cmd/memory/memory.js';
 import glossaryCommand from './cli/cmd/glossary/glossary.js';
 
 const program = new Command()
-  .name('lara-dev')
-  .description('Lara Dev')
+  .name('lara-cli')
+  .description('Lara CLI')
   .helpOption('-h, --help', 'Show help')
   .version('0.0.1')
   .addOption(new Option('-y --non-interactive', 'Run in non-interactive mode').default(false))

@@ -1,12 +1,12 @@
 # Android XML Files Configuration
 
-This guide explains how to use Lara Dev with Android XML string resource files (`.xml`), commonly used in Android applications for internationalization.
+This guide explains how to use Lara CLI with Android XML string resource files (`.xml`), commonly used in Android applications for internationalization.
 
 ## What are Android XML Files?
 
-Android XML files are the standard format for storing string resources in Android applications. Lara Dev uses the structure `res/[locale]/strings.xml` where `[locale]` is replaced with the locale code (e.g., `res/en/strings.xml`, `res/es/strings.xml`).
+Android XML files are the standard format for storing string resources in Android applications. Lara CLI uses the structure `res/[locale]/strings.xml` where `[locale]` is replaced with the locale code (e.g., `res/en/strings.xml`, `res/es/strings.xml`).
 
-Lara Dev supports Android XML files that follow the standard Android string resource format, including:
+Lara CLI supports Android XML files that follow the standard Android string resource format, including:
 
 - Simple string resources (`<string>`)
 - Plural resources (`<plurals>`)
@@ -30,11 +30,11 @@ files:
 
 > **Note:** The configuration key is `xml` (matching the file extension), but this parser is specifically designed for Android XML string resource files. Other XML formats are not supported.
 >
-> **Important:** Lara Dev uses `res/[locale]/strings.xml` structure (e.g., `res/en/strings.xml`, `res/es/strings.xml`), not the standard Android `values-[locale]` structure. The `[locale]` placeholder is replaced directly with the locale code.
+> **Important:** Lara CLI uses `res/[locale]/strings.xml` structure (e.g., `res/en/strings.xml`, `res/es/strings.xml`), not the standard Android `values-[locale]` structure. The `[locale]` placeholder is replaced directly with the locale code.
 
 ### File Path Patterns
 
-Android XML files can be configured using the `[locale]` placeholder pattern. Lara Dev uses a simplified structure where the locale code replaces `[locale]` directly in the path.
+Android XML files can be configured using the `[locale]` placeholder pattern. Lara CLI uses a simplified structure where the locale code replaces `[locale]` directly in the path.
 
 #### Standard Structure (Recommended)
 
@@ -82,7 +82,7 @@ files:
 
 ### Required Format
 
-Lara Dev expects Android XML files to follow this structure:
+Lara CLI expects Android XML files to follow this structure:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -206,13 +206,13 @@ Android XML supports XML entities for special characters:
 </resources>
 ```
 
-Lara Dev automatically handles XML entity encoding and decoding.
+Lara CLI automatically handles XML entity encoding and decoding.
 
-## How Lara Dev Handles Android XML Files
+## How Lara CLI Handles Android XML Files
 
 ### Automatic Processing
 
-Lara Dev automatically:
+Lara CLI automatically:
 
 - ✅ Extracts string resources from `<resources>` elements
 - ✅ Preserves the original XML structure and formatting
@@ -256,7 +256,7 @@ files:
 
 ### Resource Order Preservation
 
-Lara Dev preserves the original order of resources in your XML file. Resources are sorted and written back in the same order they appeared in the source file.
+Lara CLI preserves the original order of resources in your XML file. Resources are sorted and written back in the same order they appeared in the source file.
 
 ## Complete Example
 
@@ -307,15 +307,15 @@ files:
 
 If you already have Android XML files with translations:
 
-1. **Run `lara-dev init`** to create your configuration
+1. **Run `lara-cli init`** to create your configuration
 2. **Ensure your file paths match the `include` patterns** (use `[locale]` placeholder)
-3. **Run `lara-dev translate`**
-4. **Continue developing** - Lara Dev tracks changes via checksums and only translates what's new or modified
+3. **Run `lara-cli translate`**
+4. **Continue developing** - Lara CLI tracks changes via checksums and only translates what's new or modified
 
 If your Android XML files don't exist yet:
 
 1. **Create your source locale file** (e.g., `res/en/strings.xml`)
-2. **Run `lara-dev translate`** - Lara Dev will create locale-specific files automatically
+2. **Run `lara-cli translate`** - Lara CLI will create locale-specific files automatically
 3. **The files will be created with the appropriate structure**
 
 ## Limitations
@@ -354,7 +354,7 @@ If your Android XML files don't exist yet:
 
 ### Fallback Content
 
-If Lara Dev needs to create a new Android XML file and cannot find an existing one, it will use this fallback:
+If Lara CLI needs to create a new Android XML file and cannot find an existing one, it will use this fallback:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -366,7 +366,7 @@ If Lara Dev needs to create a new Android XML file and cannot find an existing o
 
 ### Resources Not Found
 
-If Lara Dev cannot find your resources:
+If Lara CLI cannot find your resources:
 
 - Ensure your file contains `<resources>` root element
 - Check that the file path in `lara.yaml` matches your actual file location
@@ -384,7 +384,7 @@ If plural resources aren't being processed correctly:
 
 ### Order Changes
 
-Lara Dev preserves resource order. If you notice changes:
+Lara CLI preserves resource order. If you notice changes:
 
 - Ensure your source XML file is properly formatted
 - The parser maintains the order from the original file
@@ -394,7 +394,7 @@ Lara Dev preserves resource order. If you notice changes:
 
 If special characters aren't displaying correctly:
 
-- Lara Dev automatically handles XML entity encoding/decoding
+- Lara CLI automatically handles XML entity encoding/decoding
 - Ensure your source file uses proper XML entities (`&amp;`, `&quot;`, etc.)
 - The parser converts entities during parsing and re-encodes during serialization
 

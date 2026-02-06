@@ -1,8 +1,8 @@
 {
-  "name": "lara-dev",
+  "name": "lara-cli",
   "type": "module",
   "version": "0.2.1",
-  "description": "Lara Dev",
+  "description": "Lara CLI",
   "main": "index.js",
   "keywords": [
     "laratranslate",
@@ -17,7 +17,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.11.1",
   "bin": {
-    "lara-dev": "./build/index.js"
+    "lara-cli": "./build/index.js"
   },
   "dependencies": {
     "@babel/parser": "^7.28.6",

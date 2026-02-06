@@ -40,7 +40,7 @@ export async function executeCommand(command: Command, args: string[]): Promise<
     // Create a parent command to match the CLI structure
     // The non-interactive flag defaults to false, so we need to explicitly set it
     const parentCommand = new Command()
-      .name('lara-dev')
+      .name('lara-cli')
       .addOption(new Option('-y --non-interactive', 'Run in non-interactive mode').default(false));
     
     // Remove command from its current parent if it has one (to avoid conflicts)
