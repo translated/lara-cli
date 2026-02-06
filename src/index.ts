@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'node:module';
 import { Command, Option } from 'commander';
 import dotenv from 'dotenv';
 
@@ -9,8 +10,9 @@ import initCommand from './cli/cmd/init/init.js';
 import translateCommand from './cli/cmd/translate/translate.js';
 import memoryCommand from './cli/cmd/memory/memory.js';
 import glossaryCommand from './cli/cmd/glossary/glossary.js';
-import packageJson from '../package.json' with { type: 'json' };
 
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json') as { version: string };
 const version = packageJson.version;
 
 const program = new Command()
