@@ -1,0 +1,27 @@
+# Environment variables
+.env
+
+# Build
+build/
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+
+# Lara 
+lara.yaml
+.lara/
+
+# Test files
+i18n-test/
+
+# VSCode files
+.vscode/
+
+# Coverage files
+coverage/
+
+# tmp files
+tmp/

@@ -1,0 +1,311 @@
+import * as fs from 'fs/promises';
+import path from 'path';
+import { glob } from 'glob';
+
+import {
+  AVAILABLE_LOCALES,
+  DEFAULT_EXCLUDED_DIRECTORIES,
+  SUPPORTED_FILE_TYPES,
+} from '#modules/common/common.const.js';
+import { Messages } from '#messages/messages.js';
+import { SearchLocalePathsOptions, SupportedExtensionEnum } from '#modules/common/common.types.js';
+import { VueParser } from '../parsers/vue.parser.js';
+
+const availableLocales: Set<string> = new Set(AVAILABLE_LOCALES);
+
+/**
+ * Checks if the path is relative
+ *
+ * @param path - The path to check.
+ * @returns True if the path is relative, false otherwise.
+ */
+function isRelative(path: string): boolean {
+  return !path.startsWith('/') && !path.startsWith('./') && !path.startsWith('../');
+}
+
+/**
+ * Gets the file extension from the path
+ *
+ * @param path - The path to get the file extension from.
+ * @returns The file extension.
+ */
+function getFileExtension(path: string): string {
+  return path.split('.').pop() ?? '';
+}
+
+/**
+ * Reads a file safely, returning a fallback value if the file does not exist
+ *
+ * @param filePath - The path to the file.
+ * @param fallback - The fallback value to return if the file does not exist.
+ * @returns The file content.
+ */
+async function readSafe(filePath: string, fallback: string = ''): Promise<string> {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Ensures that the directory for the given file path exists
+ * @param filePath - The full path to the file
+ */
+async function ensureDirectoryExists(filePath: string): Promise<void> {
+  const directory = path.dirname(filePath);
+  try {
+    await fs.access(directory);
+  } catch {
+    // Directory doesn't exist, create it recursively
+    await fs.mkdir(directory, { recursive: true });
+  }
+}
+
+/**
+ * Builds a path by replacing the [locale] placeholder with the given locale
+ *
+ * @param path - The path to build. Example: 'src/i18n/[locale].json'
+ * @param locale - The locale to replace the placeholder with. Example: 'en'
+ * @returns The built path. Example: 'src/i18n/en.json'
+ */
+function buildLocalePath(filePath: string, locale: string): string {
+  return filePath.replaceAll('[locale]', locale);
+}
+
+/**
+ * Searches for paths by a pattern
+ *
+ * @param pattern - The pattern to search for. Example: 'src/i18n/[locale].json'
+ * @returns A promise that resolves to an array of paths.
+ *
+ */
+async function searchLocalePathsByPattern(pattern: string): Promise<string[]> {
+  const localePattern = pattern.replaceAll('[locale]', `{${AVAILABLE_LOCALES.join(',')}}`);
+  const paths = await glob(localePattern, {
+    cwd: process.cwd(),
+    ignore: DEFAULT_EXCLUDED_DIRECTORIES.map((dir) => `${dir}/**`),
+  });
+
+  const localePaths: string[] = [];
+
+  for (const path of paths) {
+    const normalizedPath = normalizePath(path);
+    if (normalizedPath !== null) {
+      localePaths.push(normalizedPath);
+    }
+  }
+
+  return Array.from(new Set(localePaths));
+}
+
+/**
+ * Searches and return for paths that are compatible with localisation purposes
+ *
+ * @param options - The options for the search. Example: { source: 'en' }
+ * @param options.source - The source locale to search for. Example: 'en'
+ * @returns {Promise<string[]>} - A promise that resolves to an array of paths. Example:
+ * [
+ *  'src/i18n/[locale].json',
+ * ]
+ */
+async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<string[]> {
+  const { source } = options;
+  const allPaths = await searchPaths();
+
+  const initiallyFilteredPaths = allPaths.filter((path) => {
+    if (path.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+      return true;
+    }
+    if (path.endsWith(SupportedExtensionEnum.VUE)) {
+      return true;
+    }
+    if (path.endsWith(SupportedExtensionEnum.MD) || path.endsWith(SupportedExtensionEnum.MDX)) {
+      return true;
+    }
+    if (path.endsWith(SupportedExtensionEnum.XML)) {
+      return true;
+    }
+    return path.match(buildLocaleRegex([source]));
+  });
+
+  // Check Vue and Markdown files for i18n tags
+  const filteredPaths: string[] = [];
+  const fileChecks = initiallyFilteredPaths.map(async (filePath) => {
+    if (filePath.endsWith(SupportedExtensionEnum.VUE)) {
+      const content = await readSafe(filePath);
+      if (VueParser.hasI18nTag(content)) {
+        return filePath;
+      }
+      return null;
+    }
+    if (
+      filePath.endsWith(SupportedExtensionEnum.MD) ||
+      filePath.endsWith(SupportedExtensionEnum.MDX)
+    ) {
+      return filePath;
+    }
+    if (filePath.endsWith(SupportedExtensionEnum.XML)) {
+      return filePath;
+    }
+    if (
+      filePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`) ||
+      filePath.match(buildLocaleRegex([source]))
+    ) {
+      return filePath;
+    }
+    return null;
+  });
+  const checkedPaths = await Promise.all(fileChecks);
+  for (const p of checkedPaths) {
+    if (p) filteredPaths.push(p);
+  }
+
+  const pathsWithLocales: string[] = [];
+
+  for (const jsonPath of filteredPaths) {
+    const normalizedPath = normalizePath(jsonPath);
+    if (!normalizedPath) {
+      continue;
+    }
+    pathsWithLocales.push(normalizedPath);
+  }
+
+  return Array.from(new Set(pathsWithLocales));
+}
+
+/**
+ * Normalizes the path by replacing the locale with a placeholder.
+ *
+ * @param filePath - The path to normalize.
+ * @returns The normalized path.
+ *
+ * Example: src/i18n/en/pages/home.json -> src/i18n/[locale]/pages/home.json
+ */
+function normalizePath(filePath: string): string | null {
+  const relativeFilePath = path.relative(process.cwd(), filePath);
+
+  if (relativeFilePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+    return relativeFilePath;
+  }
+
+  const parts = relativeFilePath.split('/');
+
+  let currentLocale = '';
+  let normalizedPath = '';
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (!part) {
+      continue;
+    }
+
+    // Handle the last part of the path (filename)
+    if (i === parts.length - 1) {
+      const locale = extractLocaleFromFilename(part);
+      if (!currentLocale && locale && availableLocales.has(locale)) {
+        currentLocale = locale;
+        normalizedPath += part.replace(locale, '[locale]');
+        continue;
+      }
+      normalizedPath += part;
+      continue;
+    }
+
+    // There might be situations where there might be more than one locale in the path.
+    // If the locale is already set, we should treat the other locale as a normal part of the path.
+    //
+    // (e.g.) src/i18n/en/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
+    if (!currentLocale && availableLocales.has(part)) {
+      currentLocale = part;
+    }
+
+    if (part === currentLocale) {
+      normalizedPath += '[locale]/';
+      continue;
+    }
+    normalizedPath += part + '/';
+  }
+
+  if (!currentLocale) {
+    if (
+      normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.VUE) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.MD) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.MDX) ||
+      normalizedPath.endsWith(SupportedExtensionEnum.XML)
+    ) {
+      return normalizedPath;
+    }
+    return null;
+  }
+  return normalizedPath;
+}
+
+/**
+ * Extracts all paths from the current working directory
+ *
+ * @returns A promise that resolves to an array of paths.
+ *
+ * Example:
+ * [
+ *  'src/i18n/en.json',
+ *  'src/i18n/it.json',
+ * ]
+ */
+async function searchPaths(): Promise<string[]> {
+  if (SUPPORTED_FILE_TYPES.length === 0) {
+    throw new Error(Messages.errors.noSupportedFileTypes);
+  }
+
+  // Use simple pattern if only one file type, otherwise use brace expansion
+  const pattern =
+    SUPPORTED_FILE_TYPES.length === 1
+      ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
+      : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
+
+  return glob(pattern, {
+    cwd: process.cwd(),
+    ignore: DEFAULT_EXCLUDED_DIRECTORIES.map((dir) => `${dir}/**`),
+  });
+}
+
+/**
+ * Extracts the locale code from a filename
+ *
+ * @param filename - The filename to extract the locale from. Example: 'en.json' or 'it-IT.json'
+ * @returns The locale code if found, null otherwise. Example: 'en' or 'it-IT'
+ */
+function extractLocaleFromFilename(filename: string): string | null {
+  // Ordered by length descending because we want to match the longest locale first.
+  const sortedLocales = [...AVAILABLE_LOCALES].sort((a, b) => b.length - a.length);
+  const match = filename.match(buildLocaleRegex(sortedLocales));
+
+  if (!match || !match[2]) {
+    return null;
+  }
+
+  return match[2];
+}
+
+/**
+ * Builds a regular expression to match locale codes in text
+ *
+ * @param locales - Array of locale codes to match. Defaults to AVAILABLE_LOCALES if not provided
+ * @returns A RegExp that matches locale codes when they appear as whole words
+ */
+function buildLocaleRegex(locales: string[] = AVAILABLE_LOCALES): RegExp {
+  return new RegExp(`(^|[^a-zA-Z])(${locales.join('|')})(?=[^a-zA-Z]|$)`, 'i');
+}
+
+export {
+  getFileExtension,
+  isRelative,
+  readSafe,
+  ensureDirectoryExists,
+  buildLocalePath,
+  searchLocalePathsByPattern,
+  searchLocalePaths,
+  searchPaths,
+  extractLocaleFromFilename,
+};
