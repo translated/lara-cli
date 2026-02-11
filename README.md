@@ -6,11 +6,9 @@ Lara Cli automates translation of your i18n files with a single command, preserv
 
 Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18n single-file components, Markdown and MDX files, and Android XML string resource files. See [Supported Formats](docs/config/formats.md) for details.
 
-[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/translated/lara-cli)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/translated/lara-cli)
 
 </div>
-
-> **⚠️ Development Mode Only:** This tool is currently available in Development mode. The full release is coming soon! 🚀
 
 ## 📑 Table of Contents
 
