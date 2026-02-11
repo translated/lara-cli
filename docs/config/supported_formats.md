@@ -101,8 +101,6 @@ Each JSON file contains your translations in a nested key-value structure:
 
 ### What is NOT Supported
 
-**Other file formats**: Only `.json` files are supported. Formats like YAML, XML, PO, or properties files are not supported.
-
 **Locale with suffixes or prefixes**: The locale code must be the exact filename (without extension) or directory name, without additional text.
 
 ```
@@ -148,7 +146,7 @@ You don't need to manually exclude these in your configuration.
 
 **Use consistent naming**: Choose one pattern and stick to it across your project.
 
-**Avoid special characters**: Use only alphanumeric characters, es: en.json, translation.json
+**Avoid special characters**: Use only alphanumeric characters, e.g.: en.json, translation.json
 
 **Use relative paths**: Configure paths relative to your project root.
 

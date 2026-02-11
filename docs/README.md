@@ -38,7 +38,6 @@ The `lara.yaml` configuration file controls how Lara CLI works with your project
 
 ## Format-Specific Guides
 
-- [JSON Files Guide](config/files/json-files.md) - Complete guide for JSON files
 - [TS Files Guide](config/files/ts-files.md) - Complete guide for TypeScript files
 - [PO Files Guide](config/files/po-files.md) - Complete guide for gettext PO files
 - [Vue Files Guide](config/files/vue-files.md) - Complete guide for Vue I18n single-file components
