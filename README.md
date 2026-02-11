@@ -14,80 +14,28 @@ Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18
 
 ## 📑 Table of Contents
 
-- [Requirements](#requirements)
-- [Local Development Setup](#local-development-setup)
+- [Installation](#installation)
 - [Setting Up Your Project](#setting-up-your-project)
+- [Local Development Setup](#local-development-setup)
 - [Technology Stack](#technology-stack)
 - [Supported Locales](#supported-locales)
 - [Documentation](#documentation)
 
-## Requirements
+## Installation
+
+### Requirements
 
 - Node.js v18 or higher
-- pnpm v8 or higher
 
-## Local Development Setup
+### Install via npm
 
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/translated/lara-cli.git
-```
-
-2. **Navigate to the cloned repository**
+The easiest way to get started is to install Lara CLI globally via npm:
 
 ```bash
-cd lara-cli
+npm install -g @translated/lara-cli
 ```
 
-3. **Install dependencies and build**
-
-> **Note:** This project uses pnpm. If you don't have it installed, run: `npm install -g pnpm`. Verify the installation with `pnpm -v` before proceeding with the following commands.
-
-```bash
-pnpm install
-pnpm run build
-```
-
-4. **Setup pnpm global bin directory (first time only)**
-
-```bash
-pnpm setup
-```
-
-This command configures your shell to add the pnpm global bin directory to your PATH. After running it, you'll see output similar to:
-
-```bash
-Appended new lines to /Users/<username>/.zshrc
-
-Next configuration changes were made:
-export PNPM_HOME="/Users/<username>/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-```
-
-Add these lines to your shell profile (`.zshrc`, `.bashrc`, etc.) or restart your terminal to apply the changes. This ensures you can run globally installed pnpm packages.
-
-5. **Link globally**
-
-```bash
-pnpm link --global
-```
-
-> **Note:** If you experience an error like `ERR_PNPM_NO_GLOBAL_BIN_DIR`, you may need to manually copy and paste the lines added by `pnpm setup` into your shell profile. After doing so, restart your terminal or source your profile file, and you should be able to proceed.
-
-After running this command, the project will be successfully linked to the pnpm global library. You should see a response similar to:
-
-```bash
-/Users/username/Library/pnpm/global/5:
-+ lara-cli version <- ../../../../Projects/translated/lara-cli
-```
-
-6. **Installation Complete - Use anywhere**
-
-Now that Lara CLI is installed globally, you can use it from any directory on your system:
+Once installed, you can use it from any directory:
 
 ```bash
 # Get help with available commands
@@ -99,8 +47,6 @@ lara-cli init --help
 # Translate your localization files
 lara-cli translate --help
 ```
-
-**Note:** After making changes to the source code, run `pnpm run build` to update the global command.
 
 ## Setting Up Your Project
 
@@ -163,6 +109,89 @@ lara-cli translate
 That's it – you're ready to go!
 
 > **📖 Documentation:** For detailed information about commands, see [Init Command](docs/commands/init.md) and [Translate Command](docs/commands/translate.md).
+
+## Local Development Setup
+
+If you want to contribute to Lara CLI or run it from source, follow these steps.
+
+### Requirements
+
+- Node.js v18 or higher
+- pnpm v8 or higher
+
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/translated/lara-cli.git
+```
+
+2. **Navigate to the cloned repository**
+
+```bash
+cd lara-cli
+```
+
+3. **Install dependencies and build**
+
+> **Note:** This project uses pnpm. If you don't have it installed, run: `npm install -g pnpm`. Verify the installation with `pnpm -v` before proceeding with the following commands.
+
+```bash
+pnpm install
+pnpm run build
+```
+
+4. **Setup pnpm global bin directory (first time only)**
+
+```bash
+pnpm setup
+```
+
+This command configures your shell to add the pnpm global bin directory to your PATH. After running it, you'll see output similar to:
+
+```bash
+Appended new lines to /Users/<username>/.zshrc
+
+Next configuration changes were made:
+export PNPM_HOME="/Users/<username>/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+```
+
+Add these lines to your shell profile (`.zshrc`, `.bashrc`, etc.) or restart your terminal to apply the changes. This ensures you can run globally installed pnpm packages.
+
+5. **Link globally**
+
+```bash
+pnpm link --global
+```
+
+> **Note:** If you experience an error like `ERR_PNPM_NO_GLOBAL_BIN_DIR`, you may need to manually copy and paste the lines added by `pnpm setup` into your shell profile. After doing so, restart your terminal or source your profile file, and you should be able to proceed.
+
+After running this command, the project will be successfully linked to the pnpm global library. You should see a response similar to:
+
+```bash
+/Users/username/Library/pnpm/global/5:
++ lara-cli version <- ../../../../Projects/translated/lara-cli
+```
+
+6. **Development Complete - Use anywhere**
+
+Now that Lara CLI is linked globally, you can use it from any directory on your system:
+
+```bash
+# Get help with available commands
+lara-cli --help
+
+# Initialize a new Lara project
+lara-cli init --help
+
+# Translate your localization files
+lara-cli translate --help
+```
+
+**Note:** After making changes to the source code, run `pnpm run build` to update the global command.
 
 ## Technology Stack
 
