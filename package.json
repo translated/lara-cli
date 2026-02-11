@@ -1,0 +1,90 @@
+{
+  "name": "@translated/lara-cli",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "CLI tool for automated i18n file translation using Lara Translate",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/translated/lara-cli"
+  },
+  "main": "./build/index.js",
+  "keywords": [
+    "laratranslate",
+    "lara",
+    "localization",
+    "translation",
+    "ai",
+    "translate",
+    "translated"
+  ],
+  "author": {
+    "name": "Lara Translate",
+    "email": "info@laratranslate.com"
+  },
+  "license": "ISC",
+  "packageManager": "pnpm@10.11.1",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "lara-cli": "./build/index.js"
+  },
+  "files": [
+    "build",
+    "!build/__tests__"
+  ],
+  "dependencies": {
+    "@babel/parser": "^7.28.6",
+    "@babel/traverse": "^7.28.6",
+    "@babel/types": "^7.28.6",
+    "@inquirer/core": "^10.3.2",
+    "@inquirer/prompts": "^7.10.1",
+    "@translated/lara": "^1.7.1",
+    "commander": "^14.0.2",
+    "dotenv": "^17.2.3",
+    "fast-xml-parser": "^5.3.3",
+    "flat": "^6.0.1",
+    "gettext-parser": "^8.0.0",
+    "glob": "^11.1.0",
+    "ora": "^8.2.0",
+    "picomatch": "^4.0.3",
+    "remark": "^15.0.1",
+    "remark-gfm": "^4.0.1",
+    "string-width": "^8.1.0",
+    "unist-util-visit": "^5.0.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.5"
+  },
+  "imports": {
+    "#utils/*": "./build/utils/*",
+    "#modules/*": "./build/modules/*",
+    "#cli/*": "./build/cli/*",
+    "#messages/*": "./build/messages/*"
+  },
+  "scripts": {
+    "build": "rm -rf build && npx tsc",
+    "start": "rm -rf build && npx tsc && node build/index.js",
+    "lint": "npx eslint src/**/*.ts",
+    "lint:fix": "npx eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/gettext-parser": "^8.0.0",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^24.10.8",
+    "@types/picomatch": "^4.0.2",
+    "@vitest/coverage-v8": "^4.0.17",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.0",
+    "vitest": "^4.0.17"
+  }
+}

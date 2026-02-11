@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+
+    "outDir": "build",
+    "rootDir": "src",
+    "removeComments": true,
+
+    // Module resolution
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "baseUrl": "./",
+    "paths": {
+      "#utils/*": ["src/utils/*"],
+      "#modules/*": ["src/modules/*"],
+      "#cli/*": ["src/cli/*"],
+      "#messages/*": ["src/messages/*"]
+    },
+
+    // Source Map
+    "sourceMap": true,
+    "sourceRoot": "/",
+
+    // Strict Checks
+    "alwaysStrict": false,
+    "allowUnreachableCode": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    // Linter Checks
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "resolveJsonModule": true,
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "build"]
+}
