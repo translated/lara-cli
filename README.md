@@ -205,4 +205,8 @@ For detailed documentation on using Lara CLI:
 
 ### Format-Specific Guides
 
-- [PO Files Guide](docs/config/po-files.md) - Complete guide for gettext PO files
+- [TS Files Guide](docs/config/files/ts-files.md) - Complete guide for TypeScript files
+- [PO Files Guide](docs/config/files/po-files.md) - Complete guide for gettext PO files
+- [Vue Files Guide](docs/config/files/vue-files.md) - Complete guide for Vue I18n single-file components
+- [Markdown Files Guide](docs/config/files/md-files.md) - Complete guide for Markdown and MDX files
+- [Android XML Files Guide](docs/config/files/android-xml-files.md) - Complete guide for Android XML string resource files
