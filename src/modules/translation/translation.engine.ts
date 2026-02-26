@@ -173,21 +173,22 @@ export class TranslationEngine {
       const entries = (
         await Promise.all(
           Object.entries(changelog)
-            .filter(([key]) => !this.isIgnored(key))
+            .filter(([key]) => !this.isIgnored(TranslationEngine.toUserKey(key)))
             .map(async ([key, value]) => {
+              const userKey = TranslationEngine.toUserKey(key);
               const state = value.state;
               const sourceValue = value.value;
               const targetValue = target[key];
 
               // If the key is locked, we should NOT elaborate it and therefore return the source value
-              if (this.isLocked(key)) {
+              if (this.isLocked(userKey)) {
                 return [key, sourceValue];
               }
 
               // If the target value does not exists or the forceTranslation flag is set, we should always translate the source value
               if (!targetValue || this.forceTranslation) {
                 const translatedValue = await this.translateKey(
-                  key,
+                  userKey,
                   sourceValue,
                   this.sourceLocale,
                   targetLocale
@@ -213,7 +214,7 @@ export class TranslationEngine {
               }
 
               const translatedValue = await this.translateKey(
-                key,
+                userKey,
                 sourceValue,
                 this.sourceLocale,
                 targetLocale
@@ -242,7 +243,7 @@ export class TranslationEngine {
   }
 
   private async translateKey(
-    key: string,
+    userKey: string,
     value: unknown,
     sourceLocale: string,
     targetLocale: string
@@ -258,7 +259,7 @@ export class TranslationEngine {
     }
 
     const textBlocks: TextBlock[] = [{ text: value, translatable: true }];
-    const instruction = this.getInstructionForKey(key);
+    const instruction = this.getInstructionForKey(userKey);
 
     const options: TranslateOptions = {
       instructions: instruction ? [instruction] : undefined,
@@ -281,14 +282,20 @@ export class TranslationEngine {
     return lastTranslation.text;
   }
 
-  private isIgnored(key: string): boolean {
-    const matchKey = key.replaceAll('\0', '/');
-    return this.ignoredPatterns.some((pattern) => pattern(matchKey));
+  /**
+   * Converts an internal flattened key (using \0 delimiter) to a user-facing
+   * key path (using "/" delimiter) for pattern matching against user config.
+   */
+  private static toUserKey(key: string): string {
+    return key.replaceAll('\0', '/');
   }
 
-  private isLocked(key: string): boolean {
-    const matchKey = key.replaceAll('\0', '/');
-    return this.lockedPatterns.some((pattern) => pattern(matchKey));
+  private isIgnored(userKey: string): boolean {
+    return this.ignoredPatterns.some((pattern) => pattern(userKey));
+  }
+
+  private isLocked(userKey: string): boolean {
+    return this.lockedPatterns.some((pattern) => pattern(userKey));
   }
 
   /**
@@ -299,22 +306,20 @@ export class TranslationEngine {
    * 3. File instruction
    * 4. Project instruction
    *
-   * @param key - The translation key path
+   * @param userKey - The user-facing translation key path (using "/" delimiter)
    * @returns Instruction string or undefined
    */
-  private getInstructionForKey(key: string): string | undefined {
-    const matchKey = key.replaceAll('\0', '/');
-
+  private getInstructionForKey(userKey: string): string | undefined {
     // Priority 1: File-specific key instructions (highest)
     for (const { matcher, instruction } of this.fileKeyInstructionPatterns) {
-      if (matcher(matchKey)) {
+      if (matcher(userKey)) {
         return instruction;
       }
     }
 
     // Priority 2: Global key instructions
     for (const { matcher, instruction } of this.globalKeyInstructionPatterns) {
-      if (matcher(matchKey)) {
+      if (matcher(userKey)) {
         return instruction;
       }
     }
