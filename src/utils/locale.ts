@@ -24,7 +24,7 @@ async function extractLocalesFromFile(
     const locales = new Set<string>();
 
     for (const key of Object.keys(parsed)) {
-      const root = key.split('/')[0];
+      const root = key.split('\0')[0];
       if (root && availableLocales.has(root) && (!filterOutLocale || root !== filterOutLocale)) {
         locales.add(root);
       }

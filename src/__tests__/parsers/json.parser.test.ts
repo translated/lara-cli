@@ -20,14 +20,14 @@ describe('JsonParser', () => {
       const content = '{"dashboard": {"title": "Dashboard"}}';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'dashboard/title': 'Dashboard' });
+      expect(result).toEqual({ 'dashboard\0title': 'Dashboard' });
     });
 
     it('should flatten deeply nested objects', () => {
       const content = '{"level1": {"level2": {"level3": {"key": "value"}}}}';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'level1/level2/level3/key': 'value' });
+      expect(result).toEqual({ 'level1\0level2\0level3\0key': 'value' });
     });
 
     it('should flatten arrays', () => {
@@ -35,9 +35,9 @@ describe('JsonParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'items/0': 'item1',
-        'items/1': 'item2',
-        'items/2': 'item3',
+        'items\x000': 'item1',
+        'items\x001': 'item2',
+        'items\x002': 'item3',
       });
     });
 
@@ -47,9 +47,9 @@ describe('JsonParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'dashboard/title': 'Dashboard',
-        'dashboard/content/0': 'content 1',
-        'dashboard/content/1': 'content 2',
+        'dashboard\0title': 'Dashboard',
+        'dashboard\0content\x000': 'content 1',
+        'dashboard\0content\x001': 'content 2',
       });
     });
 
@@ -108,9 +108,9 @@ describe('JsonParser', () => {
         number: 123,
         boolean: true,
         null: null,
-        'array/0': 1,
-        'array/1': 2,
-        'object/nested': 'value',
+        'array\x000': 1,
+        'array\x001': 2,
+        'object\0nested': 'value',
       });
     });
 
@@ -125,7 +125,7 @@ describe('JsonParser', () => {
       const content = '{"parent": {"child": {}}}';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'parent/child': {} });
+      expect(result).toEqual({ 'parent\0child': {} });
     });
 
     it('should handle arrays with objects', () => {
@@ -133,8 +133,8 @@ describe('JsonParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'users/0/name': 'John',
-        'users/1/name': 'Jane',
+        'users\x000\0name': 'John',
+        'users\x001\0name': 'Jane',
       });
     });
 
@@ -170,6 +170,42 @@ describe('JsonParser', () => {
 
       expect(reparsed).toEqual(JSON.parse(original));
     });
+
+    it('should preserve keys containing forward slashes', () => {
+      const content = JSON.stringify({
+        moderation_categories: {
+          harassment: 'Harassment',
+          'harassment/threatening': 'Harassment/Threatening',
+          'self-harm': 'Self-Harm',
+          'self-harm/intent': 'Self-Harm/Intent',
+        },
+      });
+      const result = parser.parse(content);
+
+      expect(result).toEqual({
+        'moderation_categories\0harassment': 'Harassment',
+        'moderation_categories\0harassment/threatening': 'Harassment/Threatening',
+        'moderation_categories\0self-harm': 'Self-Harm',
+        'moderation_categories\0self-harm/intent': 'Self-Harm/Intent',
+      });
+    });
+
+    it('should round-trip keys containing forward slashes through parse and serialize', () => {
+      const original = {
+        moderation_categories: {
+          harassment: 'Molestie',
+          'harassment/threatening': 'Molestie/Minacce',
+          'self-harm': 'Autolesionismo',
+          'self-harm/intent': 'Autolesionismo/Intento',
+        },
+      };
+      const content = JSON.stringify(original);
+      const flattened = parser.parse(content);
+      const serialized = parser.serialize(flattened, { indentation: 2, trailingNewline: '\n' });
+      const reparsed = JSON.parse(serialized);
+
+      expect(reparsed).toEqual(original);
+    });
   });
 
   describe('serialize', () => {
@@ -182,7 +218,7 @@ describe('JsonParser', () => {
     });
 
     it('should unflatten and serialize nested objects', () => {
-      const data = { 'dashboard/title': 'Dashboard' };
+      const data = { 'dashboard\0title': 'Dashboard' };
       const options = { indentation: 2, trailingNewline: '\n' };
       const result = parser.serialize(data, options);
 
@@ -191,9 +227,9 @@ describe('JsonParser', () => {
 
     it('should unflatten and serialize arrays', () => {
       const data = {
-        'items/0': 'item1',
-        'items/1': 'item2',
-        'items/2': 'item3',
+        'items\x000': 'item1',
+        'items\x001': 'item2',
+        'items\x002': 'item3',
       };
       const options = { indentation: 2, trailingNewline: '\n' };
       const result = parser.serialize(data, options);
@@ -245,10 +281,10 @@ describe('JsonParser', () => {
 
     it('should serialize complex nested structure', () => {
       const data = {
-        'dashboard/title': 'Dashboard',
-        'dashboard/content/0': 'content 1',
-        'dashboard/content/1': 'content 2',
-        'settings/theme': 'dark',
+        'dashboard\0title': 'Dashboard',
+        'dashboard\0content\x000': 'content 1',
+        'dashboard\0content\x001': 'content 2',
+        'settings\0theme': 'dark',
       };
       const options = { indentation: 2, trailingNewline: '\n' };
       const result = parser.serialize(data, options);
@@ -292,8 +328,8 @@ describe('JsonParser', () => {
 
     it('should handle arrays with objects', () => {
       const data = {
-        'users/0/name': 'John',
-        'users/1/name': 'Jane',
+        'users\x000\0name': 'John',
+        'users\x001\0name': 'Jane',
       };
       const options = { indentation: 2, trailingNewline: '\n' };
       const result = parser.serialize(data, options);

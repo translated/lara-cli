@@ -11,7 +11,7 @@ const traverse = traverseModule.default || traverseModule;
 
 export class TsParser implements Parser<Record<string, unknown>, TsParserOptionsType> {
   private readonly fallbackContent = 'const messages = {};\n\nexport default messages;';
-  private delimiter = '/';
+  private delimiter = '\0';
 
   parse(content: string | Buffer, options?: TsParserOptionsType): Record<string, unknown> {
     const strContent = content.toString();

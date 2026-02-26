@@ -23,7 +23,7 @@ import { deepMerge } from '#utils/parser.js';
  */
 export class VueParser implements Parser<Record<string, unknown>, VueParserOptionsType> {
   private readonly fallbackContent = '<i18n>\n{}\n</i18n>';
-  private delimiter = '/';
+  private delimiter = '\0';
 
   parse(content: string | Buffer, options?: VueParserOptionsType): Record<string, unknown> {
     const strContent = content.toString();
