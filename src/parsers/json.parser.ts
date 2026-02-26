@@ -18,7 +18,7 @@ import type { JsonParserOptionsType } from './parser.types.js';
  */
 export class JsonParser implements Parser<Record<string, unknown>, JsonParserOptionsType> {
   private readonly fallbackContent: string = '{}';
-  private delimiter: string = '/';
+  private delimiter: string = '\0';
 
   /**
    * Parses a JSON string and returns a flattened object.

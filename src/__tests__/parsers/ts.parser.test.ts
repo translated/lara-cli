@@ -22,7 +22,7 @@ describe('TsParser', () => {
         'const messages = { dashboard: { title: "Dashboard" } };\n\nexport default messages;';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'dashboard/title': 'Dashboard' });
+      expect(result).toEqual({ 'dashboard\0title': 'Dashboard' });
     });
 
     it('should flatten deeply nested objects', () => {
@@ -30,7 +30,7 @@ describe('TsParser', () => {
         'const messages = { level1: { level2: { level3: { key: "value" } } } };\n\nexport default messages;';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'level1/level2/level3/key': 'value' });
+      expect(result).toEqual({ 'level1\0level2\0level3\0key': 'value' });
     });
 
     it('should flatten arrays', () => {
@@ -39,9 +39,9 @@ describe('TsParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'items/0': 'item1',
-        'items/1': 'item2',
-        'items/2': 'item3',
+        'items\x000': 'item1',
+        'items\x001': 'item2',
+        'items\x002': 'item3',
       });
     });
 
@@ -51,9 +51,9 @@ describe('TsParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'dashboard/title': 'Dashboard',
-        'dashboard/content/0': 'content 1',
-        'dashboard/content/1': 'content 2',
+        'dashboard\0title': 'Dashboard',
+        'dashboard\0content\x000': 'content 1',
+        'dashboard\0content\x001': 'content 2',
       });
     });
 
@@ -114,9 +114,9 @@ describe('TsParser', () => {
         number: 123,
         boolean: true,
         nullValue: null,
-        'array/0': 1,
-        'array/1': 2,
-        'object/nested': 'value',
+        'array\x000': 1,
+        'array\x001': 2,
+        'object\0nested': 'value',
       });
     });
 
@@ -131,7 +131,7 @@ describe('TsParser', () => {
       const content = 'const messages = { parent: { child: {} } };\n\nexport default messages;';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'parent/child': {} });
+      expect(result).toEqual({ 'parent\0child': {} });
     });
 
     it('should handle arrays with objects', () => {
@@ -140,8 +140,8 @@ describe('TsParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'users/0/name': 'John',
-        'users/1/name': 'Jane',
+        'users\x000\0name': 'John',
+        'users\x001\0name': 'Jane',
       });
     });
 
@@ -192,7 +192,7 @@ describe('TsParser', () => {
         'const messages = { en: { dashboard: { title: "Dashboard" } }, es: { dashboard: { title: "Panel" } } };\n\nexport default messages;';
       const result = parser.parse(content, { targetLocale: 'en' } as any);
 
-      expect(result).toEqual({ 'dashboard/title': 'Dashboard' });
+      expect(result).toEqual({ 'dashboard\0title': 'Dashboard' });
     });
 
     it('should handle exact locale match in targetLocale', () => {
@@ -212,6 +212,34 @@ describe('TsParser', () => {
       expect(result).not.toHaveProperty('es');
       expect(result).not.toHaveProperty('fr');
     });
+
+    it('should preserve keys containing forward slashes', () => {
+      const content =
+        'const messages = { moderation: { harassment: "Harassment", "harassment/threatening": "Harassment/Threatening" } };\n\nexport default messages;';
+      const result = parser.parse(content);
+
+      expect(result).toEqual({
+        'moderation\0harassment': 'Harassment',
+        'moderation\0harassment/threatening': 'Harassment/Threatening',
+      });
+    });
+
+    it('should round-trip keys containing forward slashes through parse and serialize', () => {
+      const originalContent =
+        'const messages = { moderation: { harassment: "Harassment", "harassment/threatening": "Harassment/Threatening" } };\n\nexport default messages;';
+      const parsed = parser.parse(originalContent);
+      const serialized = parser.serialize(parsed, { originalContent } as unknown as TsParserOptionsType);
+
+      const resultStr = serialized.toString();
+      const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
+      const reparsed = JSON.parse(match?.[1] || '{}');
+      expect(reparsed).toEqual({
+        moderation: {
+          harassment: 'Harassment',
+          'harassment/threatening': 'Harassment/Threatening',
+        },
+      });
+    });
   });
 
   describe('serialize', () => {
@@ -229,7 +257,7 @@ describe('TsParser', () => {
     it('should unflatten and serialize nested objects', () => {
       const originalContent =
         'const messages = { dashboard: { title: "Dashboard" } };\n\nexport default messages;';
-      const data = { 'dashboard/title': 'New Dashboard' };
+      const data = { 'dashboard\0title': 'New Dashboard' };
       const result = parser.serialize(data, { originalContent } as unknown as TsParserOptionsType);
 
       const resultStr = result.toString();
@@ -299,7 +327,7 @@ describe('TsParser', () => {
       const originalContent =
         'const messages = { en: { dashboard: { title: "Dashboard", subtitle: "Welcome" } }, es: { dashboard: { title: "Panel", subtitle: "Bienvenido" } } };\n\nexport default messages;';
       // subtitle was removed from source
-      const data = { 'dashboard/title': 'Dashboard' };
+      const data = { 'dashboard\0title': 'Dashboard' };
       const result = parser.serialize(data, { originalContent, targetLocale: 'en' });
 
       const resultStr = result.toString();
@@ -314,9 +342,9 @@ describe('TsParser', () => {
     it('should handle arrays in serialization', () => {
       const originalContent = 'const messages = {};\n\nexport default messages;';
       const data = {
-        'items/0': 'item1',
-        'items/1': 'item2',
-        'items/2': 'item3',
+        'items\x000': 'item1',
+        'items\x001': 'item2',
+        'items\x002': 'item3',
       };
       const result = parser.serialize(data, { originalContent } as unknown as TsParserOptionsType);
 
@@ -329,10 +357,10 @@ describe('TsParser', () => {
     it('should handle complex nested structure', () => {
       const originalContent = 'const messages = {};\n\nexport default messages;';
       const data = {
-        'dashboard/title': 'Dashboard',
-        'dashboard/content/0': 'content 1',
-        'dashboard/content/1': 'content 2',
-        'settings/theme': 'dark',
+        'dashboard\0title': 'Dashboard',
+        'dashboard\0content\x000': 'content 1',
+        'dashboard\0content\x001': 'content 2',
+        'settings\0theme': 'dark',
       };
       const result = parser.serialize(data, { originalContent } as unknown as TsParserOptionsType);
 

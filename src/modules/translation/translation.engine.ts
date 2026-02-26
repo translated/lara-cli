@@ -282,11 +282,13 @@ export class TranslationEngine {
   }
 
   private isIgnored(key: string): boolean {
-    return this.ignoredPatterns.some((pattern) => pattern(key));
+    const matchKey = key.replaceAll('\0', '/');
+    return this.ignoredPatterns.some((pattern) => pattern(matchKey));
   }
 
   private isLocked(key: string): boolean {
-    return this.lockedPatterns.some((pattern) => pattern(key));
+    const matchKey = key.replaceAll('\0', '/');
+    return this.lockedPatterns.some((pattern) => pattern(matchKey));
   }
 
   /**
@@ -301,16 +303,18 @@ export class TranslationEngine {
    * @returns Instruction string or undefined
    */
   private getInstructionForKey(key: string): string | undefined {
+    const matchKey = key.replaceAll('\0', '/');
+
     // Priority 1: File-specific key instructions (highest)
     for (const { matcher, instruction } of this.fileKeyInstructionPatterns) {
-      if (matcher(key)) {
+      if (matcher(matchKey)) {
         return instruction;
       }
     }
 
     // Priority 2: Global key instructions
     for (const { matcher, instruction } of this.globalKeyInstructionPatterns) {
-      if (matcher(key)) {
+      if (matcher(matchKey)) {
         return instruction;
       }
     }
