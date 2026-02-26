@@ -452,6 +452,27 @@ describe('locale utils', () => {
       expect(pathUtils.readSafe).not.toHaveBeenCalled();
     });
 
+    it('extractLocaleFromPath should skip non-i18n .ts files even with locale directory components', async () => {
+      const source = 'en';
+      const filePaths = ['src/en/foo.ts', 'src/fr/bar.ts'];
+      vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
+
+      const result = await extractLocaleFromPath(source);
+
+      expect(result).toEqual([]);
+      expect(pathUtils.readSafe).not.toHaveBeenCalled();
+    });
+
+    it('extractAllLocalesFromProject should skip non-i18n .ts files even with locale directory components', async () => {
+      const filePaths = ['src/en/foo.ts', 'src/fr/bar.ts'];
+      vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
+
+      const result = await extractAllLocalesFromProject();
+
+      expect(result).toEqual([]);
+      expect(pathUtils.readSafe).not.toHaveBeenCalled();
+    });
+
     it('extractLocaleFromPath should still parse i18n.ts files', async () => {
       const source = 'en';
       const filePaths = ['src/locales/i18n.ts'];

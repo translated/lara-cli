@@ -63,6 +63,10 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
       continue;
     }
 
+    if (filePath.endsWith(`.${SupportedExtensionEnum.TS}`)) {
+      continue;
+    }
+
     const relativeFilePath = path.relative(process.cwd(), filePath);
     const parts = relativeFilePath.split('/');
 
@@ -120,6 +124,10 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
       for (const locale of locales) {
         foundLocales.add(locale);
       }
+      continue;
+    }
+
+    if (filePath.endsWith(`.${SupportedExtensionEnum.TS}`)) {
       continue;
     }
 
