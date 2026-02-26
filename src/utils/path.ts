@@ -113,20 +113,20 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
   const { source } = options;
   const allPaths = await searchPaths();
 
-  const initiallyFilteredPaths = allPaths.filter((path) => {
-    if (path.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+  const initiallyFilteredPaths = allPaths.filter((p) => {
+    if (path.basename(p) === `i18n.${SupportedExtensionEnum.TS}`) {
       return true;
     }
-    if (path.endsWith(SupportedExtensionEnum.VUE)) {
+    if (p.endsWith(SupportedExtensionEnum.VUE)) {
       return true;
     }
-    if (path.endsWith(SupportedExtensionEnum.MD) || path.endsWith(SupportedExtensionEnum.MDX)) {
+    if (p.endsWith(SupportedExtensionEnum.MD) || p.endsWith(SupportedExtensionEnum.MDX)) {
       return true;
     }
-    if (path.endsWith(SupportedExtensionEnum.XML)) {
+    if (p.endsWith(SupportedExtensionEnum.XML)) {
       return true;
     }
-    return path.match(buildLocaleRegex([source]));
+    return p.match(buildLocaleRegex([source]));
   });
 
   // Check Vue and Markdown files for i18n tags
@@ -149,7 +149,7 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
       return filePath;
     }
     if (
-      filePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`) ||
+      path.basename(filePath) === `i18n.${SupportedExtensionEnum.TS}` ||
       filePath.match(buildLocaleRegex([source]))
     ) {
       return filePath;
@@ -185,7 +185,7 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
 function normalizePath(filePath: string): string | null {
   const relativeFilePath = path.relative(process.cwd(), filePath);
 
-  if (relativeFilePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+  if (path.basename(relativeFilePath) === `i18n.${SupportedExtensionEnum.TS}`) {
     return relativeFilePath;
   }
 
@@ -229,7 +229,7 @@ function normalizePath(filePath: string): string | null {
 
   if (!currentLocale) {
     if (
-      normalizedPath.includes(`i18n.${SupportedExtensionEnum.TS}`) ||
+      path.basename(normalizedPath) === `i18n.${SupportedExtensionEnum.TS}` ||
       normalizedPath.endsWith(SupportedExtensionEnum.VUE) ||
       normalizedPath.endsWith(SupportedExtensionEnum.MD) ||
       normalizedPath.endsWith(SupportedExtensionEnum.MDX) ||

@@ -47,7 +47,7 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
   const targetLocales: Set<string> = new Set();
 
   for (const filePath of paths) {
-    if (filePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+    if (path.basename(filePath) === `i18n.${SupportedExtensionEnum.TS}`) {
       const locales = await extractLocalesFromFile(filePath, source);
       for (const locale of locales) {
         targetLocales.add(locale);
@@ -111,7 +111,7 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
   const foundLocales: Set<string> = new Set();
 
   for (const filePath of paths) {
-    if (filePath.endsWith(`i18n.${SupportedExtensionEnum.TS}`)) {
+    if (path.basename(filePath) === `i18n.${SupportedExtensionEnum.TS}`) {
       const locales = await extractLocalesFromFile(filePath);
       for (const locale of locales) {
         foundLocales.add(locale);
