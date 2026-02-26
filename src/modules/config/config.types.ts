@@ -1,5 +1,7 @@
 import { z } from 'zod/v4';
 
+import { basename } from 'path';
+
 import { LocalesEnum, SupportedExtensionEnum, SupportedFileTypesEnum } from '../common/common.types.js';
 import { SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { getFileExtension, isRelative } from '#utils/path.js';
@@ -24,7 +26,7 @@ const IncludeFilePath = z
       const hasFilenamePattern = new RegExp(
         `[^/]*\\[locale\\][^/]*\\.(${SUPPORTED_FILE_TYPES.join('|')})$`
       ).test(path);
-      const isI18nFile = path.endsWith(`i18n.${SupportedExtensionEnum.TS}`);
+      const isI18nFile = basename(path) === `i18n.${SupportedExtensionEnum.TS}`;
       const isVueFile = path.endsWith(SupportedExtensionEnum.VUE);
 
       return hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile;

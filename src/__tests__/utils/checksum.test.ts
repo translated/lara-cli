@@ -44,13 +44,13 @@ describe('checksum utils', () => {
         parse: vi.fn().mockReturnValue(fileContent),
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      const result = calculateChecksum(mockFileName, mockParser as any, '');
+      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
 
       expect(result).toEqual({
         key1: { value: 'value1', state: 'new' },
@@ -84,12 +84,12 @@ describe('checksum utils', () => {
         },
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
       vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
 
-      const result = calculateChecksum(mockFileName, mockParser as any, '');
+      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
 
       expect(result).toEqual({
         key1: { value: 'value1', state: 'unchanged' },
@@ -123,13 +123,13 @@ describe('checksum utils', () => {
         },
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
       vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      const result = calculateChecksum(mockFileName, mockParser as any, '');
+      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
 
       expect(result).toEqual({
         key1: { value: 'newvalue1', state: 'updated' },
@@ -149,7 +149,7 @@ describe('checksum utils', () => {
         parse: vi.fn().mockReturnValue(fileContent),
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       // File doesn't exist - this will trigger file creation
       // Note: if cachedChecksumFile is already set, existsSync won't be called in getChecksumFile
       // but updateChecksum will still call writeFileSync
@@ -158,7 +158,7 @@ describe('checksum utils', () => {
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      calculateChecksum(uniqueFileName, mockParser as any, '');
+      calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
 
       // Verify that writeFileSync was called (for updating checksums when changed is true)
       expect(fs.writeFileSync).toHaveBeenCalled();
@@ -178,7 +178,7 @@ describe('checksum utils', () => {
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      calculateChecksum(mockFileName, mockParser as any, '');
+      calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
 
       expect(ParserFactory).not.toHaveBeenCalled();
       expect(mockParser.parse).toHaveBeenCalledWith(expect.any(String), { targetLocale: '' });
@@ -193,15 +193,15 @@ describe('checksum utils', () => {
         parse: vi.fn().mockReturnValue(fileContent),
       };
 
-      vi.mocked(ParserFactory).mockImplementation(function (this: any) {
-        return mockParser as any;
-      } as any);
+      vi.mocked(ParserFactory).mockImplementation(function () {
+        return mockParser as unknown;
+      } as unknown as () => void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('file content');
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      calculateChecksum(mockFileName, null as any, '');
+      calculateChecksum(mockFileName, null as unknown as ParserFactory, '');
 
       expect(ParserFactory).toHaveBeenCalledWith(mockFileName);
       expect(mockParser.parse).toHaveBeenCalledWith('file content', { targetLocale: '' });
@@ -216,13 +216,13 @@ describe('checksum utils', () => {
         parse: vi.fn().mockReturnValue(fileContent),
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('file content');
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      calculateChecksum(mockFileName, mockParser as any, 'en');
+      calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, 'en');
 
       expect(mockParser.parse).toHaveBeenCalledWith('file content', { targetLocale: 'en' });
     });
@@ -234,13 +234,13 @@ describe('checksum utils', () => {
         parse: vi.fn().mockReturnValue(fileContent),
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      const result = calculateChecksum(mockFileName, mockParser as any, '');
+      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
 
       expect(result).toEqual({});
       expect(fs.writeFileSync).not.toHaveBeenCalled();
@@ -270,13 +270,13 @@ describe('checksum utils', () => {
         },
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
       vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      const result = calculateChecksum(uniqueFileName, mockParser as any, '');
+      const result = calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
 
       expect(result).toEqual({
         key1: { value: 'value1', state: 'new' },
@@ -296,13 +296,13 @@ describe('checksum utils', () => {
         parse: vi.fn().mockReturnValue(fileContent),
       };
 
-      vi.mocked(ParserFactory).mockImplementation(() => mockParser as any);
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      const result = calculateChecksum(uniqueFileName, mockParser as any, '');
+      const result = calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
 
       // Verify that object values are handled correctly
       expect(result.key1).toBeDefined();

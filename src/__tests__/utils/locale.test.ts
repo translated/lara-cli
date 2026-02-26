@@ -13,6 +13,10 @@ vi.mock('path', () => ({
       }
       return to;
     }),
+    basename: vi.fn((filePath: string) => {
+      const parts = filePath.split('/');
+      return parts[parts.length - 1] || '';
+    }),
   },
 }));
 
@@ -47,7 +51,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.extractLocaleFromFilename)
         .mockReturnValueOnce('en')
@@ -73,7 +77,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: mockParse,
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
 
@@ -96,7 +100,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
@@ -118,7 +122,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
@@ -139,7 +143,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
@@ -183,8 +187,8 @@ describe('locale utils', () => {
         .mockResolvedValueOnce(fileContent);
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
-          parse: vi.fn().mockReturnValue({ en: { greeting: 'Hello, world!' } }) as any,
-        } as any;
+          parse: vi.fn().mockReturnValue({ en: { greeting: 'Hello, world!' } }) as unknown,
+        } as unknown;
       });
 
       const result = await extractLocaleFromPath(source);
@@ -246,7 +250,7 @@ describe('locale utils', () => {
           throw new Error('Parse error');
         }),
       };
-      vi.mocked(ParserFactory).mockReturnValue(mockParser as any);
+      vi.mocked(ParserFactory).mockReturnValue(mockParser as unknown as void);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
 
       const result = await extractLocaleFromPath(source);
@@ -274,7 +278,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(['src/i18n.ts']);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
@@ -295,7 +299,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(['src/i18n.ts']);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
@@ -307,8 +311,8 @@ describe('locale utils', () => {
   });
 
   describe('extractAllLocalesFromProject', () => {
-    it('should extract all locales from .ts files', async () => {
-      const filePaths = ['src/components/Component.ts'];
+    it('should extract all locales from i18n.ts files', async () => {
+      const filePaths = ['src/i18n.ts'];
       const fileContent = 'const messages = { "en": {"key": "value1"}, "it": {"key": "value2"} }';
       const parsedContent = {
         en: { key: 'value1' },
@@ -317,7 +321,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
@@ -337,7 +341,7 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent),
-        } as any;
+        } as unknown;
       });
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
@@ -361,12 +365,12 @@ describe('locale utils', () => {
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent1),
-        } as any;
+        } as unknown;
       });
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(parsedContent2),
-        } as any;
+        } as unknown;
       });
       const result = await extractAllLocalesFromProject();
       expect(result).toContain('en');
@@ -393,7 +397,7 @@ describe('locale utils', () => {
       };
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
-      vi.mocked(ParserFactory).mockReturnValue(mockParser as any);
+      vi.mocked(ParserFactory).mockReturnValue(mockParser as unknown as void);
 
       const result = await extractAllLocalesFromProject();
 
@@ -401,18 +405,99 @@ describe('locale utils', () => {
     });
 
     it('should handle readSafe errors gracefully', async () => {
-      const filePaths = ['src/components/Component.ts'];
+      const filePaths = ['src/i18n.ts'];
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockRejectedValue(new Error('File not found'));
       vi.mocked(ParserFactory).mockImplementation(function () {
         return {
           parse: vi.fn().mockReturnValue(undefined),
-        } as any;
+        } as unknown;
       });
 
       const result = await extractAllLocalesFromProject();
 
       expect(result).toEqual([]);
+    });
+
+    it('should skip non-i18n .ts files', async () => {
+      const filePaths = ['src/components/Component.ts', 'src/utils/helper.ts'];
+      vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
+      vi.mocked(pathUtils.readSafe).mockResolvedValue('export const foo = "bar"');
+      vi.mocked(ParserFactory).mockImplementation(function () {
+        return {
+          parse: vi.fn().mockReturnValue({}),
+        } as unknown;
+      });
+
+      const result = await extractAllLocalesFromProject();
+
+      expect(result).toEqual([]);
+      expect(pathUtils.readSafe).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('non-i18n TS file filtering', () => {
+    it('extractLocaleFromPath should skip non-i18n .ts files', async () => {
+      const source = 'en';
+      const filePaths = ['src/components/Component.ts', 'src/utils/helper.ts'];
+      vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
+      vi.mocked(pathUtils.readSafe).mockResolvedValue('export type Foo = { bar: string }');
+      vi.mocked(ParserFactory).mockImplementation(function () {
+        return {
+          parse: vi.fn().mockImplementation(() => {
+            throw new Error('Missing initializer in const declaration');
+          }),
+        } as unknown;
+      });
+
+      const result = await extractLocaleFromPath(source);
+
+      expect(result).toEqual([]);
+      expect(pathUtils.readSafe).not.toHaveBeenCalled();
+    });
+
+    it('extractLocaleFromPath should skip non-i18n .ts files even with locale directory components', async () => {
+      const source = 'en';
+      const filePaths = ['src/en/foo.ts', 'src/fr/bar.ts'];
+      vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
+
+      const result = await extractLocaleFromPath(source);
+
+      expect(result).toEqual([]);
+      expect(pathUtils.readSafe).not.toHaveBeenCalled();
+    });
+
+    it('extractAllLocalesFromProject should skip non-i18n .ts files even with locale directory components', async () => {
+      const filePaths = ['src/en/foo.ts', 'src/fr/bar.ts'];
+      vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
+
+      const result = await extractAllLocalesFromProject();
+
+      expect(result).toEqual([]);
+      expect(pathUtils.readSafe).not.toHaveBeenCalled();
+    });
+
+    it('extractLocaleFromPath should still parse i18n.ts files', async () => {
+      const source = 'en';
+      const filePaths = ['src/locales/i18n.ts'];
+      const fileContent = 'const messages = { "en": {"key": "value1"}, "fr": {"key": "value2"} }';
+      const parsedContent = {
+        en: { key: 'value1' },
+        fr: { key: 'value2' },
+      };
+      vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
+      vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
+      vi.mocked(ParserFactory).mockImplementation(function () {
+        return {
+          parse: vi.fn().mockReturnValue(parsedContent),
+        } as unknown;
+      });
+
+      const result = await extractLocaleFromPath(source);
+
+      expect(result).toContain('fr');
+      expect(result).not.toContain('en');
+      expect(pathUtils.readSafe).toHaveBeenCalledWith(filePaths[0]);
     });
   });
 });

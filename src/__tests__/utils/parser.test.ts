@@ -156,7 +156,7 @@ describe('parser utils', () => {
     });
 
     it('should handle null target', () => {
-      const target = null as any;
+      const target = null as unknown as Record<string, unknown>;
       const source = { a: 1, b: 2 };
       const result = deepMerge(target, source);
 
@@ -165,7 +165,7 @@ describe('parser utils', () => {
 
     it('should return source when source is null', () => {
       const target = { a: 1, b: 2 };
-      const source = null as any;
+      const source = null as unknown as Record<string, unknown>;
       const result = deepMerge(target, source);
 
       // Implementation returns source when source is null or not an object
@@ -173,7 +173,7 @@ describe('parser utils', () => {
     });
 
     it('should handle non-object target', () => {
-      const target = 'not an object' as any;
+      const target = 'not an object' as unknown as Record<string, unknown>;
       const source = { a: 1, b: 2 };
       const result = deepMerge(target, source);
 

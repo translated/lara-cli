@@ -22,7 +22,7 @@ describe('VueParser', () => {
         '<template><div>Hello</div></template>\n<i18n>\n{"dashboard": {"title": "Dashboard"}}\n</i18n>';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'dashboard/title': 'Dashboard' });
+      expect(result).toEqual({ 'dashboard\0title': 'Dashboard' });
     });
 
     it('should flatten deeply nested objects', () => {
@@ -30,7 +30,7 @@ describe('VueParser', () => {
         '<template></template>\n<i18n>\n{"level1": {"level2": {"level3": {"key": "value"}}}}\n</i18n>';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'level1/level2/level3/key': 'value' });
+      expect(result).toEqual({ 'level1\0level2\0level3\0key': 'value' });
     });
 
     it('should flatten arrays', () => {
@@ -39,9 +39,9 @@ describe('VueParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'items/0': 'item1',
-        'items/1': 'item2',
-        'items/2': 'item3',
+        'items\x000': 'item1',
+        'items\x001': 'item2',
+        'items\x002': 'item3',
       });
     });
 
@@ -51,9 +51,9 @@ describe('VueParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'dashboard/title': 'Dashboard',
-        'dashboard/content/0': 'content 1',
-        'dashboard/content/1': 'content 2',
+        'dashboard\0title': 'Dashboard',
+        'dashboard\0content\x000': 'content 1',
+        'dashboard\0content\x001': 'content 2',
       });
     });
 
@@ -114,9 +114,9 @@ describe('VueParser', () => {
         number: 123,
         boolean: true,
         null: null,
-        'array/0': 1,
-        'array/1': 2,
-        'object/nested': 'value',
+        'array\x000': 1,
+        'array\x001': 2,
+        'object\0nested': 'value',
       });
     });
 
@@ -131,7 +131,7 @@ describe('VueParser', () => {
       const content = '<template></template>\n<i18n>\n{"parent": {"child": {}}}\n</i18n>';
       const result = parser.parse(content);
 
-      expect(result).toEqual({ 'parent/child': {} });
+      expect(result).toEqual({ 'parent\0child': {} });
     });
 
     it('should handle arrays with objects', () => {
@@ -140,8 +140,8 @@ describe('VueParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        'users/0/name': 'John',
-        'users/1/name': 'Jane',
+        'users\x000\0name': 'John',
+        'users\x001\0name': 'Jane',
       });
     });
 
@@ -197,7 +197,7 @@ describe('VueParser', () => {
         '<template></template>\n<i18n>\n{"en": {"dashboard": {"title": "Dashboard"}}, "es": {"dashboard": {"title": "Panel"}}}\n</i18n>';
       const result = parser.parse(content, { targetLocale: 'en' } as VueParserOptionsType);
 
-      expect(result).toEqual({ 'dashboard/title': 'Dashboard' });
+      expect(result).toEqual({ 'dashboard\0title': 'Dashboard' });
     });
 
     it('should handle exact locale match in targetLocale', () => {
@@ -265,7 +265,7 @@ describe('VueParser', () => {
     it('should unflatten and serialize nested objects', () => {
       const originalContent =
         '<template></template>\n<i18n>\n{"dashboard": {"title": "Dashboard"}}\n</i18n>';
-      const data = { 'dashboard/title': 'New Dashboard' };
+      const data = { 'dashboard\0title': 'New Dashboard' };
       const result = parser.serialize(data, { originalContent } as VueParserOptionsType);
 
       const resultStr = result.toString();
@@ -344,7 +344,7 @@ describe('VueParser', () => {
       const originalContent =
         '<template></template>\n<i18n>\n{"en": {"dashboard": {"title": "Dashboard", "subtitle": "Welcome"}}, "es": {"dashboard": {"title": "Panel", "subtitle": "Bienvenido"}}}\n</i18n>';
       // subtitle was removed from source
-      const data = { 'dashboard/title': 'Dashboard' };
+      const data = { 'dashboard\0title': 'Dashboard' };
       const result = parser.serialize(data, {
         originalContent,
         targetLocale: 'en',
@@ -362,9 +362,9 @@ describe('VueParser', () => {
     it('should handle arrays in serialization', () => {
       const originalContent = '<template></template>\n<i18n>\n{}\n</i18n>';
       const data = {
-        'items/0': 'item1',
-        'items/1': 'item2',
-        'items/2': 'item3',
+        'items\x000': 'item1',
+        'items\x001': 'item2',
+        'items\x002': 'item3',
       };
       const result = parser.serialize(data, { originalContent } as VueParserOptionsType);
 
@@ -377,10 +377,10 @@ describe('VueParser', () => {
     it('should handle complex nested structure', () => {
       const originalContent = '<template></template>\n<i18n>\n{}\n</i18n>';
       const data = {
-        'dashboard/title': 'Dashboard',
-        'dashboard/content/0': 'content 1',
-        'dashboard/content/1': 'content 2',
-        'settings/theme': 'dark',
+        'dashboard\0title': 'Dashboard',
+        'dashboard\0content\x000': 'content 1',
+        'dashboard\0content\x001': 'content 2',
+        'settings\0theme': 'dark',
       };
       const result = parser.serialize(data, { originalContent } as VueParserOptionsType);
 

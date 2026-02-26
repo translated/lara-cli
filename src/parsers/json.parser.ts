@@ -8,17 +8,20 @@ import type { JsonParserOptionsType } from './parser.types.js';
  * This parser converts nested JSON structures into flat key-value pairs and vice versa,
  * making it easier to work with translations and other hierarchical data.
  *
+ * Uses a null byte (\0) as the internal delimiter for flattened keys to avoid
+ * conflicts with literal "/" characters in translation key names.
+ *
  * @example
  * const parser = new JsonParser();
  * const flattened = parser.parse('{"dashboard": {"title": "Dashboard"}}');
- * // Returns: { "dashboard/title": "Dashboard" }
+ * // Returns: { "dashboard\0title": "Dashboard" }
  *
  * const json = parser.serialize(flattened);
  * // Returns: '{"dashboard": {"title": "Dashboard"}}'
  */
 export class JsonParser implements Parser<Record<string, unknown>, JsonParserOptionsType> {
   private readonly fallbackContent: string = '{}';
-  private delimiter: string = '/';
+  private delimiter: string = '\0';
 
   /**
    * Parses a JSON string and returns a flattened object.
@@ -36,11 +39,11 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    *   }
    * }
    *
-   * Output:
+   * Output (using \0 as delimiter):
    * {
-   *   "dashboard/title": "Dashboard",
-   *   "dashboard/content/0": "content 1",
-   *   "dashboard/content/1": "content 2",
+   *   "dashboard\0title": "Dashboard",
+   *   "dashboard\0content\00": "content 1",
+   *   "dashboard\0content\01": "content 2",
    * }
    */
   parse(content: string): Record<string, unknown> {
@@ -56,11 +59,11 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    * @returns The JSON string with formatting applied
    *
    * @example
-   * Input:
+   * Input (using \0 as delimiter):
    * {
-   *   "dashboard/title": "Dashboard",
-   *   "dashboard/content/0": "content 1",
-   *   "dashboard/content/1": "content 2",
+   *   "dashboard\0title": "Dashboard",
+   *   "dashboard\0content\00": "content 1",
+   *   "dashboard\0content\01": "content 2",
    * }
    *
    * Output:
