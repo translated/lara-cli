@@ -406,13 +406,13 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         const value = str['#text'] ?? '';
 
         const escapedName = this.escapeTextContent(String(name));
-        const escapedValue = this.escapeTextContent(value);
-        
+        const escapedValue = this.escapeTextContent(String(value));
+
         let attrs = `name="${escapedName}"`;
         if (translatable === 'false') {
           attrs += ` translatable="false"`;
         }
-        
+
         lines.push(`${indent}<string ${attrs}>${escapedValue}</string>`);
       } else if (entry.type === 'plurals') {
         const plural = entry.resource;
@@ -432,7 +432,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
           const value = item['#text'] ?? '';
 
           const escapedQuantity = this.escapeTextContent(String(quantity));
-          const escapedValue = this.escapeTextContent(value);
+          const escapedValue = this.escapeTextContent(String(value));
           
           lines.push(`${indent}${indent}<item quantity="${escapedQuantity}">${escapedValue}</item>`);
         }
@@ -458,7 +458,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         for (const item of items) {
           // Handle both object format ({'#text': 'value'}) and string format ('value')
           const value = typeof item === 'string' ? item : (item['#text'] ?? '');
-          const escapedValue = this.escapeTextContent(value);
+          const escapedValue = this.escapeTextContent(String(value));
           
           lines.push(`${indent}${indent}<item>${escapedValue}</item>`);
         }
