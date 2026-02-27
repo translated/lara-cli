@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TsParser } from '../../parsers/ts.parser.js';
 import type { TsParserOptionsType } from '../../parsers/parser.types.js';
+import { NUMERIC_KEY_MARKER } from '#utils/parser.js';
 
 describe('TsParser', () => {
   let parser: TsParser;
@@ -162,8 +163,8 @@ describe('TsParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        '\x02123': 'value',
-        '\x02456': 'value2',
+        [`${NUMERIC_KEY_MARKER}123`]: 'value',
+        [`${NUMERIC_KEY_MARKER}456`]: 'value2',
       });
     });
 
