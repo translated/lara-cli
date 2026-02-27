@@ -1,7 +1,7 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { VueParserOptionsType } from './parser.types.js';
-import { deepMerge } from '#utils/parser.js';
+import { deepMerge, markNumericKeyObjects, restoreNumericKeys } from '#utils/parser.js';
 
 /**
  * Vue Single File Component parser that extracts and manages i18n blocks.
@@ -41,7 +41,8 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       return {};
     }
 
-    const flattened = flat(messagesObj, { delimiter: this.delimiter }) as Record<string, unknown>;
+    const marked = markNumericKeyObjects(messagesObj);
+    const flattened = flat(marked, { delimiter: this.delimiter }) as Record<string, unknown>;
 
     if (options?.targetLocale) {
       const localePrefix = options.targetLocale + this.delimiter;
@@ -92,7 +93,9 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       dataToMerge = prefixed;
     }
 
-    const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter }) as Record<string, unknown>;
+    const unflattenedData = restoreNumericKeys(
+      unflat(dataToMerge, { delimiter: this.delimiter })
+    ) as Record<string, unknown>;
 
     // If a locale is specified, replace that locale's content entirely (to handle key removal)
     // Otherwise, merge with existing messages

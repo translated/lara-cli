@@ -1,7 +1,7 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { TsParserOptionsType } from './parser.types.js';
-import { deepMerge } from '#utils/parser.js';
+import { deepMerge, markNumericKeyObjects, restoreNumericKeys } from '#utils/parser.js';
 import { parse } from '@babel/parser';
 import traverseModule from '@babel/traverse';
 import * as t from '@babel/types';
@@ -21,8 +21,9 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
       return {};
     }
 
-    // Flatten the whole object
-    const flattened = flat(messagesObj, { delimiter: this.delimiter }) as Record<string, unknown>;
+    // Mark numeric keys and flatten the whole object
+    const marked = markNumericKeyObjects(messagesObj);
+    const flattened = flat(marked, { delimiter: this.delimiter }) as Record<string, unknown>;
 
     // If a specific locale is requested, filter and unprefix
     if (options?.targetLocale) {
@@ -65,10 +66,9 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
       dataToMerge = prefixed;
     }
 
-    const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter }) as Record<
-      string,
-      unknown
-    >;
+    const unflattenedData = restoreNumericKeys(
+      unflat(dataToMerge, { delimiter: this.delimiter })
+    ) as Record<string, unknown>;
 
     // If a locale is specified, replace that locale's content entirely (to handle key removal)
     // Otherwise, merge with existing messages
