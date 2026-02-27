@@ -160,4 +160,4 @@ function resetChecksumCache() {
   cachedChecksumFile = null;
 }
 
-export { calculateChecksum, resetChecksumCache };
+export { calculateChecksum, resetChecksumCache, ChecksumState };
