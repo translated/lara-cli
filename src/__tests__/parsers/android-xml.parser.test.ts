@@ -930,6 +930,37 @@ describe('AndroidXmlParser', () => {
     });
   });
 
+  describe('falsy value handling', () => {
+    it('should parse numeric zero string value correctly', () => {
+      const content = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="zero">0</string>
+    <string name="hello">Hello</string>
+</resources>`;
+      const result = parser.parse(content);
+
+      expect(result).toEqual({
+        zero: 0,
+        hello: 'Hello',
+      });
+    });
+
+    it('should round-trip serialize data with falsy values', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="zero">0</string>
+    <string name="empty">text</string>
+</resources>`;
+      const data = {
+        zero: 0,
+        empty: '',
+      };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+      expect(result).toContain('<string name="zero">0</string>');
+      expect(result).toContain('<string name="empty"></string>');
+    });
+  });
+
   describe('getFallback', () => {
     it('should return default XML structure', () => {
       const result = parser.getFallback();

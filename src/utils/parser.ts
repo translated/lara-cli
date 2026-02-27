@@ -81,9 +81,9 @@ export function deepMerge(
   const output = { ...target };
   for (const key in source) {
     if (Object.prototype.hasOwnProperty.call(source, key)) {
-      // If both target and source values are arrays, merge them
-      if (Array.isArray(target[key]) && Array.isArray(source[key])) {
-        output[key] = [...(target[key] as unknown[]), ...(source[key] as unknown[])];
+      // If source value is an array, replace target (don't concatenate)
+      if (Array.isArray(source[key])) {
+        output[key] = source[key];
         continue;
       }
       // If both are plain objects, deep merge them

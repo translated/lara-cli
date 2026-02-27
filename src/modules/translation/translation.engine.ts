@@ -174,6 +174,7 @@ export class TranslationEngine {
         await Promise.all(
           Object.entries(changelog)
             .filter(([key]) => !this.isIgnored(TranslationEngine.toUserKey(key)))
+            .filter(([, value]) => value.state !== 'deleted')
             .map(async ([key, value]) => {
               const userKey = TranslationEngine.toUserKey(key);
               const state = value.state;

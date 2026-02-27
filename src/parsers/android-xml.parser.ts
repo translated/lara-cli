@@ -151,7 +151,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         // Skip non-translatable strings
         if (str['@_translatable'] === 'false') continue;
 
-        const value = str['#text'] || '';
+        const value = str['#text'] ?? '';
         translations[name] = value;
       }
     }
@@ -169,7 +169,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         for (const item of items) {
           const quantity = item['@_quantity'];
           if (!quantity) continue;
-          const value = item['#text'] || '';
+          const value = item['#text'] ?? '';
           const key = `${name}/${quantity}`;
           translations[key] = value;
         }
@@ -194,7 +194,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
           const item = items[i];
           if (item === undefined) continue;
           // Handle both object format ({'#text': 'value'}) and string format ('value')
-          const value = typeof item === 'string' ? item : (item['#text'] || '');
+          const value = typeof item === 'string' ? item : (item['#text'] ?? '');
           const key = `${name}/${i}`;
           translations[key] = value;
         }
@@ -290,7 +290,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         if (str['@_translatable'] === 'false') continue;
 
         if (data[name] !== undefined) {
-          str['#text'] = String(data[name] || '');
+          str['#text'] = String(data[name] ?? '');
         }
       }
     }
@@ -308,7 +308,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
           if (!quantity) continue;
           const key = `${name}/${quantity}`;
           if (data[key] !== undefined) {
-            item['#text'] = String(data[key] || '');
+            item['#text'] = String(data[key] ?? '');
           }
         }
       }
@@ -336,15 +336,15 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
             // Handle both object format and string format
             if (typeof item === 'string') {
               // Convert string to object format
-              items[i] = { '#text': String(data[key] || '') };
+              items[i] = { '#text': String(data[key] ?? '') };
             } else if (item && typeof item === 'object') {
-              item['#text'] = String(data[key] || '');
+              item['#text'] = String(data[key] ?? '');
             }
           }
         }
         // Update the items array back to the stringArray
         if (items.length > 0) {
-          stringArray.item = items.length === 1 ? items[0] : items;
+          stringArray.item = items;
         }
       }
     }
@@ -403,8 +403,8 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         const str = entry.resource;
         const name = str['@_name'];
         const translatable = str['@_translatable'];
-        const value = str['#text'] || '';
-        
+        const value = str['#text'] ?? '';
+
         const escapedName = this.escapeTextContent(String(name));
         const escapedValue = this.escapeTextContent(value);
         
@@ -429,7 +429,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
           const quantity = item['@_quantity'];
           if (!quantity) continue;
           
-          const value = item['#text'] || '';
+          const value = item['#text'] ?? '';
 
           const escapedQuantity = this.escapeTextContent(String(quantity));
           const escapedValue = this.escapeTextContent(value);
@@ -457,7 +457,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         
         for (const item of items) {
           // Handle both object format ({'#text': 'value'}) and string format ('value')
-          const value = typeof item === 'string' ? item : (item['#text'] || '');
+          const value = typeof item === 'string' ? item : (item['#text'] ?? '');
           const escapedValue = this.escapeTextContent(value);
           
           lines.push(`${indent}${indent}<item>${escapedValue}</item>`);

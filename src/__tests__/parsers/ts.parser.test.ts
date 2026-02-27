@@ -448,6 +448,22 @@ describe('TsParser', () => {
     });
   });
 
+  describe('brace counting in string context', () => {
+    it('should round-trip values containing braces without corruption', () => {
+      const originalContent =
+        'const messages = { en: { greeting: "Hello {name}, you have {count} items" } };\n\nexport default messages;';
+      const parsed = parser.parse(originalContent, { targetLocale: 'en' } as any);
+
+      expect(parsed).toEqual({ greeting: 'Hello {name}, you have {count} items' });
+
+      const serialized = parser.serialize(parsed, { originalContent, targetLocale: 'en' });
+      const resultStr = serialized.toString();
+      const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
+      const reparsed = JSON.parse(match?.[1] || '{}');
+      expect(reparsed.en.greeting).toBe('Hello {name}, you have {count} items');
+    });
+  });
+
   describe('getFallback', () => {
     it('should return default TypeScript template', () => {
       const result = parser.getFallback();
