@@ -162,8 +162,8 @@ describe('TsParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        '123': 'value',
-        '456': 'value2',
+        '\x02123': 'value',
+        '\x02456': 'value2',
       });
     });
 
@@ -428,6 +428,22 @@ describe('TsParser', () => {
       const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
       const parsed = JSON.parse(match?.[1] || '{}');
       expect(parsed).toEqual({ key: 'value' });
+    });
+  });
+
+  describe('numeric string keys preservation', () => {
+    it('should round-trip objects with numeric string keys without converting to arrays', () => {
+      const originalContent =
+        'const messages = { product: { "0": { title: "Multi-BM Ecosystem" }, "1": { title: "Bulk Campaign Launcher" } } };\n\nexport default messages;';
+      const parsed = parser.parse(originalContent);
+      const serialized = parser.serialize(parsed, { originalContent } as unknown as TsParserOptionsType);
+
+      const resultStr = serialized.toString();
+      const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
+      const reparsed = JSON.parse(match?.[1] || '{}');
+      expect(reparsed.product).not.toBeInstanceOf(Array);
+      expect(reparsed.product['0']).toEqual({ title: 'Multi-BM Ecosystem' });
+      expect(reparsed.product['1']).toEqual({ title: 'Bulk Campaign Launcher' });
     });
   });
 

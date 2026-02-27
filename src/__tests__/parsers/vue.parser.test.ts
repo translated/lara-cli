@@ -511,6 +511,22 @@ describe('VueParser', () => {
     });
   });
 
+  describe('numeric string keys preservation', () => {
+    it('should round-trip objects with numeric string keys without converting to arrays', () => {
+      const originalContent =
+        '<template></template>\n<i18n>\n{"product": {"0": {"title": "Multi-BM Ecosystem"}, "1": {"title": "Bulk Campaign Launcher"}}}\n</i18n>';
+      const parsed = parser.parse(originalContent);
+      const serialized = parser.serialize(parsed, { originalContent } as VueParserOptionsType);
+
+      const resultStr = serialized.toString();
+      const i18nMatch = resultStr.match(/<i18n[^>]*>([\s\S]*?)<\/i18n>/i);
+      const reparsed = JSON.parse(i18nMatch?.[1]?.trim() || '{}');
+      expect(reparsed.product).not.toBeInstanceOf(Array);
+      expect(reparsed.product['0']).toEqual({ title: 'Multi-BM Ecosystem' });
+      expect(reparsed.product['1']).toEqual({ title: 'Bulk Campaign Launcher' });
+    });
+  });
+
   describe('getFallback', () => {
     it('should return default i18n block template', () => {
       const result = parser.getFallback();
