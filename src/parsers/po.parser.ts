@@ -222,7 +222,7 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
         const msgstrValue =
           typeof data[serializedKey] === 'string'
             ? (data[serializedKey] as string)
-            : String(data[serializedKey] || '');
+            : String(data[serializedKey] ?? '');
 
         const context = keyObj.msgctxt || '';
 

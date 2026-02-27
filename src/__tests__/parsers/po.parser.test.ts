@@ -795,6 +795,36 @@ describe('PoParser', () => {
     });
   });
 
+  describe('falsy value handling', () => {
+    it('should serialize numeric zero value as "0" not empty string', () => {
+      const originalContent = `
+        msgid ""
+        msgstr ""
+        "Content-Type: text/plain; charset=UTF-8\\n"
+
+        msgid "Hello"
+        msgstr "Ciao"
+        `;
+
+      parser.parse(originalContent);
+
+      const data: Record<string, unknown> = {};
+      const key = JSON.stringify({
+        msgid: 'Hello',
+        msgctxt: undefined,
+        msgid_plural: undefined,
+        idx: 0,
+        order: 0,
+      });
+      data[key] = 0;
+
+      const result = parser.serialize(data, { targetLocale: 'fr' });
+      const resultStr = result.toString();
+
+      expect(resultStr).toContain('msgstr "0"');
+    });
+  });
+
   describe('getFallback', () => {
     it('should return default PO template', () => {
       const result = parser.getFallback();

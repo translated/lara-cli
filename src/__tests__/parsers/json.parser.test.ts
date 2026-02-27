@@ -341,6 +341,56 @@ describe('JsonParser', () => {
     });
   });
 
+  describe('numeric string keys preservation', () => {
+    it('should round-trip objects with numeric string keys without converting to arrays', () => {
+      const original = {
+        product: {
+          '0': { title: 'Multi-BM Ecosystem' },
+          '1': { title: 'Bulk Campaign Launcher' },
+        },
+      };
+      const content = JSON.stringify(original);
+      const flattened = parser.parse(content);
+      const serialized = parser.serialize(flattened, { indentation: 2, trailingNewline: '' });
+      const reparsed = JSON.parse(serialized);
+
+      expect(reparsed).toEqual(original);
+      expect(reparsed.product).not.toBeInstanceOf(Array);
+    });
+
+    it('should round-trip mixed arrays and numeric-key objects side by side', () => {
+      const original = {
+        items: ['a', 'b'],
+        lookup: { '0': 'zero', '1': 'one' },
+      };
+      const content = JSON.stringify(original);
+      const flattened = parser.parse(content);
+      const serialized = parser.serialize(flattened, { indentation: 2, trailingNewline: '' });
+      const reparsed = JSON.parse(serialized);
+
+      expect(reparsed).toEqual(original);
+      expect(Array.isArray(reparsed.items)).toBe(true);
+      expect(reparsed.lookup).not.toBeInstanceOf(Array);
+    });
+
+    it('should round-trip deeply nested numeric-key objects', () => {
+      const original = {
+        level1: {
+          level2: {
+            '0': { name: 'first' },
+            '1': { name: 'second' },
+          },
+        },
+      };
+      const content = JSON.stringify(original);
+      const flattened = parser.parse(content);
+      const serialized = parser.serialize(flattened, { indentation: 2, trailingNewline: '' });
+      const reparsed = JSON.parse(serialized);
+
+      expect(reparsed).toEqual(original);
+    });
+  });
+
   describe('getFallback', () => {
     it('should return empty JSON object string', () => {
       const result = parser.getFallback();

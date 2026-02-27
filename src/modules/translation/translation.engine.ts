@@ -1,7 +1,7 @@
 import picomatch, { Matcher } from 'picomatch';
 
 import { TranslationService } from './translation.service.js';
-import { calculateChecksum } from '#utils/checksum.js';
+import { calculateChecksum, ChecksumState } from '#utils/checksum.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
@@ -174,6 +174,7 @@ export class TranslationEngine {
         await Promise.all(
           Object.entries(changelog)
             .filter(([key]) => !this.isIgnored(TranslationEngine.toUserKey(key)))
+            .filter(([, value]) => value.state !== ChecksumState.DELETED)
             .map(async ([key, value]) => {
               const userKey = TranslationEngine.toUserKey(key);
               const state = value.state;

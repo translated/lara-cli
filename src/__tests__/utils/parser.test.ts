@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { deepMerge } from '#utils/parser.js';
+import {
+  deepMerge,
+  markNumericKeyObjects,
+  restoreNumericKeys,
+  NUMERIC_KEY_MARKER,
+} from '#utils/parser.js';
 
 describe('parser utils', () => {
   describe('deepMerge', () => {
@@ -83,7 +88,7 @@ describe('parser utils', () => {
       });
     });
 
-    it('should merge arrays instead of replacing them', () => {
+    it('should replace arrays from source instead of concatenating', () => {
       const target = {
         items: [1, 2, 3],
         nested: {
@@ -99,9 +104,9 @@ describe('parser utils', () => {
       const result = deepMerge(target, source);
 
       expect(result).toEqual({
-        items: [1, 2, 3, 4, 5],
+        items: [4, 5],
         nested: {
-          arr: ['a', 'b', 'c'],
+          arr: ['c'],
         },
       });
     });
@@ -204,7 +209,7 @@ describe('parser utils', () => {
           string: 'world',
           number: 100,
           boolean: false,
-          array: [1, 2, 3, 4, 5],
+          array: [3, 4, 5],
         },
       });
     });
@@ -286,6 +291,105 @@ describe('parser utils', () => {
           email: 'john@example.com',
         },
       });
+    });
+  });
+
+  describe('markNumericKeyObjects', () => {
+    it('should prefix keys in objects with numeric keys', () => {
+      const input = { '0': 'a', '1': 'b' };
+      const result = markNumericKeyObjects(input);
+      expect(result).toEqual({
+        [`${NUMERIC_KEY_MARKER}0`]: 'a',
+        [`${NUMERIC_KEY_MARKER}1`]: 'b',
+      });
+    });
+
+    it('should leave actual arrays unchanged', () => {
+      const input = ['a', 'b', 'c'];
+      const result = markNumericKeyObjects(input);
+      expect(result).toEqual(['a', 'b', 'c']);
+    });
+
+    it('should prefix all keys when at least one is numeric', () => {
+      const input = { '0': 'a', title: 'hello' };
+      const result = markNumericKeyObjects(input);
+      expect(result).toEqual({
+        [`${NUMERIC_KEY_MARKER}0`]: 'a',
+        [`${NUMERIC_KEY_MARKER}title`]: 'hello',
+      });
+    });
+
+    it('should not prefix keys in objects without numeric keys', () => {
+      const input = { title: 'hello', desc: 'world' };
+      const result = markNumericKeyObjects(input);
+      expect(result).toEqual({ title: 'hello', desc: 'world' });
+    });
+
+    it('should handle deeply nested objects with numeric keys', () => {
+      const input = {
+        product: {
+          '0': { title: 'First' },
+          '1': { title: 'Second' },
+        },
+      };
+      const result = markNumericKeyObjects(input);
+      expect(result).toEqual({
+        product: {
+          [`${NUMERIC_KEY_MARKER}0`]: { title: 'First' },
+          [`${NUMERIC_KEY_MARKER}1`]: { title: 'Second' },
+        },
+      });
+    });
+
+    it('should handle empty objects and arrays', () => {
+      expect(markNumericKeyObjects({})).toEqual({});
+      expect(markNumericKeyObjects([])).toEqual([]);
+    });
+
+    it('should return primitives as-is', () => {
+      expect(markNumericKeyObjects('hello')).toBe('hello');
+      expect(markNumericKeyObjects(42)).toBe(42);
+      expect(markNumericKeyObjects(null)).toBeNull();
+      expect(markNumericKeyObjects(undefined)).toBeUndefined();
+    });
+  });
+
+  describe('restoreNumericKeys', () => {
+    it('should strip marker prefix from keys', () => {
+      const input = {
+        [`${NUMERIC_KEY_MARKER}0`]: 'a',
+        [`${NUMERIC_KEY_MARKER}1`]: 'b',
+      };
+      const result = restoreNumericKeys(input);
+      expect(result).toEqual({ '0': 'a', '1': 'b' });
+    });
+
+    it('should not modify keys without marker prefix', () => {
+      const input = { title: 'hello', desc: 'world' };
+      const result = restoreNumericKeys(input);
+      expect(result).toEqual({ title: 'hello', desc: 'world' });
+    });
+
+    it('should handle deeply nested marked objects', () => {
+      const input = {
+        product: {
+          [`${NUMERIC_KEY_MARKER}0`]: { [`${NUMERIC_KEY_MARKER}title`]: 'First' },
+          [`${NUMERIC_KEY_MARKER}1`]: { [`${NUMERIC_KEY_MARKER}title`]: 'Second' },
+        },
+      };
+      const result = restoreNumericKeys(input);
+      expect(result).toEqual({
+        product: {
+          '0': { title: 'First' },
+          '1': { title: 'Second' },
+        },
+      });
+    });
+
+    it('should handle arrays containing marked objects', () => {
+      const input = [{ [`${NUMERIC_KEY_MARKER}0`]: 'a' }, { normal: 'b' }];
+      const result = restoreNumericKeys(input);
+      expect(result).toEqual([{ '0': 'a' }, { normal: 'b' }]);
     });
   });
 });

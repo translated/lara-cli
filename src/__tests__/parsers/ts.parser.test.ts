@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TsParser } from '../../parsers/ts.parser.js';
 import type { TsParserOptionsType } from '../../parsers/parser.types.js';
+import { NUMERIC_KEY_MARKER } from '#utils/parser.js';
 
 describe('TsParser', () => {
   let parser: TsParser;
@@ -162,8 +163,8 @@ describe('TsParser', () => {
       const result = parser.parse(content);
 
       expect(result).toEqual({
-        '123': 'value',
-        '456': 'value2',
+        [`${NUMERIC_KEY_MARKER}123`]: 'value',
+        [`${NUMERIC_KEY_MARKER}456`]: 'value2',
       });
     });
 
@@ -428,6 +429,38 @@ describe('TsParser', () => {
       const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
       const parsed = JSON.parse(match?.[1] || '{}');
       expect(parsed).toEqual({ key: 'value' });
+    });
+  });
+
+  describe('numeric string keys preservation', () => {
+    it('should round-trip objects with numeric string keys without converting to arrays', () => {
+      const originalContent =
+        'const messages = { product: { "0": { title: "Multi-BM Ecosystem" }, "1": { title: "Bulk Campaign Launcher" } } };\n\nexport default messages;';
+      const parsed = parser.parse(originalContent);
+      const serialized = parser.serialize(parsed, { originalContent } as unknown as TsParserOptionsType);
+
+      const resultStr = serialized.toString();
+      const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
+      const reparsed = JSON.parse(match?.[1] || '{}');
+      expect(reparsed.product).not.toBeInstanceOf(Array);
+      expect(reparsed.product['0']).toEqual({ title: 'Multi-BM Ecosystem' });
+      expect(reparsed.product['1']).toEqual({ title: 'Bulk Campaign Launcher' });
+    });
+  });
+
+  describe('brace counting in string context', () => {
+    it('should round-trip values containing braces without corruption', () => {
+      const originalContent =
+        'const messages = { en: { greeting: "Hello {name}, you have {count} items" } };\n\nexport default messages;';
+      const parsed = parser.parse(originalContent, { targetLocale: 'en' } as any);
+
+      expect(parsed).toEqual({ greeting: 'Hello {name}, you have {count} items' });
+
+      const serialized = parser.serialize(parsed, { originalContent, targetLocale: 'en' });
+      const resultStr = serialized.toString();
+      const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
+      const reparsed = JSON.parse(match?.[1] || '{}');
+      expect(reparsed.en.greeting).toBe('Hello {name}, you have {count} items');
     });
   });
 

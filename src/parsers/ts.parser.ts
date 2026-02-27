@@ -1,7 +1,7 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { TsParserOptionsType } from './parser.types.js';
-import { deepMerge } from '#utils/parser.js';
+import { deepMerge, markNumericKeyObjects, restoreNumericKeys } from '#utils/parser.js';
 import { parse } from '@babel/parser';
 import traverseModule from '@babel/traverse';
 import * as t from '@babel/types';
@@ -21,8 +21,9 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
       return {};
     }
 
-    // Flatten the whole object
-    const flattened = flat(messagesObj, { delimiter: this.delimiter }) as Record<string, unknown>;
+    // Mark numeric keys and flatten the whole object
+    const marked = markNumericKeyObjects(messagesObj);
+    const flattened = flat(marked, { delimiter: this.delimiter }) as Record<string, unknown>;
 
     // If a specific locale is requested, filter and unprefix
     if (options?.targetLocale) {
@@ -65,10 +66,9 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
       dataToMerge = prefixed;
     }
 
-    const unflattenedData = unflat(dataToMerge, { delimiter: this.delimiter }) as Record<
-      string,
-      unknown
-    >;
+    const unflattenedData = restoreNumericKeys(
+      unflat(dataToMerge, { delimiter: this.delimiter })
+    ) as Record<string, unknown>;
 
     // If a locale is specified, replace that locale's content entirely (to handle key removal)
     // Otherwise, merge with existing messages
@@ -203,6 +203,36 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
 
     for (let i = startIndex; i < content.length; i++) {
       const char = content[i];
+
+      // Skip single-line comments
+      if (char === '/' && content[i + 1] === '/') {
+        const newlineIdx = content.indexOf('\n', i);
+        i = newlineIdx === -1 ? content.length - 1 : newlineIdx;
+        continue;
+      }
+
+      // Skip block comments
+      if (char === '/' && content[i + 1] === '*') {
+        const closeIdx = content.indexOf('*/', i + 2);
+        i = closeIdx === -1 ? content.length - 1 : closeIdx + 1;
+        continue;
+      }
+
+      // Skip string literals (single quote, double quote, backtick)
+      if (char === "'" || char === '"' || char === '`') {
+        const quote = char;
+        i++;
+        while (i < content.length) {
+          if (content[i] === '\\') {
+            i++; // skip escaped character
+          } else if (content[i] === quote) {
+            break;
+          }
+          i++;
+        }
+        continue;
+      }
+
       if (char === '{') {
         braceCount++;
         foundStart = true;

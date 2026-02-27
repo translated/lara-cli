@@ -1,6 +1,7 @@
 import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { JsonParserOptionsType } from './parser.types.js';
+import { markNumericKeyObjects, restoreNumericKeys } from '#utils/parser.js';
 
 /**
  * JSON parser that handles flattening and unflattening of JSON objects.
@@ -48,7 +49,8 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    */
   parse(content: string): Record<string, unknown> {
     const parsed = JSON.parse(content);
-    return flat(parsed, { delimiter: this.delimiter });
+    const marked = markNumericKeyObjects(parsed);
+    return flat(marked, { delimiter: this.delimiter });
   }
 
   /**
@@ -76,7 +78,8 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
    */
   serialize(data: Record<string, unknown>, options: JsonParserOptionsType): string {
     const unflattened = unflat(data, { delimiter: this.delimiter });
-    const formatted = JSON.stringify(unflattened, null, options.indentation);
+    const restored = restoreNumericKeys(unflattened);
+    const formatted = JSON.stringify(restored, null, options.indentation);
     return formatted + options.trailingNewline;
   }
 
