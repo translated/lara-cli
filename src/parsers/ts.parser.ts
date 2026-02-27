@@ -203,6 +203,36 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
 
     for (let i = startIndex; i < content.length; i++) {
       const char = content[i];
+
+      // Skip single-line comments
+      if (char === '/' && content[i + 1] === '/') {
+        const newlineIdx = content.indexOf('\n', i);
+        i = newlineIdx === -1 ? content.length - 1 : newlineIdx;
+        continue;
+      }
+
+      // Skip block comments
+      if (char === '/' && content[i + 1] === '*') {
+        const closeIdx = content.indexOf('*/', i + 2);
+        i = closeIdx === -1 ? content.length - 1 : closeIdx + 1;
+        continue;
+      }
+
+      // Skip string literals (single quote, double quote, backtick)
+      if (char === "'" || char === '"' || char === '`') {
+        const quote = char;
+        i++;
+        while (i < content.length) {
+          if (content[i] === '\\') {
+            i++; // skip escaped character
+          } else if (content[i] === quote) {
+            break;
+          }
+          i++;
+        }
+        continue;
+      }
+
       if (char === '{') {
         braceCount++;
         foundStart = true;

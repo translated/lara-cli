@@ -8,13 +8,14 @@ enum ChecksumState {
   NEW = 'new',
   UPDATED = 'updated',
   UNCHANGED = 'unchanged',
+  DELETED = 'deleted',
 }
 
 type ChecksumChangelog = Record<
   string,
   {
     value: unknown;
-    state: 'new' | 'updated' | 'unchanged';
+    state: 'new' | 'updated' | 'unchanged' | 'deleted';
   }
 >;
 
@@ -84,6 +85,14 @@ function calculateChecksum(
     continue;
   }
 
+  // Detect deleted keys: keys present in checksum but no longer in file
+  for (const key in checksum) {
+    if (!(key in fileContent)) {
+      changelog[key] = { value: null, state: ChecksumState.DELETED };
+      changed = true;
+    }
+  }
+
   if (changed) {
     updateChecksum(fileName, fileContent);
   }
@@ -147,4 +156,8 @@ function getHash(s: unknown) {
   return crypto.createHash('md5').update(data).digest('hex');
 }
 
-export { calculateChecksum };
+function resetChecksumCache() {
+  cachedChecksumFile = null;
+}
+
+export { calculateChecksum, resetChecksumCache, ChecksumState };

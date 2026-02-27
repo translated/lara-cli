@@ -88,7 +88,7 @@ describe('parser utils', () => {
       });
     });
 
-    it('should merge arrays instead of replacing them', () => {
+    it('should replace arrays from source instead of concatenating', () => {
       const target = {
         items: [1, 2, 3],
         nested: {
@@ -104,9 +104,9 @@ describe('parser utils', () => {
       const result = deepMerge(target, source);
 
       expect(result).toEqual({
-        items: [1, 2, 3, 4, 5],
+        items: [4, 5],
         nested: {
-          arr: ['a', 'b', 'c'],
+          arr: ['c'],
         },
       });
     });
@@ -209,7 +209,7 @@ describe('parser utils', () => {
           string: 'world',
           number: 100,
           boolean: false,
-          array: [1, 2, 3, 4, 5],
+          array: [3, 4, 5],
         },
       });
     });
