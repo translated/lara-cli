@@ -2,10 +2,12 @@
 
 import { createRequire } from 'node:module';
 import { Command, Option } from 'commander';
+import { ExitPromptError } from '@inquirer/core';
 import dotenv from 'dotenv';
 
 dotenv.config({ debug: false, quiet: true });
 
+import { Messages } from './messages/messages.js';
 import initCommand from './cli/cmd/init/init.js';
 import translateCommand from './cli/cmd/translate/translate.js';
 import memoryCommand from './cli/cmd/memory/memory.js';
@@ -27,6 +29,13 @@ const program = new Command()
   .addCommand(glossaryCommand);
 
 // Parse command line arguments
-program.parse();
+program.parseAsync().catch((error: unknown) => {
+  if (error instanceof ExitPromptError) {
+    console.log(`\n${Messages.info.operationCancelled}`);
+    process.exit(0);
+  }
+  console.error(error);
+  process.exit(1);
+});
 
 export default program;

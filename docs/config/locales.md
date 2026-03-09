@@ -276,23 +276,24 @@ These are standardized language tags defined by BCP 47, combining ISO 639-1 lang
 | sl-SI       | Slovenian (Slovenia)                 | sm-WS       | Samoan (Samoa)                       |
 | sn-ZW       | Shona (Zimbabwe)                     | so-SO       | Somali (Somalia)                     |
 | sq-AL       | Albanian (Albania)                   | sr-Cyrl-RS  | Serbian (Cyrillic, Serbia)           |
-| sr-Latn-RS  | Serbian (Latin, Serbia)              | ss-SZ       | Swati (Eswatini)                     |
-| st-LS       | Southern Sotho (Lesotho)             | su-ID       | Sundanese (Indonesia)                |
-| sv-SE       | Swedish (Sweden)                     | sw-KE       | Swahili (Kenya)                      |
-| szl-PL      | Silesian (Poland)                    | ta-IN       | Tamil (India)                        |
-| taq-ML      | Tamasheq (Mali)                      | te-IN       | Telugu (India)                       |
-| tg-TJ       | Tajik (Tajikistan)                   | th-TH       | Thai (Thailand)                      |
-| ti-ET       | Tigrinya (Ethiopia)                  | tk-TM       | Turkmen (Turkmenistan)               |
-| tl-PH       | Tagalog (Philippines)                | tn-ZA       | Tswana (South Africa)                |
-| tpi-PG      | Tok Pisin (Papua New Guinea)         | tr-TR       | Turkish (Turkey)                     |
-| ts-ZA       | Tsonga (South Africa)                | tt-RU       | Tatar (Russia)                       |
-| tum-MW      | Tumbuka (Malawi)                     | tw-GH       | Twi (Ghana)                          |
-| tzm-MA      | Central Atlas Tamazight (Morocco)    | ug-CN       | Uyghur (China)                       |
-| uk-UA       | Ukrainian (Ukraine)                  | umb-AO      | Umbundu (Angola)                     |
-| ur-PK       | Urdu (Pakistan)                      | uzn-UZ      | Uzbek (Uzbekistan)                   |
-| vec-IT      | Venetian (Italy)                     | vi-VN       | Vietnamese (Vietnam)                 |
-| vls-BE      | West Flemish (Belgium)               | war-PH      | Waray (Philippines)                  |
-| wo-SN       | Wolof (Senegal)                      | xh-ZA       | Xhosa (South Africa)                 |
-| ydd-US      | Yiddish (United States)              | yo-NG       | Yoruba (Nigeria)                     |
-| zh-CN       | Chinese (Simplified, China)          | zh-HK       | Chinese (Traditional, Hong Kong)     |
-| zh-TW       | Chinese (Traditional, Taiwan)        | zu-ZA       | Zulu (South Africa)                  |
+| sr-Latn-RS  | Serbian (Latin, Serbia)              | sr-ME       | Serbian (Montenegro)                 |
+| ss-SZ       | Swati (Eswatini)                     | st-LS       | Southern Sotho (Lesotho)             |
+| su-ID       | Sundanese (Indonesia)                | sv-SE       | Swedish (Sweden)                     |
+| sw-KE       | Swahili (Kenya)                      | szl-PL      | Silesian (Poland)                    |
+| ta-IN       | Tamil (India)                        | taq-ML      | Tamasheq (Mali)                      |
+| te-IN       | Telugu (India)                       | tg-TJ       | Tajik (Tajikistan)                   |
+| th-TH       | Thai (Thailand)                      | ti-ET       | Tigrinya (Ethiopia)                  |
+| tk-TM       | Turkmen (Turkmenistan)               | tl-PH       | Tagalog (Philippines)                |
+| tn-ZA       | Tswana (South Africa)                | tpi-PG      | Tok Pisin (Papua New Guinea)         |
+| tr-TR       | Turkish (Turkey)                     | ts-ZA       | Tsonga (South Africa)                |
+| tt-RU       | Tatar (Russia)                       | tum-MW      | Tumbuka (Malawi)                     |
+| tw-GH       | Twi (Ghana)                          | tzm-MA      | Central Atlas Tamazight (Morocco)    |
+| ug-CN       | Uyghur (China)                       | uk-UA       | Ukrainian (Ukraine)                  |
+| umb-AO      | Umbundu (Angola)                     | ur-PK       | Urdu (Pakistan)                      |
+| uzn-UZ      | Uzbek (Uzbekistan)                   | vec-IT      | Venetian (Italy)                     |
+| vi-VN       | Vietnamese (Vietnam)                 | vls-BE      | West Flemish (Belgium)               |
+| war-PH      | Waray (Philippines)                  | wo-SN       | Wolof (Senegal)                      |
+| xh-ZA       | Xhosa (South Africa)                 | ydd-US      | Yiddish (United States)              |
+| yo-NG       | Yoruba (Nigeria)                     | zh-CN       | Chinese (Simplified, China)          |
+| zh-HK       | Chinese (Traditional, Hong Kong)     | zh-TW       | Chinese (Traditional, Taiwan)        |
+| zu-ZA       | Zulu (South Africa)                  |             |                                      |
