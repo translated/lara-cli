@@ -99,6 +99,7 @@ export const Messages = {
       `${count} ${count === 1 ? 'locale' : 'locales'} already added`,
     autoDetected: (count: number) => `${count} auto-detected`,
     manuallyAdded: (count: number) => `${count} manually added`,
+    operationCancelled: 'Operation cancelled.',
   },
 
   warnings: {
