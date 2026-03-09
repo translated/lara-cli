@@ -34,7 +34,8 @@ program.parseAsync().catch((error: unknown) => {
     console.log(`\n${Messages.info.operationCancelled}`);
     process.exit(0);
   }
-  throw error;
+  console.error(error);
+  process.exit(1);
 });
 
 export default program;
