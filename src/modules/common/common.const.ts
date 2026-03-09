@@ -371,6 +371,7 @@ export const BCP_47_LOCALES = [
   'sq-AL',
   'sr-Cyrl-RS',
   'sr-Latn-RS',
+  'sr-ME',
   'ss-SZ',
   'st-LS',
   'su-ID',
