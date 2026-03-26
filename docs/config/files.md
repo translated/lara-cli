@@ -136,7 +136,7 @@ Target file (`es.json`) - if `debug` was never added:
 ```json
 {
   "app": {
-    "title": "Mi Aplicacion",
+    "title": "Mi Aplicación",
     "version": "1.0.0"
   }
 }
@@ -147,8 +147,8 @@ Target file (`es.json`) - if `debug` already existed:
 ```json
 {
   "app": {
-    "title": "Mi Aplicacion",
-    "debug": "Modo depuracion activado",
+    "title": "Mi Aplicación",
+    "debug": "Modo depuración activado",
     "version": "1.0.0"
   }
 }
