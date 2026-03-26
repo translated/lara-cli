@@ -173,13 +173,21 @@ export class TranslationEngine {
       const entries = (
         await Promise.all(
           Object.entries(changelog)
-            .filter(([key]) => !this.isIgnored(TranslationEngine.toUserKey(key)))
-            .filter(([, value]) => value.state !== ChecksumState.DELETED)
             .map(async ([key, value]) => {
               const userKey = TranslationEngine.toUserKey(key);
               const state = value.state;
               const sourceValue = value.value;
               const targetValue = target[key];
+
+              // If the key is ignored, preserve existing target value or skip if not present in target
+              if (this.isIgnored(userKey)) {
+                return targetValue !== undefined ? [key, targetValue] : null;
+              }
+
+              // If the key is deleted from source, remove it from target
+              if (state === ChecksumState.DELETED) {
+                return null;
+              }
 
               // If the key is locked, we should NOT elaborate it and therefore return the source value
               if (this.isLocked(userKey)) {

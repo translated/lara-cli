@@ -4,6 +4,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import yaml from 'yaml';
+
 import { executeCommand } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
@@ -594,5 +596,91 @@ This is an aside with a [link inside](https://aside-link.com).
     const content = await readFile(path.join(testDir, 'docs', 'it', 'guide.md'), 'utf-8');
     expect(content).toEqual('');
   });
-  
+
+  it('should not add ignored keys to new target files', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+
+## Installation
+
+Follow these steps to install.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'docs/[locale]/getting-started.md',
+    ]);
+
+    // Add ignoredKeys - markdown uses segment_N keys
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.ignoredKeys = ['segment_1'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    expect(content).toContain('[it] Getting Started');
+    // segment_1 is "Welcome to our documentation." - should NOT be translated
+    expect(content).not.toContain('[it] Welcome to our documentation');
+    // Other segments should be translated
+    expect(content).toContain('[it] Installation');
+  });
+
+  it('should preserve ignored keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'docs/[locale]/getting-started.md',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without ignoredKeys
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    expect(contentBefore).toContain('[it] Welcome to our documentation');
+
+    // Add ignoredKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.ignoredKeys = ['segment_1'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Updated Title
+
+Welcome to our documentation.
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    expect(contentAfter).toContain('[it] Updated Title');
+    // segment_1 preserved with its previous translated value
+    expect(contentAfter).toContain('[it] Welcome to our documentation');
+  });
+
 });
