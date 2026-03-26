@@ -4,6 +4,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import yaml from 'yaml';
+
 import { executeCommand } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
@@ -404,5 +406,125 @@ msgstr "Cancel"
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('should not add ignored keys to new target files', async () => {
+    // Set up PO repository structure
+    await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World"
+
+msgid "Welcome"
+msgstr "Welcome to our application"
+`
+    );
+
+    // Initialize
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'locales/[locale]/messages.po',
+    ]);
+
+    // Add ignoredKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.po.ignoredKeys = ['*World*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    // Translate
+    await executeCommand(translateCommand, []);
+
+    // Verify translation
+    const content = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    expect(content).toContain('[it] Hello');
+    expect(content).toContain('[it] Welcome to our application');
+    expect(content).not.toContain('[it] World');
+  });
+
+  it('should preserve ignored keys in existing target files', async () => {
+    // Set up PO repository structure
+    await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World"
+`
+    );
+
+    // Initialize
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'locales/[locale]/messages.po',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without ignoredKeys - all keys get translated
+    await executeCommand(translateCommand, []);
+
+    // Verify translation
+    const content = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    expect(content).toContain('[it] World');
+
+    // Now add ignoredKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.po.ignoredKeys = ['*World*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    // Modify source to add a new message (to trigger re-translate)
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World"
+
+msgid "Welcome"
+msgstr "Welcome to our application"
+`
+    );
+
+    // Translate again
+    await executeCommand(translateCommand, []);
+
+    // Verify translation
+    const newContent = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    expect(newContent).toContain('[it] Hello');
+    expect(newContent).toContain('[it] World'); // preserved, not removed
+    expect(newContent).toContain('[it] Welcome to our application');
   });
 });

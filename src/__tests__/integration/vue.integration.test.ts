@@ -4,6 +4,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import yaml from 'yaml';
+
 import { executeCommand } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
@@ -439,5 +441,110 @@ describe('Vue Repository Integration Tests', () => {
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('should not add ignored keys to new target files', async () => {
+    // Set up Vue repository structure
+    await mkdir(path.join(testDir, 'src', 'components'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'components', 'HelloWorld.vue'),
+      `<i18n>
+{
+  "en": {
+    "greeting": "Hello World",
+    "farewell": "Goodbye",
+    "internal": "Debug info"
+  }
+}
+</i18n>`
+    );
+
+    // Initialize
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/components/*.vue',
+    ]);
+
+    // Add ignoredKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.vue.ignoredKeys = ['internal'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    // Translate
+    await executeCommand(translateCommand, []);
+
+    // Verify translation
+    const content = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    expect(content).toContain('[it] Hello World');
+    expect(content).toContain('[it] Goodbye');
+    expect(content).not.toContain('[it] Debug info');
+  });
+
+  it('should preserve ignored keys in existing target files', async () => {
+    // Set up Vue repository structure
+    await mkdir(path.join(testDir, 'src', 'components'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'components', 'HelloWorld.vue'),
+      `<i18n>
+{
+  "en": {
+    "greeting": "Hello World",
+    "farewell": "Goodbye"
+  }
+}
+</i18n>`
+    );
+
+    // Initialize
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/components/*.vue',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without ignoredKeys - all keys get translated
+    await executeCommand(translateCommand, []);
+
+    // Verify translations
+    const content = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    expect(content).toContain('[it] Goodbye');
+
+    // Now add ignoredKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.vue.ignoredKeys = ['farewell'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    // Modify source greeting to trigger re-translate, preserving existing it locale
+    const currentContent = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    const match = currentContent.match(/<i18n>\s*([\s\S]*?)\s*<\/i18n>/);
+    const localeData = JSON.parse(match![1]!);
+    localeData.en.greeting = 'Hi World';
+    await writeFile(
+      path.join(testDir, 'src', 'components', 'HelloWorld.vue'),
+      `<i18n>\n${JSON.stringify(localeData, null, 2)}\n</i18n>`
+    );
+
+    // Translate again
+    await executeCommand(translateCommand, []);
+
+    // Verify: greeting is re-translated, farewell is preserved (not removed)
+    const newContent = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    expect(newContent).toContain('[it] Hi World');
+    expect(newContent).toContain('[it] Goodbye');
   });
 });

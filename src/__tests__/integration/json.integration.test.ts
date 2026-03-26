@@ -4,6 +4,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import yaml from 'yaml';
+
 import { executeCommand } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
@@ -299,5 +301,147 @@ describe('JSON Repository Integration Tests', () => {
 
     expect(itContent).toEqual({});
     expect(frContent).toEqual({});
-  });  
+  });
+
+  it('should not add ignored keys to new target files', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        app: {
+          debug: "Debug mode enabled",
+          version: "1.0.0"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'i18n/locales/[locale].json',
+    ]);
+
+    // Add ignoredKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.ignoredKeys = ['**/debug'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    expect(itContent.title).toBe('[it] Hello, world!');
+    expect(itContent.app.version).toBe('[it] 1.0.0');
+    expect(itContent.app.debug).toBeUndefined();
+  });
+
+  it('should preserve ignored keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        app: {
+          debug: "Debug mode enabled",
+          version: "1.0.0"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'i18n/locales/[locale].json',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without ignoredKeys - all keys get translated
+    await executeCommand(translateCommand, []);
+
+    const itContentBefore = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    expect(itContentBefore.app.debug).toBe('[it] Debug mode enabled');
+
+    // Now add ignoredKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.ignoredKeys = ['**/debug'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, updated world!",
+        app: {
+          debug: "Debug mode enabled",
+          version: "1.0.0"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const itContentAfter = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    expect(itContentAfter.title).toBe('[it] Hello, updated world!');
+    expect(itContentAfter.app.debug).toBe('[it] Debug mode enabled'); // preserved, not removed
+    expect(itContentAfter.app.version).toBe('[it] 1.0.0');
+  });
+
+  it('should preserve ignored keys even when deleted from source', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        app: {
+          debug: "Debug mode enabled",
+          version: "1.0.0"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'i18n/locales/[locale].json',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without ignoredKeys
+    await executeCommand(translateCommand, []);
+
+    const itContentBefore = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    expect(itContentBefore.app.debug).toBe('[it] Debug mode enabled');
+
+    // Add ignoredKeys and remove the key from source
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.ignoredKeys = ['**/debug'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        app: {
+          version: "1.0.0"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const itContentAfter = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    expect(itContentAfter.title).toBe('[it] Hello, world!');
+    expect(itContentAfter.app.debug).toBe('[it] Debug mode enabled'); // preserved despite deletion from source
+    expect(itContentAfter.app.version).toBe('[it] 1.0.0');
+  });
 });
