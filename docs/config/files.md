@@ -53,7 +53,7 @@ files:
 
 - **Type**: Array of strings (key patterns)
 - **Required**: No (defaults to empty array)
-- **Description**: Identifies keys that should be completely excluded from target files
+- **Description**: Identifies keys that should be left untouched in target files (not translated, not added, not removed)
 - **Format**: Uses glob patterns for matching keys (e.g., `internal/**`, `**/debug`)
 
 ## Locked vs Ignored Keys
@@ -104,11 +104,11 @@ Target file (`es.json`):
 
 ### Ignored Keys
 
-Keys marked as ignored are **excluded** from target files entirely. Use this for:
+Keys marked as ignored are **left untouched** in target files. They are not translated, not added, and not removed. Use this for:
 
-- Development-only messages
-- Internal debugging information
-- Keys not relevant to other locales
+- Development-only messages that may have been manually added to targets
+- Keys managed by other tools or processes
+- Keys not relevant to the translation workflow
 
 **Example:**
 
@@ -131,7 +131,7 @@ ignoredKeys:
   - "**/debug"
 ```
 
-Target file (`es.json`):
+Target file (`es.json`) - if `debug` was never added:
 
 ```json
 {
@@ -142,7 +142,19 @@ Target file (`es.json`):
 }
 ```
 
-Note: The `debug` key is completely omitted from the target file.
+Target file (`es.json`) - if `debug` already existed:
+
+```json
+{
+  "app": {
+    "title": "Mi Aplicación",
+    "debug": "Modo depuración activado",
+    "version": "1.0.0"
+  }
+}
+```
+
+Note: The `debug` key is never translated or modified by Lara. If it already exists in the target, it is preserved as-is. If it does not exist, it is not added.
 
 ## Path Patterns
 

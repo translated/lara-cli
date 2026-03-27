@@ -8,6 +8,8 @@ import traverseModule from '@babel/traverse';
 import * as t from '@babel/types';
 import type { NodePath } from '@babel/traverse';
 
+import yaml from 'yaml';
+
 import { executeCommand } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
@@ -497,6 +499,114 @@ export default messages;`
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('should not add ignored keys to new target files', async () => {
+    // Set up TypeScript repository structure
+    await mkdir(path.join(testDir, 'src'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      `const messages = {
+  en: {
+    greeting: 'Hello',
+    app: {
+      name: 'My App',
+      version: '1.0.0',
+    },
+  },
+};
+
+export default messages;`
+    );
+
+    // Initialize
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/i18n.ts',
+    ]);
+
+    // Add ignoredKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const configContent = await readFile(configPath, 'utf-8');
+    const config = yaml.parse(configContent);
+    config.files.ts.ignoredKeys = ['app/version'];
+    await writeFile(configPath, yaml.stringify(config));
+
+    (ConfigProvider as any).instance = null;
+
+    // Translate
+    await executeCommand(translateCommand, []);
+
+    // Verify translation
+    const content = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    expect(content).toContain('[it] Hello');
+    expect(content).toContain('[it] My App');
+    expect(content).not.toContain('[it] 1.0.0');
+  });
+
+  it('should preserve ignored keys in existing target files', async () => {
+    // Set up TypeScript repository structure
+    await mkdir(path.join(testDir, 'src'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      `const messages = {
+  en: {
+    greeting: 'Hello',
+    app: {
+      name: 'My App',
+      version: '1.0.0',
+    },
+  },
+};
+
+export default messages;`
+    );
+
+    // Initialize
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/i18n.ts',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // Translate (no ignoredKeys yet - all keys translated)
+    await executeCommand(translateCommand, []);
+
+    // Add ignoredKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const configContent = await readFile(configPath, 'utf-8');
+    const config = yaml.parse(configContent);
+    config.files.ts.ignoredKeys = ['app/version'];
+    await writeFile(configPath, yaml.stringify(config));
+
+    (ConfigProvider as any).instance = null;
+
+    // Modify source greeting to trigger re-translate
+    const currentContent = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      currentContent.replace('"greeting": "Hello"', '"greeting": "Hi there"')
+    );
+
+    // Translate again
+    await executeCommand(translateCommand, []);
+
+    // Verify translation
+    const content = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    expect(content).toContain('[it] Hi there');
+    expect(content).toContain('[it] My App');
+    expect(content).toContain('[it] 1.0.0');
   });
 
 });

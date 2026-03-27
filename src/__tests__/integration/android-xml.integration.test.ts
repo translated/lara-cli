@@ -4,6 +4,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import yaml from 'yaml';
+
 import { executeCommand } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
@@ -428,6 +430,93 @@ describe('Android XML Repository Integration Tests', () => {
     expect(content).toContain('<?xml version="1.0" encoding="utf-8"?>');
     expect(content).toContain('<resources>');
     expect(content).toContain('</resources>');
+  });
+
+  it('should not add ignored keys to new target files', async () => {
+    await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="hello">Hello World</string>
+    <string name="welcome">Welcome to the app</string>
+</resources>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'res/[locale]/strings.xml',
+    ]);
+
+    // Add ignoredKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.xml.ignoredKeys = ['hello'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    expect(content).toContain('[it] My Application');
+    expect(content).toContain('[it] Welcome to the app');
+    // Ignored key should NOT be translated (no [it] prefix)
+    expect(content).not.toContain('[it] Hello World');
+  });
+
+  it('should preserve ignored keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="hello">Hello World</string>
+    <string name="welcome">Welcome to the app</string>
+</resources>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'res/[locale]/strings.xml',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without ignoredKeys
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    expect(contentBefore).toContain('[it] Hello World');
+
+    // Add ignoredKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.xml.ignoredKeys = ['hello'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Updated Application</string>
+    <string name="hello">Hello World</string>
+    <string name="welcome">Welcome to the app</string>
+</resources>`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    expect(contentAfter).toContain('[it] My Updated Application');
+    expect(contentAfter).toContain('[it] Hello World'); // preserved, not removed
+    expect(contentAfter).toContain('[it] Welcome to the app');
   });
 
 });

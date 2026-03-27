@@ -250,7 +250,7 @@ describe('locale utils', () => {
           throw new Error('Parse error');
         }),
       };
-      vi.mocked(ParserFactory).mockReturnValue(mockParser as unknown as void);
+      vi.mocked(ParserFactory).mockReturnValue(mockParser as unknown as ParserFactory);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
 
       const result = await extractLocaleFromPath(source);
@@ -397,7 +397,7 @@ describe('locale utils', () => {
       };
       vi.mocked(pathUtils.searchPaths).mockResolvedValue(filePaths);
       vi.mocked(pathUtils.readSafe).mockResolvedValue(fileContent);
-      vi.mocked(ParserFactory).mockReturnValue(mockParser as unknown as void);
+      vi.mocked(ParserFactory).mockReturnValue(mockParser as unknown as ParserFactory);
 
       const result = await extractAllLocalesFromProject();
 

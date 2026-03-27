@@ -1,7 +1,7 @@
 {
   "name": "@translated/lara-cli",
   "type": "module",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "CLI tool for automated i18n file translation using Lara Translate",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.11.1",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "bin": {
     "lara-cli": "./build/index.js"
@@ -34,26 +34,26 @@
     "!build/__tests__"
   ],
   "dependencies": {
-    "@babel/parser": "^7.28.6",
-    "@babel/traverse": "^7.28.6",
-    "@babel/types": "^7.28.6",
+    "@babel/parser": "^7.29.2",
+    "@babel/traverse": "^7.29.0",
+    "@babel/types": "^7.29.0",
     "@inquirer/core": "^10.3.2",
     "@inquirer/prompts": "^7.10.1",
-    "@translated/lara": "^1.8.0",
-    "commander": "^14.0.2",
-    "dotenv": "^17.2.3",
-    "fast-xml-parser": "^5.3.3",
+    "@translated/lara": "^1.8.4",
+    "commander": "^14.0.3",
+    "dotenv": "^17.3.1",
+    "fast-xml-parser": "^5.5.9",
     "flat": "^6.0.1",
     "gettext-parser": "^8.0.0",
     "glob": "^11.1.0",
     "ora": "^8.2.0",
-    "picomatch": "^4.0.3",
+    "picomatch": "^4.0.4",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
-    "string-width": "^8.1.0",
-    "unist-util-visit": "^5.0.0",
-    "yaml": "^2.8.2",
-    "zod": "^4.3.5"
+    "string-width": "^8.2.0",
+    "unist-util-visit": "^5.1.0",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
   },
   "imports": {
     "#utils/*": "./build/utils/*",
@@ -73,18 +73,18 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^9.39.4",
     "@types/gettext-parser": "^8.0.0",
     "@types/mdast": "^4.0.4",
-    "@types/node": "^24.10.8",
+    "@types/node": "^24.12.0",
     "@types/picomatch": "^4.0.2",
-    "@vitest/coverage-v8": "^4.0.17",
-    "eslint": "^9.39.2",
+    "@vitest/coverage-v8": "^4.1.2",
+    "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.53.0",
-    "vitest": "^4.0.17"
+    "typescript-eslint": "^8.57.2",
+    "vitest": "^4.1.2"
   }
 }
