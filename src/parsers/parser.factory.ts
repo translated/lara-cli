@@ -9,7 +9,7 @@ import { XcodeStringsParser } from './xcode-strings.parser.js';
 import { XcodeStringsdictParser } from './xcode-stringsdict.parser.js';
 import { XcodeXcstringsParser } from './xcode-xcstrings.parser.js';
 import { Parser } from '../interface/parser.js';
-import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
+import { SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { SupportedExtensionEnum } from '#modules/common/common.types.js';
 import type { ParserOptionsType } from './parser.types.js';
 
@@ -51,7 +51,7 @@ export class ParserFactory {
     const detectedExtension = getFileType(filePath).toLowerCase();
     if (!this.isSupportedExtension(detectedExtension)) {
       throw new Error(
-        `Unsupported file extension: ${detectedExtension}. Supported extensions: json, po, ts, vue, md, mdx, xml, strings, stringsdict, xcstrings`
+        `Unsupported file extension: ${detectedExtension}. Supported extensions: ${SEARCHABLE_EXTENSIONS.join(', ')}`
       );
     }
 

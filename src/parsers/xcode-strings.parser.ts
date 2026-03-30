@@ -1,6 +1,9 @@
 import type { Parser } from '../interface/parser.js';
 import type { XcodeStringsParserOptionsType } from './parser.types.js';
 
+const KV_PATTERN = /^"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)"\s*;/;
+const HEX_4_PATTERN = /^[0-9a-fA-F]{4}$/;
+
 /**
  * Represents a parsed entry from a .strings file, preserving its comment and order.
  */
@@ -64,7 +67,7 @@ export class XcodeStringsParser
           case 'u': {
             // Unicode escape: \Uxxxx or \uxxxx (4 hex digits)
             const hex = value.substring(i + 2, i + 6);
-            if (hex.length === 4 && /^[0-9a-fA-F]{4}$/.test(hex)) {
+            if (hex.length === 4 && HEX_4_PATTERN.test(hex)) {
               result += String.fromCharCode(parseInt(hex, 16));
               i += 6;
             } else {
@@ -119,12 +122,12 @@ export class XcodeStringsParser
 
       // Capture block comments (/* ... */)
       if (trimmed.startsWith('/*')) {
-        let comment = line;
-        while (!comment.includes('*/') && i + 1 < lines.length) {
+        const commentLines = [line];
+        while (!commentLines[commentLines.length - 1]!.includes('*/') && i + 1 < lines.length) {
           i++;
-          comment += '\n' + lines[i];
+          commentLines.push(lines[i]!);
         }
-        currentComment = comment;
+        currentComment = commentLines.join('\n');
         i++;
         continue;
       }
@@ -137,7 +140,7 @@ export class XcodeStringsParser
       }
 
       // Match key-value pairs: "key" = "value";
-      const kvMatch = trimmed.match(/^"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)"\s*;/);
+      const kvMatch = trimmed.match(KV_PATTERN);
       if (kvMatch && kvMatch[1] !== undefined && kvMatch[2] !== undefined) {
         entries.push({
           key: this.unescapeValue(kvMatch[1]),

@@ -1,8 +1,8 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { Parser } from '../interface/parser.js';
 import type { XcodeStringsdictParserOptionsType } from './parser.types.js';
+import { PLURAL_FORMS, escapeXml } from '../utils/parser.js';
 
-const PLURAL_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other'];
 const METADATA_KEYS = new Set([
   'NSStringLocalizedFormatKey',
   'NSStringFormatSpecTypeKey',
@@ -70,7 +70,6 @@ export class XcodeStringsdictParser
 
   /**
    * Extracts key-value pairs from a plist `<dict>` represented as a preserveOrder array.
-   * Returns an array of [key, value] tuples.
    */
   private extractDictEntries(
     dictArray: Record<string, unknown>[]
@@ -85,15 +84,23 @@ export class XcodeStringsdictParser
       if ('key' in node) {
         const keyArr = node['key'] as Array<{ '#text': string }>;
         const keyText = keyArr?.[0]?.['#text'] ?? '';
-        // The value is the next node
         const valueNode = nodes[i + 1];
         if (valueNode) {
           entries.push([keyText, valueNode]);
-          i++; // skip the value node
+          i++;
         }
       }
     }
     return entries;
+  }
+
+  /**
+   * Extracts the dict array from a preserveOrder node, or returns null.
+   */
+  private getDictArray(node: unknown): Record<string, unknown>[] | null {
+    if (typeof node !== 'object' || node === null || !('dict' in node)) return null;
+    const arr = (node as Record<string, unknown>)['dict'];
+    return Array.isArray(arr) ? (arr as Record<string, unknown>[]) : null;
   }
 
   /**
@@ -118,11 +125,61 @@ export class XcodeStringsdictParser
         if (typeof first === 'object' && first !== null && '#text' in first) {
           return String((first as Record<string, unknown>)['#text'] ?? '');
         }
-        // Empty string element
         return '';
       }
     }
     return '';
+  }
+
+  /**
+   * Parses XML content and navigates to the root dict entries.
+   * Returns null if the content is invalid or doesn't contain a proper plist structure.
+   */
+  private parseRootEntries(content: string): Array<[string, unknown]> | null {
+    let parsed: unknown;
+    try {
+      parsed = this.parser.parse(content);
+    } catch (error) {
+      console.error('Failed to parse .stringsdict content', error);
+      return null;
+    }
+
+    if (!Array.isArray(parsed)) return null;
+
+    const plistNode = (parsed as Record<string, unknown>[]).find((n) => 'plist' in n);
+    if (!plistNode) return null;
+
+    const plistContent = (plistNode as Record<string, unknown>)['plist'];
+    if (!Array.isArray(plistContent)) return null;
+
+    const rootDictNode = (plistContent as Record<string, unknown>[]).find((n) => 'dict' in n);
+    if (!rootDictNode) return null;
+
+    const rootDictArray = (rootDictNode as Record<string, unknown>)['dict'];
+    if (!Array.isArray(rootDictArray)) return null;
+
+    return this.extractDictEntries(rootDictArray as Record<string, unknown>[]);
+  }
+
+  /**
+   * Extracts plural variable dicts from an entry's dict entries.
+   * Returns an array of [varName, varEntries] tuples.
+   */
+  private extractPluralVars(
+    entryDictEntries: Array<[string, unknown]>
+  ): Array<[string, Array<[string, unknown]>]> {
+    const pluralVars: Array<[string, Array<[string, unknown]>]> = [];
+    for (const [key, value] of entryDictEntries) {
+      if (METADATA_KEYS.has(key)) continue;
+      const varDictArray = this.getDictArray(value);
+      if (varDictArray) {
+        const varEntries = this.extractDictEntries(varDictArray);
+        if (this.isPluralRuleDict(varEntries)) {
+          pluralVars.push([key, varEntries]);
+        }
+      }
+    }
+    return pluralVars;
   }
 
   /**
@@ -137,85 +194,25 @@ export class XcodeStringsdictParser
       return {};
     }
 
-    let parsed: unknown;
-    try {
-      parsed = this.parser.parse(strContent);
-    } catch (error) {
-      console.error('Failed to parse .stringsdict content', error);
-      return {};
-    }
-
-    if (!Array.isArray(parsed)) {
-      return {};
-    }
-
-    // Navigate: root array -> find plist -> find dict
-    const plistNode = (parsed as Record<string, unknown>[]).find((n) => 'plist' in n);
-    if (!plistNode) {
-      return {};
-    }
-
-    const plistContent = (plistNode as Record<string, unknown>)['plist'];
-    if (!Array.isArray(plistContent)) {
-      return {};
-    }
-
-    const rootDictNode = (plistContent as Record<string, unknown>[]).find((n) => 'dict' in n);
-    if (!rootDictNode) {
-      return {};
-    }
-
-    const rootDictArray = (rootDictNode as Record<string, unknown>)['dict'];
-    if (!Array.isArray(rootDictArray)) {
-      return {};
-    }
-
-    const rootEntries = this.extractDictEntries(rootDictArray as Record<string, unknown>[]);
+    const rootEntries = this.parseRootEntries(strContent);
+    if (!rootEntries) return {};
 
     const translations: Record<string, unknown> = {};
 
     for (const [entryKey, entryValue] of rootEntries) {
-      // entryValue should be a dict node
-      if (typeof entryValue !== 'object' || entryValue === null || !('dict' in entryValue)) {
-        continue;
-      }
+      const entryDictArray = this.getDictArray(entryValue);
+      if (!entryDictArray) continue;
 
-      const entryDictArray = (entryValue as Record<string, unknown>)['dict'];
-      if (!Array.isArray(entryDictArray)) {
-        continue;
-      }
-
-      const entryDictEntries = this.extractDictEntries(
-        entryDictArray as Record<string, unknown>[]
-      );
-
-      // Find plural variable dicts (skip metadata keys)
-      const pluralVars: Array<[string, Array<[string, unknown]>]> = [];
-      for (const [key, value] of entryDictEntries) {
-        if (METADATA_KEYS.has(key)) continue;
-
-        if (typeof value === 'object' && value !== null && 'dict' in value) {
-          const varDictArray = (value as Record<string, unknown>)['dict'];
-          if (Array.isArray(varDictArray)) {
-            const varEntries = this.extractDictEntries(
-              varDictArray as Record<string, unknown>[]
-            );
-            if (this.isPluralRuleDict(varEntries)) {
-              pluralVars.push([key, varEntries]);
-            }
-          }
-        }
-      }
-
+      const entryDictEntries = this.extractDictEntries(entryDictArray);
+      const pluralVars = this.extractPluralVars(entryDictEntries);
       const isSingleVariable = pluralVars.length === 1;
 
       for (const [varName, varEntries] of pluralVars) {
         for (const [formKey, formValue] of varEntries) {
           if (METADATA_KEYS.has(formKey)) continue;
-          if (!PLURAL_FORMS.includes(formKey)) continue;
+          if (!PLURAL_FORMS.has(formKey)) continue;
 
           const value = this.getStringValue(formValue);
-          // Single-variable: item_count/one, Multi-variable: transfer/files/one
           const flatKey = isSingleVariable
             ? `${entryKey}/${formKey}`
             : `${entryKey}/${varName}/${formKey}`;
@@ -253,7 +250,6 @@ export class XcodeStringsdictParser
    * Rebuilds the plist XML, updating only the translatable plural form values.
    */
   private rebuildPlist(originalContent: string, data: Record<string, unknown>): string {
-    // Build a lookup: flat key -> translated value
     const dataMap = new Map(Object.entries(data));
 
     // Precompute the set of root entry keys present in data for O(1) lookup
@@ -263,29 +259,8 @@ export class XcodeStringsdictParser
       dataEntryKeys.add(slashIndex >= 0 ? key.substring(0, slashIndex) : key);
     }
 
-    // Parse the original to understand structure
-    let parsed: unknown;
-    try {
-      parsed = this.parser.parse(originalContent);
-    } catch {
-      return originalContent;
-    }
-
-    if (!Array.isArray(parsed)) return originalContent;
-
-    const plistNode = (parsed as Record<string, unknown>[]).find((n) => 'plist' in n);
-    if (!plistNode) return originalContent;
-
-    const plistContent = (plistNode as Record<string, unknown>)['plist'];
-    if (!Array.isArray(plistContent)) return originalContent;
-
-    const rootDictNode = (plistContent as Record<string, unknown>[]).find((n) => 'dict' in n);
-    if (!rootDictNode) return originalContent;
-
-    const rootDictArray = (rootDictNode as Record<string, unknown>)['dict'];
-    if (!Array.isArray(rootDictArray)) return originalContent;
-
-    const rootEntries = this.extractDictEntries(rootDictArray as Record<string, unknown>[]);
+    const rootEntries = this.parseRootEntries(originalContent);
+    if (!rootEntries) return originalContent;
 
     const indent = '    ';
     const lines: string[] = [];
@@ -299,90 +274,60 @@ export class XcodeStringsdictParser
     for (const [entryKey, entryValue] of rootEntries) {
       if (!dataEntryKeys.has(entryKey)) continue;
 
-      lines.push(`${indent}<key>${this.escapeXml(entryKey)}</key>`);
+      lines.push(`${indent}<key>${escapeXml(entryKey)}</key>`);
 
-      if (typeof entryValue !== 'object' || entryValue === null || !('dict' in entryValue)) {
-        continue;
-      }
+      const entryDictArray = this.getDictArray(entryValue);
+      if (!entryDictArray) continue;
 
-      const entryDictArray = (entryValue as Record<string, unknown>)['dict'];
-      if (!Array.isArray(entryDictArray)) continue;
-
-      const entryDictEntries = this.extractDictEntries(
-        entryDictArray as Record<string, unknown>[]
-      );
+      const entryDictEntries = this.extractDictEntries(entryDictArray);
 
       lines.push(`${indent}<dict>`);
 
-      // Count plural variable dicts to determine single vs multi-variable
-      const pluralVarNames: string[] = [];
-      for (const [key, value] of entryDictEntries) {
-        if (METADATA_KEYS.has(key)) continue;
-        if (typeof value === 'object' && value !== null && 'dict' in value) {
-          const varDictArray = (value as Record<string, unknown>)['dict'];
-          if (Array.isArray(varDictArray)) {
-            const varEntries = this.extractDictEntries(
-              varDictArray as Record<string, unknown>[]
-            );
-            if (this.isPluralRuleDict(varEntries)) {
-              pluralVarNames.push(key);
-            }
-          }
-        }
-      }
-      const isSingleVariable = pluralVarNames.length === 1;
+      // Extract plural vars once and cache for reuse
+      const pluralVars = this.extractPluralVars(entryDictEntries);
+      const isSingleVariable = pluralVars.length === 1;
+      const pluralVarEntriesMap = new Map(pluralVars);
 
       for (const [key, value] of entryDictEntries) {
         if (key === 'NSStringLocalizedFormatKey') {
           lines.push(`${indent}${indent}<key>NSStringLocalizedFormatKey</key>`);
           lines.push(
-            `${indent}${indent}<string>${this.escapeXml(this.getStringValue(value))}</string>`
+            `${indent}${indent}<string>${escapeXml(this.getStringValue(value))}</string>`
           );
           continue;
         }
 
-        if (typeof value === 'object' && value !== null && 'dict' in value) {
-          const varDictArray = (value as Record<string, unknown>)['dict'];
-          if (!Array.isArray(varDictArray)) continue;
+        const cachedVarEntries = pluralVarEntriesMap.get(key);
+        if (!cachedVarEntries) continue;
 
-          const varEntries = this.extractDictEntries(
-            varDictArray as Record<string, unknown>[]
-          );
+        lines.push(`${indent}${indent}<key>${escapeXml(key)}</key>`);
+        lines.push(`${indent}${indent}<dict>`);
 
-          if (!this.isPluralRuleDict(varEntries)) continue;
+        for (const [formKey, formValue] of cachedVarEntries) {
+          lines.push(`${indent}${indent}${indent}<key>${escapeXml(formKey)}</key>`);
 
-          lines.push(`${indent}${indent}<key>${this.escapeXml(key)}</key>`);
-          lines.push(`${indent}${indent}<dict>`);
-
-          for (const [formKey, formValue] of varEntries) {
-            lines.push(`${indent}${indent}${indent}<key>${this.escapeXml(formKey)}</key>`);
-
-            if (METADATA_KEYS.has(formKey)) {
-              // Preserve metadata values unchanged
-              lines.push(
-                `${indent}${indent}${indent}<string>${this.escapeXml(this.getStringValue(formValue))}</string>`
-              );
-            } else if (PLURAL_FORMS.includes(formKey)) {
-              // Look up translated value
-              const flatKey = isSingleVariable
-                ? `${entryKey}/${formKey}`
-                : `${entryKey}/${key}/${formKey}`;
-              const translatedValue = dataMap.has(flatKey)
-                ? String(dataMap.get(flatKey) ?? '')
-                : this.getStringValue(formValue);
-              lines.push(
-                `${indent}${indent}${indent}<string>${this.escapeXml(translatedValue)}</string>`
-              );
-            } else {
-              // Other keys - preserve as-is
-              lines.push(
-                `${indent}${indent}${indent}<string>${this.escapeXml(this.getStringValue(formValue))}</string>`
-              );
-            }
+          if (METADATA_KEYS.has(formKey)) {
+            lines.push(
+              `${indent}${indent}${indent}<string>${escapeXml(this.getStringValue(formValue))}</string>`
+            );
+          } else if (PLURAL_FORMS.has(formKey)) {
+            const flatKey = isSingleVariable
+              ? `${entryKey}/${formKey}`
+              : `${entryKey}/${key}/${formKey}`;
+            const translatedValue = dataMap.has(flatKey)
+              ? String(dataMap.get(flatKey) ?? '')
+              : this.getStringValue(formValue);
+            lines.push(
+              `${indent}${indent}${indent}<string>${escapeXml(translatedValue)}</string>`
+            );
+          } else {
+            lines.push(
+              `${indent}${indent}${indent}<string>${escapeXml(this.getStringValue(formValue))}</string>`
+            );
           }
-
-          lines.push(`${indent}${indent}</dict>`);
         }
+
+        lines.push(`${indent}${indent}</dict>`);
       }
 
       lines.push(`${indent}</dict>`);
@@ -392,18 +337,6 @@ export class XcodeStringsdictParser
     lines.push('</plist>');
 
     return lines.join('\n') + '\n';
-  }
-
-  /**
-   * Escapes XML special characters.
-   */
-  private escapeXml(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
   }
 
   /**

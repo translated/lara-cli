@@ -1,7 +1,6 @@
 import type { Parser } from '../interface/parser.js';
 import type { XcodeXcstringsParserOptionsType } from './parser.types.js';
-
-const PLURAL_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other'];
+import { PLURAL_FORMS } from '../utils/parser.js';
 
 /**
  * Represents a stringUnit in an .xcstrings file.
@@ -149,7 +148,7 @@ export class XcodeXcstringsParser
       // Handle plural variations
       if (localization.variations?.plural) {
         for (const [form, formEntry] of Object.entries(localization.variations.plural)) {
-          if (!PLURAL_FORMS.includes(form)) continue;
+          if (!PLURAL_FORMS.has(form)) continue;
           if (formEntry.stringUnit) {
             translations[`${key}/${form}`] = formEntry.stringUnit.value;
           }
@@ -210,7 +209,7 @@ export class XcodeXcstringsParser
       if (lastSlash >= 0) {
         const baseKey = flatKey.substring(0, lastSlash);
         const form = flatKey.substring(lastSlash + 1);
-        if (PLURAL_FORMS.includes(form)) {
+        if (PLURAL_FORMS.has(form)) {
           if (!pluralKeys.has(baseKey)) {
             pluralKeys.set(baseKey, new Map());
           }
@@ -221,8 +220,7 @@ export class XcodeXcstringsParser
       simpleKeys.set(flatKey, String(value ?? ''));
     }
 
-    // Update simple string entries
-    for (const [key, value] of simpleKeys) {
+    const ensureEntry = (key: string): XcstringsStringEntry => {
       if (!xcstrings.strings[key]) {
         xcstrings.strings[key] = { localizations: {} };
       }
@@ -230,8 +228,13 @@ export class XcodeXcstringsParser
       if (!entry.localizations) {
         entry.localizations = {};
       }
+      return entry;
+    };
 
-      entry.localizations[targetLocale] = {
+    // Update simple string entries
+    for (const [key, value] of simpleKeys) {
+      const entry = ensureEntry(key);
+      entry.localizations![targetLocale] = {
         stringUnit: {
           state: 'translated',
           value: value,
@@ -241,13 +244,7 @@ export class XcodeXcstringsParser
 
     // Update plural string entries
     for (const [key, forms] of pluralKeys) {
-      if (!xcstrings.strings[key]) {
-        xcstrings.strings[key] = { localizations: {} };
-      }
-      const entry = xcstrings.strings[key]!;
-      if (!entry.localizations) {
-        entry.localizations = {};
-      }
+      const entry = ensureEntry(key);
 
       const pluralVariations: Record<string, { stringUnit: StringUnit }> = {};
       for (const [form, value] of forms) {
@@ -259,7 +256,7 @@ export class XcodeXcstringsParser
         };
       }
 
-      entry.localizations[targetLocale] = {
+      entry.localizations![targetLocale] = {
         variations: {
           plural: pluralVariations,
         },

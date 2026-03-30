@@ -6,6 +6,10 @@ import { LocalesEnum, SupportedExtensionEnum, SupportedFileTypesEnum } from '../
 import { SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { getFileType, isRelative } from '#utils/path.js';
 
+const LOCALE_FILENAME_PATTERN = new RegExp(
+  `[^/]*\\[locale\\][^/]*\\.(${SEARCHABLE_EXTENSIONS.join('|')})$`
+);
+
 const IncludeFilePath = z
   .string()
   .refine((path) => isRelative(path), {
@@ -23,9 +27,7 @@ const IncludeFilePath = z
   .refine(
     (path) => {
       const hasDirectoryPattern = path.includes('/[locale]/') || path.includes('[locale].lproj/');
-      const hasFilenamePattern = new RegExp(
-        `[^/]*\\[locale\\][^/]*\\.(${SEARCHABLE_EXTENSIONS.join('|')})$`
-      ).test(path);
+      const hasFilenamePattern = LOCALE_FILENAME_PATTERN.test(path);
       const isI18nFile = basename(path) === `i18n.${SupportedExtensionEnum.TS}`;
       const isVueFile = path.endsWith(SupportedExtensionEnum.VUE);
       const isXcstringsFile = path.endsWith('.xcstrings');

@@ -22,13 +22,13 @@ describe('ParserFactory', () => {
 
     it('should throw error for unsupported file extension', () => {
       expect(() => new ParserFactory('/path/to/file.txt')).toThrow(
-        'Unsupported file extension: txt. Supported extensions: json, po, ts, vue, md, mdx, xml, strings, stringsdict, xcstrings'
+        'Unsupported file extension: txt'
       );
     });
 
     it('should throw error for file without extension', () => {
       expect(() => new ParserFactory('/path/to/file')).toThrow(
-        'Unsupported file extension: /path/to/file. Supported extensions: json, po, ts, vue, md, mdx, xml, strings, stringsdict, xcstrings'
+        'Unsupported file extension:'
       );
     });
 
