@@ -4,7 +4,7 @@ import { basename } from 'path';
 
 import { LocalesEnum, SupportedExtensionEnum, SupportedFileTypesEnum } from '../common/common.types.js';
 import { SUPPORTED_FILE_TYPES } from '../common/common.const.js';
-import { getFileExtension, isRelative } from '#utils/path.js';
+import { getFileType, isRelative } from '#utils/path.js';
 
 const IncludeFilePath = z
   .string()
@@ -13,8 +13,8 @@ const IncludeFilePath = z
   })
   .refine(
     (path) => {
-      const fileExtension = getFileExtension(path);
-      return SUPPORTED_FILE_TYPES.includes(fileExtension);
+      const fileType = getFileType(path);
+      return SUPPORTED_FILE_TYPES.includes(fileType);
     },
     {
       message: `Path must end with a valid file extension (${SUPPORTED_FILE_TYPES.map((type) => `.${type}`).join(', ')})`,
@@ -22,18 +22,19 @@ const IncludeFilePath = z
   )
   .refine(
     (path) => {
-      const hasDirectoryPattern = path.includes('/[locale]/');
+      const hasDirectoryPattern = path.includes('/[locale]/') || path.includes('[locale].lproj/');
       const hasFilenamePattern = new RegExp(
-        `[^/]*\\[locale\\][^/]*\\.(${SUPPORTED_FILE_TYPES.join('|')})$`
+        `[^/]*\\[locale\\][^/]*\\.(${SUPPORTED_FILE_TYPES.join('|').replace(/-/g, '\\-')})$`
       ).test(path);
       const isI18nFile = basename(path) === `i18n.${SupportedExtensionEnum.TS}`;
       const isVueFile = path.endsWith(SupportedExtensionEnum.VUE);
+      const isXcstringsFile = path.endsWith('.xcstrings');
 
-      return hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile;
+      return hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile || isXcstringsFile;
     },
     {
       message:
-        'Path must contain [locale] as either a directory (/[locale]/) or filename ([locale].extension), or be a Vue file, or be named i18n.ts',
+        'Path must contain [locale] as either a directory (/[locale]/ or [locale].lproj/), or filename ([locale].extension), or be a Vue file, .xcstrings file, or be named i18n.ts',
     }
   );
 
@@ -115,9 +116,9 @@ const Config = z
         }
 
         for (const includePath of fileConfig.include) {
-          const fileExtension = getFileExtension(includePath);
+          const resolvedFileType = getFileType(includePath);
 
-          if (fileExtension !== fileType) {
+          if (resolvedFileType !== fileType) {
             return false;
           }
         }

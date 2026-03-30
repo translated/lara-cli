@@ -1,10 +1,13 @@
-import { getFileExtension } from '../utils/path.js';
+import { getFileType } from '../utils/path.js';
 import { JsonParser } from './json.parser.js';
 import { PoParser } from './po.parser.js';
 import { TsParser } from './ts.parser.js';
 import { VueParser } from './vue.parser.js';
 import { MarkdownParser } from './markdown.parser.js';
 import { AndroidXmlParser } from './android-xml.parser.js';
+import { XcodeStringsParser } from './xcode-strings.parser.js';
+import { XcodeStringsdictParser } from './xcode-stringsdict.parser.js';
+import { XcodeXcstringsParser } from './xcode-xcstrings.parser.js';
 import { Parser } from '../interface/parser.js';
 import { SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { SupportedExtensionEnum } from '#modules/common/common.types.js';
@@ -45,10 +48,10 @@ export class ParserFactory {
     if (!filePath) {
       throw new Error('File path is required');
     }
-    const detectedExtension = getFileExtension(filePath).toLowerCase();
+    const detectedExtension = getFileType(filePath).toLowerCase();
     if (!this.isSupportedExtension(detectedExtension)) {
       throw new Error(
-        `Unsupported file extension: ${detectedExtension}. Supported extensions: json, po, ts, vue, md, mdx, xml`
+        `Unsupported file extension: ${detectedExtension}. Supported extensions: json, po, ts, vue, md, mdx, xml, strings, stringsdict, xcstrings`
       );
     }
 
@@ -89,6 +92,12 @@ export class ParserFactory {
         return new MarkdownParser();
       case SupportedExtensionEnum.XML:
         return new AndroidXmlParser();
+      case SupportedExtensionEnum.XCODE_STRINGS:
+        return new XcodeStringsParser();
+      case SupportedExtensionEnum.XCODE_STRINGSDICT:
+        return new XcodeStringsdictParser();
+      case SupportedExtensionEnum.XCODE_XCSTRINGS:
+        return new XcodeXcstringsParser();
     }
   }
 
