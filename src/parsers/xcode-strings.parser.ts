@@ -11,6 +11,8 @@ interface StringsEntry {
   key: string;
   value: string;
   comment?: string;
+  /** Whether there was a blank line before this entry (or its comment). */
+  leadingBlank: boolean;
 }
 
 /**
@@ -108,19 +110,19 @@ export class XcodeStringsParser
     const entries: StringsEntry[] = [];
     const lines = content.split('\n');
     let currentComment: string | undefined;
+    let sawBlank = false;
     let i = 0;
 
     while (i < lines.length) {
       const line = lines[i]!;
       const trimmed = line.trim();
 
-      // Skip empty lines
       if (trimmed === '') {
+        sawBlank = true;
         i++;
         continue;
       }
 
-      // Capture block comments (/* ... */)
       if (trimmed.startsWith('/*')) {
         const commentLines = [line];
         while (!commentLines[commentLines.length - 1]!.includes('*/') && i + 1 < lines.length) {
@@ -132,22 +134,22 @@ export class XcodeStringsParser
         continue;
       }
 
-      // Skip single-line comments (//)
       if (trimmed.startsWith('//')) {
         currentComment = line;
         i++;
         continue;
       }
 
-      // Match key-value pairs: "key" = "value";
       const kvMatch = trimmed.match(KV_PATTERN);
       if (kvMatch && kvMatch[1] !== undefined && kvMatch[2] !== undefined) {
         entries.push({
           key: this.unescapeValue(kvMatch[1]),
           value: this.unescapeValue(kvMatch[2]),
           comment: currentComment,
+          leadingBlank: sawBlank,
         });
         currentComment = undefined;
+        sawBlank = false;
       }
 
       i++;
@@ -200,12 +202,17 @@ export class XcodeStringsParser
     // Build a set of keys from data for quick lookup
     const dataKeys = new Set(Object.keys(data));
 
-    // Build output preserving original order and comments
+    // Build output preserving original order, comments, and blank line separators
     const lines: string[] = [];
+    let isFirst = true;
 
     for (const entry of originalEntries) {
       if (!dataKeys.has(entry.key)) {
         continue;
+      }
+
+      if (entry.leadingBlank && !isFirst) {
+        lines.push('');
       }
 
       if (entry.comment) {
@@ -218,6 +225,7 @@ export class XcodeStringsParser
       lines.push(`"${escapedKey}" = "${escapedValue}";`);
 
       dataKeys.delete(entry.key);
+      isFirst = false;
     }
 
     // Append any new keys that weren't in the original
