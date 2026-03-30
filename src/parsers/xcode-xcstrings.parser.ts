@@ -181,19 +181,20 @@ export class XcodeXcstringsParser
     options: XcodeXcstringsParserOptionsType
   ): string | Buffer {
     const { originalContent, targetLocale } = options;
-    if (!originalContent) {
+    if (originalContent === undefined || originalContent === null) {
       throw new Error('Original content is required for Xcode .xcstrings serialization');
     }
 
     const strContent = originalContent.toString();
-    const indentation = this.detectIndentation(strContent);
+    const baseContent = strContent.trim().length > 0 ? strContent : this.getFallback();
+    const indentation = this.detectIndentation(baseContent);
 
     let xcstrings: XcstringsFile;
     try {
-      xcstrings = JSON.parse(strContent) as XcstringsFile;
+      xcstrings = JSON.parse(baseContent) as XcstringsFile;
     } catch (error) {
       console.error('Failed to parse original .xcstrings content', error);
-      return strContent;
+      return baseContent;
     }
 
     if (!xcstrings.strings) {
@@ -277,7 +278,7 @@ export class XcodeXcstringsParser
       }
     }
 
-    const trailingNewline = strContent.endsWith('\n') ? '\n' : '';
+    const trailingNewline = baseContent.endsWith('\n') ? '\n' : '';
     return JSON.stringify(xcstrings, null, indentation) + trailingNewline;
   }
 

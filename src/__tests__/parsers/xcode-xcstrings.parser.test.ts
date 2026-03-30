@@ -674,9 +674,21 @@ describe('XcodeXcstringsParser', () => {
       expect(() => {
         parser.serialize(data, {
           targetLocale: 'fr',
-          originalContent: '',
         } as XcodeXcstringsParserOptionsType);
       }).toThrow('Original content is required');
+    });
+
+    it('should handle empty originalContent by using fallback', () => {
+      const data = { hello: 'Bonjour' };
+
+      const result = parser.serialize(data, {
+        targetLocale: 'fr',
+        originalContent: '',
+      } as XcodeXcstringsParserOptionsType);
+
+      const parsed = JSON.parse(result as string);
+      expect(parsed.sourceLanguage).toBe('en');
+      expect(parsed.strings.hello.localizations.fr.stringUnit.value).toBe('Bonjour');
     });
   });
 

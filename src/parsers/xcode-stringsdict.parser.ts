@@ -239,13 +239,14 @@ export class XcodeStringsdictParser
     options: XcodeStringsdictParserOptionsType
   ): string | Buffer {
     const { originalContent } = options;
-    if (!originalContent) {
+    if (originalContent === undefined || originalContent === null) {
       throw new Error('Original content is required for Xcode .stringsdict serialization');
     }
 
     const strContent = originalContent.toString();
+    const baseContent = strContent.trim().length === 0 ? this.getFallback() : strContent;
 
-    return this.rebuildPlist(strContent, data);
+    return this.rebuildPlist(baseContent, data);
   }
 
   /**
@@ -254,6 +255,13 @@ export class XcodeStringsdictParser
   private rebuildPlist(originalContent: string, data: Record<string, unknown>): string {
     // Build a lookup: flat key -> translated value
     const dataMap = new Map(Object.entries(data));
+
+    // Precompute the set of root entry keys present in data for O(1) lookup
+    const dataEntryKeys = new Set<string>();
+    for (const key of dataMap.keys()) {
+      const slashIndex = key.indexOf('/');
+      dataEntryKeys.add(slashIndex >= 0 ? key.substring(0, slashIndex) : key);
+    }
 
     // Parse the original to understand structure
     let parsed: unknown;
@@ -289,11 +297,7 @@ export class XcodeStringsdictParser
     lines.push('<dict>');
 
     for (const [entryKey, entryValue] of rootEntries) {
-      // Check if any data keys start with this entry key
-      const hasData = Array.from(dataMap.keys()).some(
-        (k) => k === entryKey || k.startsWith(entryKey + '/')
-      );
-      if (!hasData) continue;
+      if (!dataEntryKeys.has(entryKey)) continue;
 
       lines.push(`${indent}<key>${this.escapeXml(entryKey)}</key>`);
 
