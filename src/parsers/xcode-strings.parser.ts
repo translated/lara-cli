@@ -204,12 +204,10 @@ export class XcodeStringsParser
     const lines: string[] = [];
 
     for (const entry of originalEntries) {
-      // Skip keys that are not in the translated data (deleted)
       if (!dataKeys.has(entry.key)) {
         continue;
       }
 
-      // Add the comment if present
       if (entry.comment) {
         lines.push(entry.comment);
       }
@@ -218,7 +216,6 @@ export class XcodeStringsParser
       const escapedKey = this.escapeValue(entry.key);
       const escapedValue = this.escapeValue(String(value ?? ''));
       lines.push(`"${escapedKey}" = "${escapedValue}";`);
-      lines.push('');
 
       dataKeys.delete(entry.key);
     }
@@ -229,12 +226,6 @@ export class XcodeStringsParser
       const escapedKey = this.escapeValue(key);
       const escapedValue = this.escapeValue(String(value ?? ''));
       lines.push(`"${escapedKey}" = "${escapedValue}";`);
-      lines.push('');
-    }
-
-    // Remove trailing empty line if present, then add one back
-    while (lines.length > 0 && lines[lines.length - 1] === '') {
-      lines.pop();
     }
 
     const result = lines.join('\n');
