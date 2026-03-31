@@ -582,4 +582,118 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     expect(content.sourceLanguage).toBe('en');
     expect(content.version).toBe('1.0');
   });
+
+  it('should copy locked keys from source without translation', async () => {
+    await writeFile(
+      path.join(testDir, 'Localizable.xcstrings'),
+      JSON.stringify({
+        sourceLanguage: 'en',
+        version: '1.0',
+        strings: {
+          app_name: {
+            localizations: {
+              en: {
+                stringUnit: { state: 'translated', value: 'My Application' },
+              },
+            },
+          },
+          hello: {
+            localizations: {
+              en: {
+                stringUnit: { state: 'translated', value: 'Hello World' },
+              },
+            },
+          },
+          welcome: {
+            localizations: {
+              en: {
+                stringUnit: { state: 'translated', value: 'Welcome to the app' },
+              },
+            },
+          },
+        },
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'Localizable.xcstrings',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-xcstrings'].lockedKeys = ['hello'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    // Locked key should have source value (no [it] prefix)
+    expect(content.strings.hello.localizations.it.stringUnit.value).toBe('Hello World');
+    // Non-locked keys should be translated
+    expect(content.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
+    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe('[it] Welcome to the app');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await writeFile(
+      path.join(testDir, 'Localizable.xcstrings'),
+      JSON.stringify({
+        sourceLanguage: 'en',
+        version: '1.0',
+        strings: {
+          app_name: {
+            localizations: {
+              en: {
+                stringUnit: { state: 'translated', value: 'My Application' },
+              },
+            },
+          },
+          hello: {
+            localizations: {
+              en: {
+                stringUnit: { state: 'translated', value: 'Hello World' },
+              },
+            },
+          },
+        },
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'Localizable.xcstrings',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-xcstrings'].lockedKeys = ['hello'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    let content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    expect(content.strings.hello.localizations.it.stringUnit.value).toBe('Hello World');
+
+    // Update source value of locked key
+    content.strings.hello.localizations.en.stringUnit.value = 'Hello Universe';
+    await writeFile(path.join(testDir, 'Localizable.xcstrings'), JSON.stringify(content, null, 2));
+
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const newContent = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    // Locked key should have the new source value
+    expect(newContent.strings.hello.localizations.it.stringUnit.value).toBe('Hello Universe');
+    expect(newContent.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
+  });
 });

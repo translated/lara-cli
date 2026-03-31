@@ -345,4 +345,85 @@ describe('Xcode .strings Repository Integration Tests', () => {
     expect(contentAfter).toContain('[it] Welcome to the app');
   });
 
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'en.lproj'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.strings'),
+      `"app_name" = "My Application";
+"hello" = "Hello World";
+"welcome" = "Welcome to the app";
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', '[locale].lproj/Localizable.strings',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-strings'].lockedKeys = ['hello'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    // Locked key should have source value (no [it] prefix)
+    expect(content).toContain('Hello World');
+    expect(content).not.toContain('[it] Hello World');
+    // Non-locked keys should be translated
+    expect(content).toContain('[it] My Application');
+    expect(content).toContain('[it] Welcome to the app');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'en.lproj'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.strings'),
+      `"app_name" = "My Application";
+"hello" = "Hello World";
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', '[locale].lproj/Localizable.strings',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-strings'].lockedKeys = ['hello'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    expect(contentBefore).toContain('Hello World');
+    expect(contentBefore).not.toContain('[it] Hello World');
+
+    // Update source value of locked key
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.strings'),
+      `"app_name" = "My Application";
+"hello" = "Hello Universe";
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    // Locked key should have the new source value
+    expect(contentAfter).toContain('Hello Universe');
+    expect(contentAfter).not.toContain('[it] Hello Universe');
+    expect(contentAfter).toContain('[it] My Application');
+  });
+
 });

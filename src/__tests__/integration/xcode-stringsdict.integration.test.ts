@@ -702,4 +702,192 @@ describe('Xcode .stringsdict Repository Integration Tests', () => {
     expect(contentAfter).toContain('[it] %d day remaining');
     expect(contentAfter).toContain('[it] %d days remaining');
   });
+
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'en.lproj'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.stringsdict'),
+      `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>item_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d item</string>
+            <key>other</key>
+            <string>%d items</string>
+        </dict>
+    </dict>
+    <key>day_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d day</string>
+            <key>other</key>
+            <string>%d days</string>
+        </dict>
+    </dict>
+</dict>
+</plist>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', '[locale].lproj/Localizable.stringsdict',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-stringsdict'].lockedKeys = ['item_count/*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'it.lproj', 'Localizable.stringsdict'), 'utf-8');
+    // Locked keys should have source values (no [it] prefix)
+    expect(content).not.toContain('[it] %d item');
+    expect(content).not.toContain('[it] %d items');
+    // Non-locked keys should be translated
+    expect(content).toContain('[it] %d day');
+    expect(content).toContain('[it] %d days');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'en.lproj'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.stringsdict'),
+      `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>item_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d item</string>
+            <key>other</key>
+            <string>%d items</string>
+        </dict>
+    </dict>
+    <key>day_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d day</string>
+            <key>other</key>
+            <string>%d days</string>
+        </dict>
+    </dict>
+</dict>
+</plist>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', '[locale].lproj/Localizable.stringsdict',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-stringsdict'].lockedKeys = ['item_count/*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'it.lproj', 'Localizable.stringsdict'), 'utf-8');
+    expect(contentBefore).not.toContain('[it] %d item');
+
+    // Update source value of locked key
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.stringsdict'),
+      `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>item_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d element</string>
+            <key>other</key>
+            <string>%d elements</string>
+        </dict>
+    </dict>
+    <key>day_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d day</string>
+            <key>other</key>
+            <string>%d days</string>
+        </dict>
+    </dict>
+</dict>
+</plist>`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'it.lproj', 'Localizable.stringsdict'), 'utf-8');
+    // Locked keys should have the new source values
+    expect(contentAfter).toContain('%d element');
+    expect(contentAfter).toContain('%d elements');
+    expect(contentAfter).not.toContain('[it] %d element');
+    expect(contentAfter).not.toContain('[it] %d elements');
+    // Non-locked keys should be translated
+    expect(contentAfter).toContain('[it] %d day');
+    expect(contentAfter).toContain('[it] %d days');
+  });
 });

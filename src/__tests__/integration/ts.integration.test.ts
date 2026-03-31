@@ -609,4 +609,97 @@ export default messages;`
     expect(content).toContain('[it] 1.0.0');
   });
 
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'src'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      `const messages = {
+  en: {
+    greeting: 'Hello',
+    app: {
+      name: 'My App',
+      version: '1.0.0',
+    },
+  },
+};
+
+export default messages;`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'src/i18n.ts',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.ts.lockedKeys = ['app/version'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    // Locked key should have source value (no [it] prefix)
+    expect(content).not.toContain('[it] 1.0.0');
+    // Non-locked keys should be translated
+    expect(content).toContain('[it] Hello');
+    expect(content).toContain('[it] My App');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'src'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      `const messages = {
+  en: {
+    greeting: 'Hello',
+    app: {
+      name: 'My App',
+      version: '1.0.0',
+    },
+  },
+};
+
+export default messages;`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'src/i18n.ts',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.ts.lockedKeys = ['app/version'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    expect(contentBefore).not.toContain('[it] 1.0.0');
+
+    // Update source value of locked key
+    const currentContent = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      currentContent.replace('"version": "1.0.0"', '"version": "2.0.0"')
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    // Locked key should have the new source value
+    expect(contentAfter).not.toContain('[it] 2.0.0');
+    expect(contentAfter).toContain('[it] Hello');
+    expect(contentAfter).toContain('[it] My App');
+  });
+
 });
