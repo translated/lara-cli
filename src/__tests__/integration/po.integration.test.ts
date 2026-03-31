@@ -527,4 +527,107 @@ msgstr "Welcome to our application"
     expect(newContent).toContain('[it] World'); // preserved, not removed
     expect(newContent).toContain('[it] Welcome to our application');
   });
+
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World"
+
+msgid "Welcome"
+msgstr "Welcome to our application"
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'locales/[locale]/messages.po',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.po.lockedKeys = ['*World*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    // Locked key should have source value (no [it] prefix)
+    expect(content).toContain('"World"');
+    expect(content).not.toContain('[it] World');
+    // Non-locked keys should be translated
+    expect(content).toContain('[it] Hello');
+    expect(content).toContain('[it] Welcome to our application');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World"
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'locales/[locale]/messages.po',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.po.lockedKeys = ['*World*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    expect(contentBefore).not.toContain('[it] World');
+
+    // Update source value of locked key
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World Updated"
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    // Locked key should have the new source value
+    expect(contentAfter).toContain('World Updated');
+    expect(contentAfter).not.toContain('[it] World Updated');
+    expect(contentAfter).toContain('[it] Hello');
+  });
 });

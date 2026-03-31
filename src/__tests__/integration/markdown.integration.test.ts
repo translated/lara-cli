@@ -683,4 +683,92 @@ Welcome to our documentation.
     expect(contentAfter).toContain('[it] Welcome to our documentation');
   });
 
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+
+## Installation
+
+Follow these steps to install.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'docs/[locale]/getting-started.md',
+    ]);
+
+    // Add lockedKeys - markdown uses segment_N keys
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.lockedKeys = ['segment_1'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    // segment_0 is "Getting Started" - should be translated
+    expect(content).toContain('[it] Getting Started');
+    // segment_1 is "Welcome to our documentation." - locked, should have source value
+    expect(content).toContain('Welcome to our documentation');
+    expect(content).not.toContain('[it] Welcome to our documentation');
+    // Other segments should be translated
+    expect(content).toContain('[it] Installation');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'docs/[locale]/getting-started.md',
+    ]);
+
+    // Add lockedKeys
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.lockedKeys = ['segment_1'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    expect(contentBefore).toContain('Welcome to our documentation');
+    expect(contentBefore).not.toContain('[it] Welcome to our documentation');
+
+    // Update source value of locked segment
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to the new docs.
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    // Locked segment should have new source value
+    expect(contentAfter).toContain('Welcome to the new docs');
+    expect(contentAfter).not.toContain('[it] Welcome to the new docs');
+    expect(contentAfter).toContain('[it] Getting Started');
+  });
+
 });

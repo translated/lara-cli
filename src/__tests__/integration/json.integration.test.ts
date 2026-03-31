@@ -444,4 +444,131 @@ describe('JSON Repository Integration Tests', () => {
     expect(itContentAfter.app.debug).toBe('[it] Debug mode enabled'); // preserved despite deletion from source
     expect(itContentAfter.app.version).toBe('[it] 1.0.0');
   });
+
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        app: {
+          version: "1.0.0",
+          name: "My App"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'i18n/locales/[locale].json',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.lockedKeys = ['app/version'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    // Locked key should have source value (no [it] prefix)
+    expect(itContent.app.version).toBe('1.0.0');
+    // Non-locked keys should be translated
+    expect(itContent.title).toBe('[it] Hello, world!');
+    expect(itContent.app.name).toBe('[it] My App');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        app: {
+          version: "1.0.0",
+          name: "My App"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'i18n/locales/[locale].json',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.lockedKeys = ['app/version'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    expect(itContent.app.version).toBe('1.0.0');
+
+    // Update source value of locked key
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify({
+        title: "Hello, world!",
+        app: {
+          version: "2.0.0",
+          name: "My App"
+        }
+      }, null, 2)
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const itContentAfterUpdate = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    // Locked key should have the new source value
+    expect(itContentAfterUpdate.app.version).toBe('2.0.0');
+    expect(itContentAfterUpdate.title).toBe('[it] Hello, world!');
+    expect(itContentAfterUpdate.app.name).toBe('[it] My App');
+  });
+
+  it('should not translate files matching exclude patterns', async () => {
+    // Create two source directories with JSON files
+    await mkdir(path.join(testDir, 'i18n', 'main'), { recursive: true });
+    await mkdir(path.join(testDir, 'i18n', 'dev'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'main', 'en.json'),
+      JSON.stringify({ title: "Hello from main" }, null, 2)
+    );
+    await writeFile(
+      path.join(testDir, 'i18n', 'dev', 'en.json'),
+      JSON.stringify({ title: "Hello from dev" }, null, 2)
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'i18n/*/[locale].json',
+    ]);
+
+    // Add exclude pattern to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.exclude = ['i18n/dev/[locale].json'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    // Non-excluded file should be translated
+    const mainContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'main', 'it.json'), 'utf-8'));
+    expect(mainContent.title).toBe('[it] Hello from main');
+
+    // Excluded file should NOT be translated
+    expect(existsSync(path.join(testDir, 'i18n', 'dev', 'it.json'))).toBe(false);
+  });
 });

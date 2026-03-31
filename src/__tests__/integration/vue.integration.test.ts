@@ -547,4 +547,95 @@ describe('Vue Repository Integration Tests', () => {
     expect(newContent).toContain('[it] Hi World');
     expect(newContent).toContain('[it] Goodbye');
   });
+
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'src', 'components'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'components', 'HelloWorld.vue'),
+      `<i18n>
+{
+  "en": {
+    "greeting": "Hello World",
+    "farewell": "Goodbye",
+    "internal": "Debug info"
+  }
+}
+</i18n>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'src/components/*.vue',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.vue.lockedKeys = ['internal'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    // Locked key should have source value (no [it] prefix)
+    expect(content).not.toContain('[it] Debug info');
+    // Non-locked keys should be translated
+    expect(content).toContain('[it] Hello World');
+    expect(content).toContain('[it] Goodbye');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'src', 'components'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'components', 'HelloWorld.vue'),
+      `<i18n>
+{
+  "en": {
+    "greeting": "Hello World",
+    "internal": "Debug info"
+  }
+}
+</i18n>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source', 'en',
+      '--target', 'it',
+      '--paths', 'src/components/*.vue',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.vue.lockedKeys = ['internal'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    expect(contentBefore).not.toContain('[it] Debug info');
+
+    // Update source value of locked key
+    const currentContent = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    const match = currentContent.match(/<i18n>\s*([\s\S]*?)\s*<\/i18n>/);
+    const localeData = JSON.parse(match![1]!);
+    localeData.en.internal = 'Updated debug';
+    await writeFile(
+      path.join(testDir, 'src', 'components', 'HelloWorld.vue'),
+      `<i18n>\n${JSON.stringify(localeData, null, 2)}\n</i18n>`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'src', 'components', 'HelloWorld.vue'), 'utf-8');
+    // Locked key should have the new source value
+    expect(contentAfter).toContain('Updated debug');
+    expect(contentAfter).not.toContain('[it] Updated debug');
+    expect(contentAfter).toContain('[it] Hello World');
+  });
 });
