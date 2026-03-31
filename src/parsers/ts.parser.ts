@@ -99,14 +99,13 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
       });
 
       let messagesObject: Record<string, unknown> | null = null;
-      const self = this;
 
       // Traverse the AST to find the messages declaration
       traverse(ast, {
-        VariableDeclarator(path: NodePath<t.VariableDeclarator>) {
+        VariableDeclarator: (path: NodePath<t.VariableDeclarator>) => {
           const { node } = path;
           if (t.isIdentifier(node.id) && node.id.name === 'messages' && node.init) {
-            messagesObject = self.extractObjectFromAST(node.init);
+            messagesObject = this.extractObjectFromAST(node.init);
             path.stop();
           }
         },
