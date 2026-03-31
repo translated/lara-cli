@@ -426,6 +426,41 @@ export const DEFAULT_EXCLUDED_DIRECTORIES = [
   'tests',
 ];
 
-export const SUPPORTED_FILE_TYPES = ['json', 'po', 'ts', 'vue', 'md', 'mdx', 'xml'];
+export const SUPPORTED_FILE_TYPES = [
+  'json',
+  'po',
+  'ts',
+  'vue',
+  'md',
+  'mdx',
+  'xml',
+  'xcode-strings',
+  'xcode-stringsdict',
+  'xcode-xcstrings',
+];
+
+/**
+ * Maps raw file extensions to their config-level file type identifiers.
+ * Used for Xcode files where the raw extension (e.g., 'strings') differs
+ * from the config key (e.g., 'xcode-strings').
+ */
+export const FILE_EXTENSION_TO_TYPE_MAP: Record<string, string> = {
+  strings: 'xcode-strings',
+  stringsdict: 'xcode-stringsdict',
+  xcstrings: 'xcode-xcstrings',
+};
+
+/**
+ * All actual file extensions to search for on disk.
+ * Derived from SUPPORTED_FILE_TYPES, mapping config-level type names
+ * back to raw extensions using the inverse of FILE_EXTENSION_TO_TYPE_MAP.
+ */
+const TYPE_TO_EXTENSION_MAP = Object.fromEntries(
+  Object.entries(FILE_EXTENSION_TO_TYPE_MAP).map(([ext, type]) => [type, ext])
+);
+
+export const SEARCHABLE_EXTENSIONS = SUPPORTED_FILE_TYPES.map(
+  (type) => TYPE_TO_EXTENSION_MAP[type] ?? type
+);
 
 export const LARA_WEB_URL = 'https://app.laratranslate.com';

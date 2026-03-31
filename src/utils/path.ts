@@ -5,7 +5,8 @@ import { glob } from 'glob';
 import {
   AVAILABLE_LOCALES,
   DEFAULT_EXCLUDED_DIRECTORIES,
-  SUPPORTED_FILE_TYPES,
+  FILE_EXTENSION_TO_TYPE_MAP,
+  SEARCHABLE_EXTENSIONS,
 } from '#modules/common/common.const.js';
 import { Messages } from '#messages/messages.js';
 import { SearchLocalePathsOptions, SupportedExtensionEnum } from '#modules/common/common.types.js';
@@ -31,6 +32,19 @@ function isRelative(path: string): boolean {
  */
 function getFileExtension(path: string): string {
   return path.split('.').pop() ?? '';
+}
+
+/**
+ * Maps a file path to its config-level file type identifier.
+ * For Xcode files, maps raw extensions (e.g., 'strings') to config keys (e.g., 'xcode-strings').
+ * For other files, returns the raw extension unchanged.
+ *
+ * @param filePath - The path to get the file type from.
+ * @returns The config-level file type identifier.
+ */
+function getFileType(filePath: string): string {
+  const rawExtension = getFileExtension(filePath).toLowerCase();
+  return FILE_EXTENSION_TO_TYPE_MAP[rawExtension] ?? rawExtension;
 }
 
 /**
@@ -126,6 +140,14 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
     if (p.endsWith(SupportedExtensionEnum.XML)) {
       return true;
     }
+    // .xcstrings files contain all locales in one file (no [locale] in path)
+    if (p.endsWith('.xcstrings')) {
+      return true;
+    }
+    // .strings and .stringsdict files in .lproj directories
+    if (p.endsWith('.strings') || p.endsWith('.stringsdict')) {
+      return true;
+    }
     return p.match(buildLocaleRegex([source]));
   });
 
@@ -146,6 +168,14 @@ async function searchLocalePaths(options: SearchLocalePathsOptions): Promise<str
       return filePath;
     }
     if (filePath.endsWith(SupportedExtensionEnum.XML)) {
+      return filePath;
+    }
+    // .xcstrings files contain all locales (no [locale] needed)
+    if (filePath.endsWith('.xcstrings')) {
+      return filePath;
+    }
+    // .strings and .stringsdict files in .lproj directories
+    if (filePath.endsWith('.strings') || filePath.endsWith('.stringsdict')) {
       return filePath;
     }
     if (
@@ -212,6 +242,14 @@ function normalizePath(filePath: string): string | null {
       continue;
     }
 
+    // Handle .lproj directories (e.g., en.lproj -> [locale].lproj)
+    const lprojMatch = part.match(/^(.+)\.lproj$/);
+    if (lprojMatch && !currentLocale && lprojMatch[1] && availableLocales.has(lprojMatch[1])) {
+      currentLocale = lprojMatch[1];
+      normalizedPath += '[locale].lproj/';
+      continue;
+    }
+
     // There might be situations where there might be more than one locale in the path.
     // If the locale is already set, we should treat the other locale as a normal part of the path.
     //
@@ -233,7 +271,8 @@ function normalizePath(filePath: string): string | null {
       normalizedPath.endsWith(SupportedExtensionEnum.VUE) ||
       normalizedPath.endsWith(SupportedExtensionEnum.MD) ||
       normalizedPath.endsWith(SupportedExtensionEnum.MDX) ||
-      normalizedPath.endsWith(SupportedExtensionEnum.XML)
+      normalizedPath.endsWith(SupportedExtensionEnum.XML) ||
+      normalizedPath.endsWith('.xcstrings')
     ) {
       return normalizedPath;
     }
@@ -254,15 +293,15 @@ function normalizePath(filePath: string): string | null {
  * ]
  */
 async function searchPaths(): Promise<string[]> {
-  if (SUPPORTED_FILE_TYPES.length === 0) {
+  if (SEARCHABLE_EXTENSIONS.length === 0) {
     throw new Error(Messages.errors.noSupportedFileTypes);
   }
 
-  // Use simple pattern if only one file type, otherwise use brace expansion
+  // Use actual file extensions for disk search (not config-level type names)
   const pattern =
-    SUPPORTED_FILE_TYPES.length === 1
-      ? `**/*.${SUPPORTED_FILE_TYPES[0]}`
-      : `**/*.{${SUPPORTED_FILE_TYPES.join(',')}}`;
+    SEARCHABLE_EXTENSIONS.length === 1
+      ? `**/*.${SEARCHABLE_EXTENSIONS[0]}`
+      : `**/*.{${SEARCHABLE_EXTENSIONS.join(',')}}`;
 
   return glob(pattern, {
     cwd: process.cwd(),
@@ -300,6 +339,7 @@ function buildLocaleRegex(locales: string[] = AVAILABLE_LOCALES): RegExp {
 
 export {
   getFileExtension,
+  getFileType,
   isRelative,
   readSafe,
   ensureDirectoryExists,

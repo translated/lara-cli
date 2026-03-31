@@ -43,3 +43,6 @@ The `lara.yaml` configuration file controls how Lara CLI works with your project
 - [Vue Files Guide](config/files/vue-files.md) - Complete guide for Vue I18n single-file components
 - [Markdown Files Guide](config/files/md-files.md) - Complete guide for Markdown and MDX files
 - [Android XML Files Guide](config/files/android-xml-files.md) - Complete guide for Android XML string resource files
+- [Xcode Strings Files Guide](config/files/xcode-strings-files.md) - Complete guide for Xcode .strings files
+- [Xcode Stringsdict Files Guide](config/files/xcode-stringsdict-files.md) - Complete guide for Xcode .stringsdict plural files
+- [Xcode String Catalogs Guide](config/files/xcode-xcstrings-files.md) - Complete guide for Xcode .xcstrings String Catalogs

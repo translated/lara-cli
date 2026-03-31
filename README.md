@@ -4,7 +4,7 @@
 
 Lara Cli automates translation of your i18n files with a single command, preserving structure and formatting while integrating with a professional translation API. Given a source language, it translates your content to selected target languages based on your source i18n files.
 
-Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18n single-file components, Markdown and MDX files, and Android XML string resource files. See [Supported Formats](docs/config/formats.md) for details.
+Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18n single-file components, Markdown and MDX files, Android XML string resource files, and Xcode localization files (.strings, .stringsdict, .xcstrings). See [Supported Formats](docs/config/formats.md) for details.
 
 [![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/translated/lara-cli)
 
@@ -237,3 +237,6 @@ For detailed documentation on using Lara CLI:
 - [Vue Files Guide](docs/config/files/vue-files.md) - Complete guide for Vue I18n single-file components
 - [Markdown Files Guide](docs/config/files/md-files.md) - Complete guide for Markdown and MDX files
 - [Android XML Files Guide](docs/config/files/android-xml-files.md) - Complete guide for Android XML string resource files
+- [Xcode Strings Files Guide](docs/config/files/xcode-strings-files.md) - Complete guide for Xcode .strings files
+- [Xcode Stringsdict Files Guide](docs/config/files/xcode-stringsdict-files.md) - Complete guide for Xcode .stringsdict plural files
+- [Xcode String Catalogs Guide](docs/config/files/xcode-xcstrings-files.md) - Complete guide for Xcode .xcstrings String Catalogs
