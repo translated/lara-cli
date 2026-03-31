@@ -14,6 +14,15 @@ To get started with Lara CLI, follow these steps:
 2. **Initialize your project**: Run `lara-cli init` to create a configuration file
 3. **Translate your files**: Run `lara-cli translate` to process translations
 
+For quick, one-off translations or CI/CD pipelines, you can also use **direct translation** without any configuration:
+
+```bash
+lara-cli translate --text "Hello, world!" --source en --target fr
+lara-cli translate --file "messages.json" --source en --target fr --output "messages-fr.json"
+```
+
+See the [Translate Command](commands/translate.md) documentation for details.
+
 ## Command Reference
 
 Lara CLI provides several commands to manage your internationalization:

@@ -308,19 +308,12 @@ describe('CLI Integration Tests', () => {
       (ConfigProvider as any).instance = null;
 
       // Translate only specific path
-      // Note: The --paths option maps to options.paths, but the code uses options.input
-      // So this test verifies that when --paths is provided, it should filter paths
-      // However, due to the code using options.input instead of options.paths,
-      // both paths from config will be translated. This test documents the current behavior.
       await executeCommand(translateCommand, ['--paths', 'src/locales/[locale].json']);
 
       // Verify the specified path was translated
       expect(existsSync(path.join(testDir, 'src', 'locales', 'it.json'))).toBe(true);
-      // Note: Due to a bug where --paths maps to options.paths but code uses options.input,
-      // both paths get translated. This test verifies the current (buggy) behavior.
-      // In a real fix, only src/locales/[locale].json should be translated.
-      // For now, we verify both are translated to match actual behavior
-      expect(existsSync(path.join(testDir, 'src', 'i18n', 'it.json'))).toBe(true);
+      // Verify the non-specified path was NOT translated
+      expect(existsSync(path.join(testDir, 'src', 'i18n', 'it.json'))).toBe(false);
     });
   });
 

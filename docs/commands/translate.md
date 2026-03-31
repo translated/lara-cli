@@ -129,6 +129,91 @@ Use `--force` when you need to:
 - Fix translation errors by regenerating all translations
 - Reset translations after configuration changes
 
+## Direct Translation (Pipeline Mode)
+
+In addition to config-based translation, the `translate` command supports direct file and text translation. This mode is designed for CI/CD pipelines, scripting, and one-off translations — no `lara.yaml` configuration file is needed.
+
+### Direct Text Translation
+
+Translate a text string directly:
+
+```bash
+lara-cli translate --text "Hello, world!" --source en-US --target fr-FR
+```
+
+The translated text is printed to stdout, making it easy to pipe into other commands:
+
+```bash
+lara-cli translate --text "Welcome" --source en --target es | pbcopy
+```
+
+### Direct File Translation
+
+Translate a file directly:
+
+```bash
+lara-cli translate --file "/path/to/file.txt" --source en-US --target fr-FR
+```
+
+By default, the translated content is printed to stdout. Use `--output` to write to a file:
+
+```bash
+lara-cli translate --file "messages.json" --source en --target fr --output "messages-fr.json"
+```
+
+#### Structured vs Plain Text Files
+
+- **Structured files** (JSON, PO, XML, Markdown, and other [supported formats](../config/formats.md)): Parsed key-by-key, preserving file structure, formatting, and non-string values.
+- **Plain text files** (`.txt` and unsupported extensions): The entire file content is translated as a single block of text.
+
+### Direct Translation Options
+
+| Option | Description |
+|--------|-------------|
+| `--file <path>` | Path to a file to translate directly |
+| `--text <string>` | Text string to translate directly |
+| `-s, --source <locale>` | Source locale (required with `--file` or `--text`) |
+| `-o, --output <path>` | Output file path (only with `--file`) |
+
+### Pipeline Examples
+
+Translate multiple files in a loop:
+
+```bash
+for lang in fr it de es; do
+  lara-cli translate --file "en.json" --source en --target $lang --output "$lang.json"
+done
+```
+
+Translate text inline in a script:
+
+```bash
+TRANSLATED=$(lara-cli translate --text "Hello" --source en --target fr)
+echo "Translation: $TRANSLATED"
+```
+
+### Differences from Config-Based Mode
+
+| Feature | Config Mode | Direct Mode |
+|---------|-------------|-------------|
+| Requires `lara.yaml` | Yes | No |
+| Change detection (checksums) | Yes | No |
+| Locked/ignored keys | Yes | No |
+| Translation instructions | Yes | No |
+| Multiple target locales per invocation | Yes | No (one at a time) |
+| Translation Memories & Glossaries | Yes | No |
+
+### Prerequisites
+
+Direct translation only requires API credentials. No `lara-cli init` is needed:
+
+```
+LARA_ACCESS_KEY_ID=your_access_key_id
+LARA_ACCESS_KEY_SECRET=your_access_key_secret
+```
+
+Set these as environment variables or in a `.env` file in your working directory.
+
 ## Related
 
 - [Configuration Reference](../config/README.md) - Detailed configuration options
