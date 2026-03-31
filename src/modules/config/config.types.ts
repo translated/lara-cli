@@ -2,7 +2,11 @@ import { z } from 'zod/v4';
 
 import { basename } from 'path';
 
-import { LocalesEnum, SupportedExtensionEnum, SupportedFileTypesEnum } from '../common/common.types.js';
+import {
+  LocalesEnum,
+  SupportedExtensionEnum,
+  SupportedFileTypesEnum,
+} from '../common/common.types.js';
 import { SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { getFileType, isRelative } from '#utils/path.js';
 
@@ -26,13 +30,18 @@ const IncludeFilePath = z
   )
   .refine(
     (path) => {
-      const hasDirectoryPattern = path.includes('/[locale]/') || path.includes('[locale].lproj/');
+      const hasDirectoryPattern =
+        path.includes('/[locale]/') ||
+        path.startsWith('[locale]/') ||
+        path.includes('[locale].lproj/');
       const hasFilenamePattern = LOCALE_FILENAME_PATTERN.test(path);
       const isI18nFile = basename(path) === `i18n.${SupportedExtensionEnum.TS}`;
       const isVueFile = path.endsWith(SupportedExtensionEnum.VUE);
       const isXcstringsFile = path.endsWith('.xcstrings');
 
-      return hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile || isXcstringsFile;
+      return (
+        hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile || isXcstringsFile
+      );
     },
     {
       message:

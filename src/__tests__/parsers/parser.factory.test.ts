@@ -18,18 +18,24 @@ describe('ParserFactory', () => {
       expect(() => new ParserFactory('/path/to/file.STRINGS')).not.toThrow();
       expect(() => new ParserFactory('/path/to/file.STRINGSDICT')).not.toThrow();
       expect(() => new ParserFactory('/path/to/file.XCSTRINGS')).not.toThrow();
+      expect(() => new ParserFactory('/path/to/file.TXT')).not.toThrow();
     });
 
     it('should throw error for unsupported file extension', () => {
-      expect(() => new ParserFactory('/path/to/file.txt')).toThrow(
-        'Unsupported file extension: txt'
+      expect(() => new ParserFactory('/path/to/file.csv')).toThrow(
+        'Unsupported file extension: csv'
       );
     });
 
+    it('should create parser for .txt files', () => {
+      const factory = new ParserFactory('/path/to/file.txt');
+      expect(factory).toBeInstanceOf(ParserFactory);
+      const result = factory.parse('Hello World\nWelcome');
+      expect(result).toEqual({ line_0: 'Hello World', line_1: 'Welcome' });
+    });
+
     it('should throw error for file without extension', () => {
-      expect(() => new ParserFactory('/path/to/file')).toThrow(
-        'Unsupported file extension:'
-      );
+      expect(() => new ParserFactory('/path/to/file')).toThrow('Unsupported file extension:');
     });
 
     it('should create parser for .strings files', () => {
