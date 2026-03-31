@@ -387,4 +387,29 @@ describe('TXT Repository Integration Tests', () => {
     // Verify the double empty line is preserved
     expect(content).toContain('\n\n\n');
   });
+
+  it('should handle [locale] at the start of the path', async () => {
+    // Set up TXT files with locale as the first directory (no parent)
+    await mkdir(path.join(testDir, 'en'), { recursive: true });
+    await writeFile(path.join(testDir, 'en', 'messages.txt'), 'Hello World\nWelcome\n');
+
+    // Initialize with [locale] at the start of path
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      '[locale]/messages.txt',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'it', 'messages.txt'), 'utf-8');
+    expect(content).toContain('[it] Hello World');
+    expect(content).toContain('[it] Welcome');
+  });
 });
