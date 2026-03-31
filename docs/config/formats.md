@@ -15,6 +15,7 @@ Lara CLI supports multiple internationalization file formats. The appropriate pa
 | **Xcode Strings** | `.strings`   | Xcode .strings key-value localization files for iOS/macOS applications             | [Xcode Strings Files Guide](./files/xcode-strings-files.md) |
 | **Xcode Stringsdict** | `.stringsdict` | Xcode .stringsdict plist files with plural rules for iOS/macOS applications    | [Xcode Stringsdict Files Guide](./files/xcode-stringsdict-files.md) |
 | **Xcode String Catalogs** | `.xcstrings` | Xcode String Catalogs (Xcode 15+), all locales in a single JSON file       | [Xcode String Catalogs Guide](./files/xcode-xcstrings-files.md) |
+| **Plain Text**    | `.txt`        | Plain text files with one translatable segment per line                     | [TXT Files Guide](./files/txt-files.md)  |
 
 ## How It Works
 
@@ -29,6 +30,7 @@ The file format is automatically detected based on the file extension:
 - Files ending with `.strings` are parsed as Xcode .strings localization files
 - Files ending with `.stringsdict` are parsed as Xcode .stringsdict plural files
 - Files ending with `.xcstrings` are parsed as Xcode String Catalogs (all locales in one file)
+- Files ending with `.txt` are parsed as plain text files
 
 You can configure multiple formats simultaneously in the same project by adding different format sections under the `files` configuration.
 
@@ -60,6 +62,9 @@ files:
   xcode-xcstrings:
     include:
       - 'Localizable.xcstrings'
+  txt:
+    include:
+      - 'texts/[locale]/messages.txt'
 ```
 
 ## Format-Specific Documentation
@@ -74,3 +79,4 @@ For detailed information about a specific format, see its dedicated documentatio
 - [Xcode Strings Files Guide](./files/xcode-strings-files.md) - Complete guide for Xcode .strings files
 - [Xcode Stringsdict Files Guide](./files/xcode-stringsdict-files.md) - Complete guide for Xcode .stringsdict plural files
 - [Xcode String Catalogs Guide](./files/xcode-xcstrings-files.md) - Complete guide for Xcode .xcstrings String Catalogs
+- [TXT Files Guide](./files/txt-files.md) - Complete guide for plain text files

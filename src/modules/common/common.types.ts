@@ -16,6 +16,7 @@ export enum SupportedExtensionEnum {
   XCODE_STRINGS = 'xcode-strings',
   XCODE_STRINGSDICT = 'xcode-stringsdict',
   XCODE_XCSTRINGS = 'xcode-xcstrings',
+  TXT = 'txt',
 }
 
 export type SearchLocalePathsOptions = {
