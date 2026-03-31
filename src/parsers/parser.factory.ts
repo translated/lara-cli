@@ -8,6 +8,7 @@ import { AndroidXmlParser } from './android-xml.parser.js';
 import { XcodeStringsParser } from './xcode-strings.parser.js';
 import { XcodeStringsdictParser } from './xcode-stringsdict.parser.js';
 import { XcodeXcstringsParser } from './xcode-xcstrings.parser.js';
+import { TxtParser } from './txt.parser.js';
 import { Parser } from '../interface/parser.js';
 import { SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { SupportedExtensionEnum } from '#modules/common/common.types.js';
@@ -98,6 +99,8 @@ export class ParserFactory {
         return new XcodeStringsdictParser();
       case SupportedExtensionEnum.XCODE_XCSTRINGS:
         return new XcodeXcstringsParser();
+      case SupportedExtensionEnum.TXT:
+        return new TxtParser();
     }
   }
 

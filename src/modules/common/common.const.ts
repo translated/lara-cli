@@ -437,6 +437,7 @@ export const SUPPORTED_FILE_TYPES = [
   'xcode-strings',
   'xcode-stringsdict',
   'xcode-xcstrings',
+  'txt',
 ];
 
 /**

@@ -163,8 +163,8 @@ lara-cli translate --file "messages.json" --source en --target fr --output "mess
 
 #### Structured vs Plain Text Files
 
-- **Structured files** (JSON, PO, XML, Markdown, and other [supported formats](../config/formats.md)): Parsed key-by-key, preserving file structure, formatting, and non-string values.
-- **Plain text files** (`.txt` and unsupported extensions): The entire file content is translated as a single block of text.
+- **Structured files** (JSON, PO, XML, Markdown, TXT, and other [supported formats](../config/formats.md)): Parsed and translated preserving file structure, formatting, and non-string values. For `.txt` files, each non-empty line is translated independently while empty lines are preserved.
+- **Unsupported extensions**: The entire file content is translated as a single block of text.
 
 ### Direct Translation Options
 

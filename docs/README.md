@@ -55,3 +55,4 @@ The `lara.yaml` configuration file controls how Lara CLI works with your project
 - [Xcode Strings Files Guide](config/files/xcode-strings-files.md) - Complete guide for Xcode .strings files
 - [Xcode Stringsdict Files Guide](config/files/xcode-stringsdict-files.md) - Complete guide for Xcode .stringsdict plural files
 - [Xcode String Catalogs Guide](config/files/xcode-xcstrings-files.md) - Complete guide for Xcode .xcstrings String Catalogs
+- [TXT Files Guide](config/files/txt-files.md) - Complete guide for plain text files

@@ -26,17 +26,22 @@ const IncludeFilePath = z
   )
   .refine(
     (path) => {
-      const hasDirectoryPattern = path.includes('/[locale]/') || path.includes('[locale].lproj/');
+      const hasDirectoryPattern =
+        path.includes('/[locale]/') ||
+        path.startsWith('[locale]/') ||
+        path.includes('[locale].lproj/');
       const hasFilenamePattern = LOCALE_FILENAME_PATTERN.test(path);
       const isI18nFile = basename(path) === `i18n.${SupportedExtensionEnum.TS}`;
       const isVueFile = path.endsWith(SupportedExtensionEnum.VUE);
       const isXcstringsFile = path.endsWith('.xcstrings');
 
-      return hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile || isXcstringsFile;
+      return (
+        hasDirectoryPattern || hasFilenamePattern || isI18nFile || isVueFile || isXcstringsFile
+      );
     },
     {
       message:
-        'Path must contain [locale] as either a directory (/[locale]/ or [locale].lproj/), or filename ([locale].extension), or be a Vue file, .xcstrings file, or be named i18n.ts',
+        'Path must contain [locale] as either a directory ([locale]/, /[locale]/ or [locale].lproj/), or filename ([locale].extension), or be a Vue file, .xcstrings file, or be named i18n.ts',
     }
   );
 

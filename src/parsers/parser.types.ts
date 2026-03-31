@@ -34,6 +34,8 @@ export type XcodeStringsdictParserOptionsType = BaseContentParserOptionsType;
 
 export type XcodeXcstringsParserOptionsType = BaseContentParserOptionsType;
 
+export type TxtParserOptionsType = BaseContentParserOptionsType;
+
 export type ParserOptionsType = Partial<
   PoParserOptionsType &
     JsonParserOptionsType &
@@ -43,5 +45,6 @@ export type ParserOptionsType = Partial<
     AndroidXmlParserOptionsType &
     XcodeStringsParserOptionsType &
     XcodeStringsdictParserOptionsType &
-    XcodeXcstringsParserOptionsType
+    XcodeXcstringsParserOptionsType &
+    TxtParserOptionsType
 >;

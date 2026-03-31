@@ -256,16 +256,12 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
     if (parser) {
       // Structured file: parse, batch-translate all string values, serialize
       const parsed = parser.parse(content, { targetLocale: target });
-      const allEntries = Object.entries(parsed);
+      const translatedData: Record<string, unknown> = { ...parsed };
 
       const translatableEntries: [string, string][] = [];
-      const resultMap = new Map<string, unknown>();
-
-      for (const [key, value] of allEntries) {
+      for (const [key, value] of Object.entries(parsed)) {
         if (typeof value === 'string' && value.trim() !== '') {
           translatableEntries.push([key, value]);
-        } else {
-          resultMap.set(key, value);
         }
       }
 
@@ -273,11 +269,9 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
         const textBlocks: TextBlock[] = translatableEntries.map(([, v]) => ({ text: v, translatable: true }));
         const translations = await translationService.translate(textBlocks, source, target, {});
         for (let i = 0; i < translatableEntries.length; i++) {
-          resultMap.set(translatableEntries[i]![0], translations[i]?.text ?? translatableEntries[i]![1]);
+          translatedData[translatableEntries[i]![0]] = translations[i]?.text ?? translatableEntries[i]![1];
         }
       }
-
-      const translatedData = Object.fromEntries(allEntries.map(([k]) => [k, resultMap.get(k)]));
       const formatting = detectFormatting(content);
       result = parser.serialize(translatedData, {
         ...formatting,

@@ -190,8 +190,8 @@ describe('Direct Translation Integration Tests', () => {
     });
   });
 
-  describe('file mode - plain text', () => {
-    it('should translate a plain text file and output to stdout', async () => {
+  describe('file mode - txt files', () => {
+    it('should translate a txt file and output to stdout', async () => {
       const inputFile = path.join(testDir, 'hello.txt');
       await writeFile(inputFile, 'Hello, world!');
 
@@ -278,6 +278,29 @@ describe('Direct Translation Integration Tests', () => {
       ).rejects.toThrow();
     });
 
+    it('should translate multi-line txt file line-by-line', async () => {
+      const inputFile = path.join(testDir, 'multi.txt');
+      await writeFile(inputFile, 'Hello\n\nWelcome\nGoodbye\n');
+
+      await executeCommand(translateCommand, [
+        '--file',
+        inputFile,
+        '--source',
+        'en',
+        '--target',
+        'fr',
+      ]);
+
+      const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => String(call[0]));
+      const output = stdoutCalls.find((call: string) => call.includes('[fr]'));
+      expect(output).toBeDefined();
+      expect(output).toContain('[fr] Hello');
+      expect(output).toContain('[fr] Welcome');
+      expect(output).toContain('[fr] Goodbye');
+      // Verify empty lines are preserved
+      expect(output).toContain('\n\n');
+    });
+
     it('should work without a lara.yaml config file', async () => {
       expect(existsSync(path.join(testDir, 'lara.yaml'))).toBe(false);
 
@@ -295,6 +318,25 @@ describe('Direct Translation Integration Tests', () => {
 
       const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => call[0]);
       expect(stdoutCalls).toContainEqual('[es] Translate me');
+    });
+  });
+
+  describe('file mode - plain text fallback', () => {
+    it('should translate unsupported file extensions as plain text', async () => {
+      const inputFile = path.join(testDir, 'data.csv');
+      await writeFile(inputFile, 'Hello, world!');
+
+      await executeCommand(translateCommand, [
+        '--file',
+        inputFile,
+        '--source',
+        'en',
+        '--target',
+        'fr',
+      ]);
+
+      const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => call[0]);
+      expect(stdoutCalls).toContainEqual('[fr] Hello, world!');
     });
   });
 
