@@ -45,7 +45,7 @@
     "fast-xml-parser": "^5.5.9",
     "flat": "^6.0.1",
     "gettext-parser": "^8.0.0",
-    "glob": "^11.1.0",
+    "glob": "^13.0.6",
     "ora": "^8.2.0",
     "picomatch": "^4.0.4",
     "remark": "^15.0.1",
@@ -62,10 +62,10 @@
     "#messages/*": "./build/messages/*"
   },
   "scripts": {
-    "build": "rm -rf build && npx tsc",
-    "start": "rm -rf build && npx tsc && node build/index.js",
-    "lint": "npx eslint src/**/*.ts",
-    "lint:fix": "npx eslint src/**/*.ts --fix",
+    "build": "rm -rf build && tsc",
+    "start": "rm -rf build && tsc && node build/index.js",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "test": "vitest run",
