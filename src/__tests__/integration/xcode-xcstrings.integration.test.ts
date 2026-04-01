@@ -29,7 +29,14 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-xcstrings-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-xcstrings-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -70,41 +77,48 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Create xcstrings file with en entries
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
-          },
-          welcome: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Welcome to the app' },
+            welcome: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Welcome to the app' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -113,12 +127,16 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify the same file now contains it locale
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
 
     // Verify it locale translations
     expect(content.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
     expect(content.strings.hello.localizations.it.stringUnit.value).toBe('[it] Hello World');
-    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe('[it] Welcome to the app');
+    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe(
+      '[it] Welcome to the app'
+    );
 
     // Verify en locale entries are preserved
     expect(content.strings.app_name.localizations.en.stringUnit.value).toBe('My Application');
@@ -129,34 +147,41 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
   it('should handle multiple target locales', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize with multiple targets
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it,fr',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it,fr',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -164,7 +189,9 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Translate
     await executeCommand(translateCommand, []);
 
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
 
     // Verify it locale
     expect(content.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
@@ -179,40 +206,47 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Create file with en + es entries
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
-              },
-              es: {
-                stringUnit: { state: 'translated', value: 'Mi Aplicacion' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
+                es: {
+                  stringUnit: { state: 'translated', value: 'Mi Aplicacion' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
-              },
-              es: {
-                stringUnit: { state: 'translated', value: 'Hola Mundo' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
+                es: {
+                  stringUnit: { state: 'translated', value: 'Hola Mundo' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize - translate to it only
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -220,7 +254,9 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Translate
     await executeCommand(translateCommand, []);
 
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
 
     // Verify es entries still present and unchanged
     expect(content.strings.app_name.localizations.es.stringUnit.value).toBe('Mi Aplicacion');
@@ -235,20 +271,22 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Create xcstrings with plural entry
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          item_count: {
-            localizations: {
-              en: {
-                variations: {
-                  plural: {
-                    one: {
-                      stringUnit: { state: 'translated', value: '%lld item' },
-                    },
-                    other: {
-                      stringUnit: { state: 'translated', value: '%lld items' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            item_count: {
+              localizations: {
+                en: {
+                  variations: {
+                    plural: {
+                      one: {
+                        stringUnit: { state: 'translated', value: '%lld item' },
+                      },
+                      other: {
+                        stringUnit: { state: 'translated', value: '%lld items' },
+                      },
                     },
                   },
                 },
@@ -256,15 +294,20 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -272,41 +315,58 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Translate
     await executeCommand(translateCommand, []);
 
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
 
     // Verify plural forms translated correctly
-    expect(content.strings.item_count.localizations.it.variations.plural.one.stringUnit.value).toBe('[it] %lld item');
-    expect(content.strings.item_count.localizations.it.variations.plural.other.stringUnit.value).toBe('[it] %lld items');
+    expect(content.strings.item_count.localizations.it.variations.plural.one.stringUnit.value).toBe(
+      '[it] %lld item'
+    );
+    expect(
+      content.strings.item_count.localizations.it.variations.plural.other.stringUnit.value
+    ).toBe('[it] %lld items');
 
     // Verify en plural forms preserved
-    expect(content.strings.item_count.localizations.en.variations.plural.one.stringUnit.value).toBe('%lld item');
-    expect(content.strings.item_count.localizations.en.variations.plural.other.stringUnit.value).toBe('%lld items');
+    expect(content.strings.item_count.localizations.en.variations.plural.one.stringUnit.value).toBe(
+      '%lld item'
+    );
+    expect(
+      content.strings.item_count.localizations.en.variations.plural.other.stringUnit.value
+    ).toBe('%lld items');
   });
 
   it('should add new keys when source is changed', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -334,49 +394,60 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify new key in target locale
-    const newContent = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
-    expect(newContent.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
+    const newContent = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
+    expect(newContent.strings.app_name.localizations.it.stringUnit.value).toBe(
+      '[it] My Application'
+    );
     expect(newContent.strings.goodbye.localizations.it.stringUnit.value).toBe('[it] Goodbye');
   });
 
   it('should remove keys when source is changed', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
-          },
-          welcome: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Welcome to the app' },
+            welcome: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Welcome to the app' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -387,7 +458,9 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Verify initial translations
     let content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
     expect(content.strings.hello.localizations.it.stringUnit.value).toBe('[it] Hello World');
-    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe('[it] Welcome to the app');
+    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe(
+      '[it] Welcome to the app'
+    );
 
     // Remove hello and welcome from en locale
     delete content.strings.hello.localizations.en;
@@ -400,8 +473,12 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify removed keys absent from target
-    const newContent = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
-    expect(newContent.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
+    const newContent = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
+    expect(newContent.strings.app_name.localizations.it.stringUnit.value).toBe(
+      '[it] My Application'
+    );
     expect(newContent.strings.hello.localizations.it).toBeUndefined();
     expect(newContent.strings.welcome.localizations.it).toBeUndefined();
   });
@@ -409,19 +486,26 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
   it('should handle empty xcstrings file', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {},
-      }, null, 2)
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {},
+        },
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -430,7 +514,9 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify file still valid
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
     expect(content.sourceLanguage).toBe('en');
     expect(content.strings).toBeDefined();
   });
@@ -438,41 +524,48 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
   it('should not add ignored keys to new target locales', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
-          },
-          welcome: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Welcome to the app' },
+            welcome: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Welcome to the app' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     // Add ignoredKeys to config
@@ -485,11 +578,15 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Translate
     await executeCommand(translateCommand, []);
 
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
 
     // Non-ignored keys should be translated
     expect(content.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
-    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe('[it] Welcome to the app');
+    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe(
+      '[it] Welcome to the app'
+    );
 
     // Ignored key should NOT have it locale
     expect(content.strings.hello.localizations.it).toBeUndefined();
@@ -498,35 +595,42 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
   it('should preserve non-translatable keys (shouldTranslate: false)', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_id: {
-            shouldTranslate: false,
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'com.example.app' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_id: {
+              shouldTranslate: false,
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'com.example.app' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -534,7 +638,9 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Translate
     await executeCommand(translateCommand, []);
 
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
 
     // Non-translatable key should NOT have it locale added
     expect(content.strings.app_id.shouldTranslate).toBe(false);
@@ -548,27 +654,34 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
   it('should preserve sourceLanguage and version metadata', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -576,7 +689,9 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Translate
     await executeCommand(translateCommand, []);
 
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
 
     // Verify metadata fields are unchanged
     expect(content.sourceLanguage).toBe('en');
@@ -586,40 +701,47 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
   it('should copy locked keys from source without translation', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
-          },
-          welcome: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Welcome to the app' },
+            welcome: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Welcome to the app' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     // Add lockedKeys to config
@@ -631,44 +753,55 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const content = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
     // Locked key should have source value (no [it] prefix)
     expect(content.strings.hello.localizations.it.stringUnit.value).toBe('Hello World');
     // Non-locked keys should be translated
     expect(content.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
-    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe('[it] Welcome to the app');
+    expect(content.strings.welcome.localizations.it.stringUnit.value).toBe(
+      '[it] Welcome to the app'
+    );
   });
 
   it('should update locked keys when source changes', async () => {
     await writeFile(
       path.join(testDir, 'Localizable.xcstrings'),
-      JSON.stringify({
-        sourceLanguage: 'en',
-        version: '1.0',
-        strings: {
-          app_name: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'My Application' },
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
               },
             },
-          },
-          hello: {
-            localizations: {
-              en: {
-                stringUnit: { state: 'translated', value: 'Hello World' },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
               },
             },
           },
         },
-      }, null, 2)
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'Localizable.xcstrings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
     ]);
 
     // Add lockedKeys to config
@@ -691,9 +824,156 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const newContent = JSON.parse(await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8'));
+    const newContent = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
     // Locked key should have the new source value
     expect(newContent.strings.hello.localizations.it.stringUnit.value).toBe('Hello Universe');
-    expect(newContent.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
+    expect(newContent.strings.app_name.localizations.it.stringUnit.value).toBe(
+      '[it] My Application'
+    );
+  });
+
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await writeFile(
+      path.join(testDir, 'Localizable.xcstrings'),
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
+              },
+            },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
+              },
+            },
+            welcome: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Welcome to the app' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
+    ]);
+
+    // Add includeKeys - only translate app_name
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-xcstrings'].includeKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
+    // Included key should be translated
+    expect(content.strings.app_name.localizations.it.stringUnit.value).toBe('[it] My Application');
+    // Non-included keys should NOT have it locale
+    expect(content.strings.hello.localizations.it).toBeUndefined();
+    expect(content.strings.welcome.localizations.it).toBeUndefined();
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await writeFile(
+      path.join(testDir, 'Localizable.xcstrings'),
+      JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          version: '1.0',
+          strings: {
+            app_name: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'My Application' },
+                },
+              },
+            },
+            hello: {
+              localizations: {
+                en: {
+                  stringUnit: { state: 'translated', value: 'Hello World' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys - all keys get translated
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
+    expect(contentBefore.strings.hello.localizations.it.stringUnit.value).toBe('[it] Hello World');
+
+    // Add includeKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-xcstrings'].includeKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    const currentContent = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
+    currentContent.strings.app_name.localizations.en.stringUnit.value = 'My Updated Application';
+    await writeFile(
+      path.join(testDir, 'Localizable.xcstrings'),
+      JSON.stringify(currentContent, null, 2)
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
+    // Included key should be updated
+    expect(contentAfter.strings.app_name.localizations.it.stringUnit.value).toBe(
+      '[it] My Updated Application'
+    );
+    // Non-included key should be preserved
+    expect(contentAfter.strings.hello.localizations.it.stringUnit.value).toBe('[it] Hello World');
   });
 });

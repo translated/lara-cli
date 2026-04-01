@@ -119,6 +119,7 @@ function groupPathsByExtension(paths: string[]): ConfigType['files'] {
         keyInstructions: [],
         lockedKeys: [],
         ignoredKeys: [],
+        includeKeys: [],
       };
     }
 

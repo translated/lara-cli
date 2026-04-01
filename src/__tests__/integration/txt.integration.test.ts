@@ -412,4 +412,84 @@ describe('TXT Repository Integration Tests', () => {
     expect(content).toContain('[it] Hello World');
     expect(content).toContain('[it] Welcome');
   });
+
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await mkdir(path.join(testDir, 'texts', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'texts', 'en', 'messages.txt'),
+      'Hello World\nDo not translate this\nGoodbye\n'
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'texts/[locale]/messages.txt',
+    ]);
+
+    // Add includeKeys - only translate line_0
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.txt.includeKeys = ['line_0'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'texts', 'it', 'messages.txt'), 'utf-8');
+    // Included line should be translated
+    expect(content).toContain('[it] Hello World');
+    // Non-included lines should NOT be present
+    expect(content).not.toContain('[it] Do not translate this');
+    expect(content).not.toContain('[it] Goodbye');
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'texts', 'en'), { recursive: true });
+    await writeFile(path.join(testDir, 'texts', 'en', 'messages.txt'), 'Hello World\nKeep this\n');
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'texts/[locale]/messages.txt',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(
+      path.join(testDir, 'texts', 'it', 'messages.txt'),
+      'utf-8'
+    );
+    expect(contentBefore).toContain('[it] Keep this');
+
+    // Add includeKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.txt.includeKeys = ['line_0'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'texts', 'en', 'messages.txt'),
+      'Updated Title\nKeep this\n'
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'texts', 'it', 'messages.txt'), 'utf-8');
+    // Included line should be updated
+    expect(contentAfter).toContain('[it] Updated Title');
+    // Non-included line should be preserved
+    expect(contentAfter).toContain('[it] Keep this');
+  });
 });

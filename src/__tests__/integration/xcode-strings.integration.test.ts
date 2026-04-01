@@ -29,7 +29,14 @@ describe('Xcode .strings Repository Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-strings-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-strings-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -214,7 +221,10 @@ describe('Xcode .strings Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify all keys are translated
-    const contentBefore = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    const contentBefore = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
     expect(contentBefore).toContain('[it] My Application');
     expect(contentBefore).toContain('[it] Hello World');
     expect(contentBefore).toContain('[it] Welcome to the app');
@@ -230,7 +240,10 @@ describe('Xcode .strings Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify removed keys are absent
-    const contentAfter = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    const contentAfter = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
     expect(contentAfter).toContain('[it] My Application');
     expect(contentAfter).not.toContain('[it] Hello World');
     expect(contentAfter).not.toContain('[it] Welcome to the app');
@@ -238,10 +251,7 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
   it('should handle empty .strings file', async () => {
     await mkdir(path.join(testDir, 'en.lproj'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'en.lproj', 'Localizable.strings'),
-      ''
-    );
+    await writeFile(path.join(testDir, 'en.lproj', 'Localizable.strings'), '');
 
     // Initialize
     await executeCommand(initCommand, [
@@ -276,9 +286,12 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', '[locale].lproj/Localizable.strings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      '[locale].lproj/Localizable.strings',
     ]);
 
     // Add ignoredKeys to config
@@ -309,9 +322,12 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', '[locale].lproj/Localizable.strings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      '[locale].lproj/Localizable.strings',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -319,7 +335,10 @@ describe('Xcode .strings Repository Integration Tests', () => {
     // First translate without ignoredKeys
     await executeCommand(translateCommand, []);
 
-    const contentBefore = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    const contentBefore = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
     expect(contentBefore).toContain('[it] Hello World');
 
     // Add ignoredKeys and update source to trigger re-translate
@@ -339,7 +358,10 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const contentAfter = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    const contentAfter = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
     expect(contentAfter).toContain('[it] My Updated Application');
     expect(contentAfter).toContain('[it] Hello World'); // preserved, not removed
     expect(contentAfter).toContain('[it] Welcome to the app');
@@ -357,9 +379,12 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', '[locale].lproj/Localizable.strings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      '[locale].lproj/Localizable.strings',
     ]);
 
     // Add lockedKeys to config
@@ -391,9 +416,12 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', '[locale].lproj/Localizable.strings',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      '[locale].lproj/Localizable.strings',
     ]);
 
     // Add lockedKeys to config
@@ -405,7 +433,10 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const contentBefore = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    const contentBefore = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
     expect(contentBefore).toContain('Hello World');
     expect(contentBefore).not.toContain('[it] Hello World');
 
@@ -419,11 +450,109 @@ describe('Xcode .strings Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const contentAfter = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    const contentAfter = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
     // Locked key should have the new source value
     expect(contentAfter).toContain('Hello Universe');
     expect(contentAfter).not.toContain('[it] Hello Universe');
     expect(contentAfter).toContain('[it] My Application');
   });
 
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await mkdir(path.join(testDir, 'en.lproj'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.strings'),
+      `"app_name" = "My Application";
+"hello" = "Hello World";
+"welcome" = "Welcome to the app";
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      '[locale].lproj/Localizable.strings',
+    ]);
+
+    // Add includeKeys - only translate app_name
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-strings'].includeKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'it.lproj', 'Localizable.strings'), 'utf-8');
+    // Included key should be translated
+    expect(content).toContain('[it] My Application');
+    // Non-included keys should NOT be present
+    expect(content).not.toContain('[it] Hello World');
+    expect(content).not.toContain('[it] Welcome to the app');
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'en.lproj'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.strings'),
+      `"app_name" = "My Application";
+"hello" = "Hello World";
+"welcome" = "Welcome to the app";
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      '[locale].lproj/Localizable.strings',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
+    expect(contentBefore).toContain('[it] Hello World');
+
+    // Add includeKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files['xcode-strings'].includeKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'en.lproj', 'Localizable.strings'),
+      `"app_name" = "My Updated Application";
+"hello" = "Hello World";
+"welcome" = "Welcome to the app";
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(
+      path.join(testDir, 'it.lproj', 'Localizable.strings'),
+      'utf-8'
+    );
+    // Included key should be updated
+    expect(contentAfter).toContain('[it] My Updated Application');
+    // Non-included keys should be preserved
+    expect(contentAfter).toContain('[it] Hello World');
+    expect(contentAfter).toContain('[it] Welcome to the app');
+  });
 });
