@@ -45,7 +45,7 @@ const IncludeFilePath = z
     },
     {
       message:
-        'Path must contain [locale] as either a directory (/[locale]/ or [locale].lproj/), or filename ([locale].extension), or be a Vue file, .xcstrings file, or be named i18n.ts',
+        'Path must contain [locale] as either a directory ([locale]/, /[locale]/ or [locale].lproj/), or filename ([locale].extension), or be a Vue file, .xcstrings file, or be named i18n.ts',
     }
   );
 

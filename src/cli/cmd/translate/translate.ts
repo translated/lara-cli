@@ -1,26 +1,38 @@
 import { Command, Option } from 'commander';
 import Ora from 'ora';
+import { readFile, writeFile } from 'fs/promises';
 
-import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
+import { COMMA_AND_SPACE_REGEX, SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
-import { searchLocalePathsByPattern } from '#utils/path.js';
+import { TranslationService, TextBlock } from '#modules/translation/translation.service.js';
+import { searchLocalePathsByPattern, ensureDirectoryExists, getFileType } from '#utils/path.js';
+import { detectFormatting } from '#utils/formatting.js';
 import picomatch from 'picomatch';
 import { handleLaraApiError } from '#utils/error.js';
-import { LaraApiError } from '@translated/lara';
+import { LaraApiError, TranslateOptions as LaraTranslateOptions } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { Messages } from '#messages/messages.js';
 import { displaySummaryBox } from '#utils/display.js';
+import { ParserFactory } from '../../../parsers/parser.factory.js';
 
 type TranslateOptions = {
   target: string[];
-  input: string[];
-
+  paths: string[];
   force: boolean;
   parallel: boolean;
+  // Direct translation options
+  file?: string;
+  text?: string;
+  source?: string;
+  output?: string;
+  translationMemories?: string[];
+  glossaries?: string[];
 };
+
+type TranslateMode = 'text' | 'file' | 'config';
 
 export default new Command()
   .command('translate')
@@ -59,8 +71,55 @@ export default new Command()
   .addOption(
     new Option('-f, --force', 'Force translation even if the files have not changed').default(false)
   )
+  .addOption(
+    new Option('--file <path>', 'Path to a file to translate directly (bypasses config)')
+  )
+  .addOption(
+    new Option('--text <string>', 'Text string to translate directly')
+  )
+  .addOption(
+    new Option('-s, --source <locale>', 'Source locale (required with --file or --text)')
+      .argParser((value) => {
+        const parsed = LocalesEnum.safeParse(value);
+        if (!parsed.success) {
+          Ora({ text: Messages.errors.invalidLocale(value), color: 'red' }).fail();
+          process.exit(1);
+        }
+        return LocalesEnum.parse(value);
+      })
+  )
+  .addOption(
+    new Option('-o, --output <path>', 'Output file path (only with --file)')
+  )
+  .addOption(
+    new Option(
+      '-m, --translation-memories <ids>',
+      'Translation Memory IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
+    )
+      .argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
+  )
+  .addOption(
+    new Option(
+      '-g, --glossaries <ids>',
+      'Glossary IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
+    )
+      .argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
+  )
   .action(async (options: TranslateOptions) => {
     try {
+      const mode = validateAndDetectMode(options);
+
+      if (mode === 'text') {
+        await handleTextMode(options);
+        return;
+      }
+
+      if (mode === 'file') {
+        await handleFileMode(options);
+        return;
+      }
+
+      // Existing config-based flow
       const config = ConfigProvider.getInstance().getConfig();
 
       if (options.target.includes(config.locales.source)) {
@@ -100,6 +159,162 @@ export default new Command()
     }
   });
 
+function validateAndDetectMode(options: TranslateOptions): TranslateMode {
+  const isDirectMode = !!(options.file || options.text);
+
+  if (options.file && options.text) {
+    throw new Error(Messages.errors.fileAndTextMutuallyExclusive);
+  }
+
+  if (!isDirectMode) {
+    if (options.source) {
+      throw new Error(Messages.errors.sourceOnlyWithDirect);
+    }
+    if (options.output) {
+      throw new Error(Messages.errors.outputOnlyWithFile);
+    }
+    if (options.translationMemories || options.glossaries) {
+      throw new Error(Messages.errors.memoriesGlossariesOnlyWithDirect);
+    }
+    return 'config';
+  }
+
+  // Direct mode validations
+  if (!options.source) {
+    throw new Error(Messages.errors.sourceRequiredForDirect);
+  }
+
+  if (!options.target || options.target.length === 0) {
+    throw new Error(Messages.errors.targetRequiredForDirect);
+  }
+
+  if (options.target.length > 1) {
+    throw new Error(Messages.errors.directModeSingleTarget);
+  }
+
+  if (options.target.includes(options.source)) {
+    throw new Error(Messages.errors.sourceEqualsTarget);
+  }
+
+  if (options.force) {
+    throw new Error(Messages.errors.forceNotAllowedWithDirect);
+  }
+
+  if (options.paths && options.paths.length > 0) {
+    throw new Error(Messages.errors.pathsNotAllowedWithDirect);
+  }
+
+  if (options.output && !options.file) {
+    throw new Error(Messages.errors.outputOnlyWithFile);
+  }
+
+  return options.text ? 'text' : 'file';
+}
+
+function buildTranslateOptions(options: TranslateOptions): LaraTranslateOptions {
+  return {
+    adaptTo: options.translationMemories ?? [],
+    glossaries: options.glossaries && options.glossaries.length > 0 ? options.glossaries : undefined,
+  };
+}
+
+async function handleTextMode(options: TranslateOptions): Promise<void> {
+  const text = options.text!;
+  const source = options.source!;
+  const target = options.target[0]!;
+
+  if (text.trim() === '') {
+    throw new Error(Messages.errors.emptyText);
+  }
+
+  const spinner = Ora({ text: Messages.info.translatingText, color: 'yellow' }).start();
+
+  try {
+    const translationService = TranslationService.getInstance();
+    const translateOptions = buildTranslateOptions(options);
+    const textBlocks: TextBlock[] = [{ text, translatable: true }];
+    const translations = await translationService.translate(textBlocks, source, target, translateOptions);
+    const translatedText = translations[0]?.text ?? '';
+
+    spinner.succeed();
+    process.stdout.write(translatedText + '\n');
+  } catch (error) {
+    spinner.fail();
+    if (error instanceof LaraApiError) {
+      handleLaraApiError(error, Messages.info.translatingText, spinner);
+    }
+    throw error;
+  }
+}
+
+async function handleFileMode(options: TranslateOptions): Promise<void> {
+  const filePath = options.file!;
+  const source = options.source!;
+  const target = options.target[0]!;
+
+  const fileType = getFileType(filePath);
+  if (!SUPPORTED_FILE_TYPES.includes(fileType)) {
+    throw new Error(
+      Messages.errors.unsupportedFileType(fileType, SEARCHABLE_EXTENSIONS.join(', '))
+    );
+  }
+
+  let content: string;
+  try {
+    content = await readFile(filePath, 'utf8');
+  } catch {
+    throw new Error(Messages.errors.fileNotFound(filePath));
+  }
+
+  const spinner = Ora({ text: Messages.info.translatingDirectFile(filePath), color: 'yellow' }).start();
+
+  try {
+    const translationService = TranslationService.getInstance();
+    const translateOptions = buildTranslateOptions(options);
+
+    const parser = new ParserFactory(filePath);
+    const parsed = parser.parse(content, { targetLocale: target, originalContent: content });
+    const translatedData: Record<string, unknown> = { ...parsed };
+
+    const translatableEntries: [string, string][] = [];
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === 'string' && value.trim() !== '') {
+        translatableEntries.push([key, value]);
+      }
+    }
+
+    if (translatableEntries.length > 0) {
+      const textBlocks: TextBlock[] = translatableEntries.map(([, v]) => ({ text: v, translatable: true }));
+      const translations = await translationService.translate(textBlocks, source, target, translateOptions);
+      for (let i = 0; i < translatableEntries.length; i++) {
+        translatedData[translatableEntries[i]![0]] = translations[i]?.text ?? translatableEntries[i]![1];
+      }
+    }
+
+    const formatting = detectFormatting(content);
+    const result = parser.serialize(translatedData, {
+      ...formatting,
+      targetLocale: target,
+      originalContent: content,
+    }) as string;
+
+    spinner.succeed();
+
+    if (options.output) {
+      await ensureDirectoryExists(options.output);
+      await writeFile(options.output, result);
+    } else {
+      process.stdout.write(result);
+    }
+  } catch (error) {
+    spinner.fail();
+    if (error instanceof LaraApiError) {
+      handleLaraApiError(error, Messages.info.translatingDirectFile(filePath), spinner);
+    }
+    throw error;
+  }
+}
+
 async function handleFileType(
   fileType: string,
   options: TranslateOptions,
@@ -109,7 +324,7 @@ async function handleFileType(
   const sourceLocale = config.locales.source;
   const targetLocales = getTargetLocales(options, config);
 
-  const inputPathsArray = await getInputPaths(fileType, config, options.input);
+  const inputPathsArray = await getInputPaths(fileType, config, options.paths);
   let hasErrors = false;
 
   for (const inputPath of inputPathsArray) {
@@ -212,7 +427,7 @@ async function calculateTotalWork(
   let totalElements = 0;
 
   for (const fileType of Object.keys(config.files)) {
-    const inputPaths = await getInputPaths(fileType, config, options.input);
+    const inputPaths = await getInputPaths(fileType, config, options.paths);
     totalElements += inputPaths.length * targetLocales.length;
   }
 

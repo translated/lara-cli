@@ -3,6 +3,7 @@ import picomatch, { Matcher } from 'picomatch';
 import { TranslationService } from './translation.service.js';
 import { calculateChecksum, ChecksumState } from '#utils/checksum.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
+import { detectFormatting } from '#utils/formatting.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
@@ -29,46 +30,6 @@ export type TranslationEngineOptions = {
   translationMemoryIds: Memory['id'][];
   glossaryIds: string[];
 };
-
-/**
- * Detects the formatting used in a JSON string by analyzing indentation patterns
- * and trailing newlines.
- *
- * @param jsonContent - The JSON string to analyze
- * @returns Object containing detected indentation (tabs or number of spaces) and trailing newline
- */
-function detectFormatting(jsonContent: string): {
-  indentation: string | number;
-  trailingNewline: string;
-} {
-  const lines = jsonContent.split('\n');
-  let indentation: string | number = 2; // default
-
-  // Detect indentation
-  for (const line of lines) {
-    const match = line.match(/^(\s+)\S/);
-    if (match && match[1]) {
-      const indent = match[1];
-
-      // Check if it's tabs
-      if (indent.includes('\t')) {
-        indentation = '\t';
-        break;
-      }
-
-      // Check if it's spaces
-      if (indent.match(/^ +$/)) {
-        indentation = indent.length;
-        break;
-      }
-    }
-  }
-
-  // Detect trailing newline
-  const trailingNewline = jsonContent.endsWith('\n') ? '\n' : '';
-
-  return { indentation, trailingNewline };
-}
 
 /**
  * Handles the translation of a given input path to a set of target locales.
