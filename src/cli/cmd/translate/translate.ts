@@ -2,7 +2,11 @@ import { Command, Option } from 'commander';
 import Ora from 'ora';
 import { readFile, writeFile } from 'fs/promises';
 
-import { COMMA_AND_SPACE_REGEX, SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
+import {
+  COMMA_AND_SPACE_REGEX,
+  SEARCHABLE_EXTENSIONS,
+  SUPPORTED_FILE_TYPES,
+} from '#modules/common/common.const.js';
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType } from '#modules/config/config.types.js';
@@ -71,39 +75,32 @@ export default new Command()
   .addOption(
     new Option('-f, --force', 'Force translation even if the files have not changed').default(false)
   )
+  .addOption(new Option('--file <path>', 'Path to a file to translate directly (bypasses config)'))
+  .addOption(new Option('--text <string>', 'Text string to translate directly'))
   .addOption(
-    new Option('--file <path>', 'Path to a file to translate directly (bypasses config)')
-  )
-  .addOption(
-    new Option('--text <string>', 'Text string to translate directly')
-  )
-  .addOption(
-    new Option('-s, --source <locale>', 'Source locale (required with --file or --text)')
-      .argParser((value) => {
+    new Option('-s, --source <locale>', 'Source locale (required with --file or --text)').argParser(
+      (value) => {
         const parsed = LocalesEnum.safeParse(value);
         if (!parsed.success) {
           Ora({ text: Messages.errors.invalidLocale(value), color: 'red' }).fail();
           process.exit(1);
         }
         return LocalesEnum.parse(value);
-      })
+      }
+    )
   )
-  .addOption(
-    new Option('-o, --output <path>', 'Output file path (only with --file)')
-  )
+  .addOption(new Option('-o, --output <path>', 'Output file path (only with --file)'))
   .addOption(
     new Option(
       '-m, --translation-memories <ids>',
       'Translation Memory IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
-    )
-      .argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
+    ).argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
   )
   .addOption(
     new Option(
       '-g, --glossaries <ids>',
       'Glossary IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
-    )
-      .argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
+    ).argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
   )
   .action(async (options: TranslateOptions) => {
     try {
@@ -214,7 +211,8 @@ function validateAndDetectMode(options: TranslateOptions): TranslateMode {
 function buildTranslateOptions(options: TranslateOptions): LaraTranslateOptions {
   return {
     adaptTo: options.translationMemories ?? [],
-    glossaries: options.glossaries && options.glossaries.length > 0 ? options.glossaries : undefined,
+    glossaries:
+      options.glossaries && options.glossaries.length > 0 ? options.glossaries : undefined,
   };
 }
 
@@ -233,7 +231,12 @@ async function handleTextMode(options: TranslateOptions): Promise<void> {
     const translationService = TranslationService.getInstance();
     const translateOptions = buildTranslateOptions(options);
     const textBlocks: TextBlock[] = [{ text, translatable: true }];
-    const translations = await translationService.translate(textBlocks, source, target, translateOptions);
+    const translations = await translationService.translate(
+      textBlocks,
+      source,
+      target,
+      translateOptions
+    );
     const translatedText = translations[0]?.text ?? '';
 
     spinner.succeed();
@@ -266,7 +269,10 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
     throw new Error(Messages.errors.fileNotFound(filePath));
   }
 
-  const spinner = Ora({ text: Messages.info.translatingDirectFile(filePath), color: 'yellow' }).start();
+  const spinner = Ora({
+    text: Messages.info.translatingDirectFile(filePath),
+    color: 'yellow',
+  }).start();
 
   try {
     const translationService = TranslationService.getInstance();
@@ -284,10 +290,19 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
     }
 
     if (translatableEntries.length > 0) {
-      const textBlocks: TextBlock[] = translatableEntries.map(([, v]) => ({ text: v, translatable: true }));
-      const translations = await translationService.translate(textBlocks, source, target, translateOptions);
+      const textBlocks: TextBlock[] = translatableEntries.map(([, v]) => ({
+        text: v,
+        translatable: true,
+      }));
+      const translations = await translationService.translate(
+        textBlocks,
+        source,
+        target,
+        translateOptions
+      );
       for (let i = 0; i < translatableEntries.length; i++) {
-        translatedData[translatableEntries[i]![0]] = translations[i]?.text ?? translatableEntries[i]![1];
+        translatedData[translatableEntries[i]![0]] =
+          translations[i]?.text ?? translatableEntries[i]![1];
       }
     }
 

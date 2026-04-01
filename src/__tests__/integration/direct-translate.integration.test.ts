@@ -149,14 +149,7 @@ describe('Direct Translation Integration Tests', () => {
 
     it('should error when multiple target locales are provided', async () => {
       await expect(
-        executeCommand(translateCommand, [
-          '--text',
-          'Hello',
-          '--source',
-          'en',
-          '--target',
-          'fr,it',
-        ])
+        executeCommand(translateCommand, ['--text', 'Hello', '--source', 'en', '--target', 'fr,it'])
       ).rejects.toThrow();
     });
 
@@ -327,14 +320,7 @@ describe('Direct Translation Integration Tests', () => {
       await writeFile(inputFile, 'fake png content');
 
       await expect(
-        executeCommand(translateCommand, [
-          '--file',
-          inputFile,
-          '--source',
-          'en',
-          '--target',
-          'fr',
-        ])
+        executeCommand(translateCommand, ['--file', inputFile, '--source', 'en', '--target', 'fr'])
       ).rejects.toThrow();
     });
 
@@ -343,14 +329,7 @@ describe('Direct Translation Integration Tests', () => {
       await writeFile(inputFile, 'col1,col2\nval1,val2');
 
       await expect(
-        executeCommand(translateCommand, [
-          '--file',
-          inputFile,
-          '--source',
-          'en',
-          '--target',
-          'fr',
-        ])
+        executeCommand(translateCommand, ['--file', inputFile, '--source', 'en', '--target', 'fr'])
       ).rejects.toThrow();
     });
   });
@@ -478,10 +457,7 @@ describe('Direct Translation Integration Tests', () => {
     it('should write structured JSON to output file', async () => {
       const inputFile = path.join(testDir, 'input.json');
       const outputFile = path.join(testDir, 'output.json');
-      await writeFile(
-        inputFile,
-        JSON.stringify({ hello: 'Hello' }, null, 2) + '\n'
-      );
+      await writeFile(inputFile, JSON.stringify({ hello: 'Hello' }, null, 2) + '\n');
 
       await executeCommand(translateCommand, [
         '--file',
@@ -503,9 +479,7 @@ describe('Direct Translation Integration Tests', () => {
 
   describe('validation', () => {
     it('should error when --source is used without --file or --text', async () => {
-      await expect(
-        executeCommand(translateCommand, ['--source', 'en'])
-      ).rejects.toThrow();
+      await expect(executeCommand(translateCommand, ['--source', 'en'])).rejects.toThrow();
     });
 
     it('should error when --output is used without --file', async () => {
@@ -565,9 +539,7 @@ describe('Direct Translation Integration Tests', () => {
     });
 
     it('should error when --glossaries is used without --file or --text', async () => {
-      await expect(
-        executeCommand(translateCommand, ['--glossaries', 'gls_123'])
-      ).rejects.toThrow();
+      await expect(executeCommand(translateCommand, ['--glossaries', 'gls_123'])).rejects.toThrow();
     });
   });
 
