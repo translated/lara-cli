@@ -45,9 +45,10 @@ const METADATA_KEYS = new Set([
  * </plist>
  * ```
  */
-export class XcodeStringsdictParser
-  implements Parser<Record<string, unknown>, XcodeStringsdictParserOptionsType>
-{
+export class XcodeStringsdictParser implements Parser<
+  Record<string, unknown>,
+  XcodeStringsdictParserOptionsType
+> {
   private readonly fallbackContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -71,13 +72,9 @@ export class XcodeStringsdictParser
   /**
    * Extracts key-value pairs from a plist `<dict>` represented as a preserveOrder array.
    */
-  private extractDictEntries(
-    dictArray: Record<string, unknown>[]
-  ): Array<[string, unknown]> {
+  private extractDictEntries(dictArray: Record<string, unknown>[]): Array<[string, unknown]> {
     // Filter out #text whitespace nodes produced by fast-xml-parser preserveOrder mode
-    const nodes = dictArray.filter(
-      (n) => !('#text' in n && Object.keys(n).length === 1)
-    );
+    const nodes = dictArray.filter((n) => !('#text' in n && Object.keys(n).length === 1));
     const entries: Array<[string, unknown]> = [];
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]!;
@@ -291,9 +288,7 @@ export class XcodeStringsdictParser
       for (const [key, value] of entryDictEntries) {
         if (key === 'NSStringLocalizedFormatKey') {
           lines.push(`${indent}${indent}<key>NSStringLocalizedFormatKey</key>`);
-          lines.push(
-            `${indent}${indent}<string>${escapeXml(this.getStringValue(value))}</string>`
-          );
+          lines.push(`${indent}${indent}<string>${escapeXml(this.getStringValue(value))}</string>`);
           continue;
         }
 
@@ -317,9 +312,7 @@ export class XcodeStringsdictParser
             const translatedValue = dataMap.has(flatKey)
               ? String(dataMap.get(flatKey) ?? '')
               : this.getStringValue(formValue);
-            lines.push(
-              `${indent}${indent}${indent}<string>${escapeXml(translatedValue)}</string>`
-            );
+            lines.push(`${indent}${indent}${indent}<string>${escapeXml(translatedValue)}</string>`);
           } else {
             lines.push(
               `${indent}${indent}${indent}<string>${escapeXml(this.getStringValue(formValue))}</string>`

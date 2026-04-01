@@ -49,10 +49,7 @@ function calculateChecksum(
   const changelog: ChecksumChangelog = {};
 
   const fileParser = parser || new ParserFactory(fileName);
-  const fileContent = fileParser.parse(
-    fs.readFileSync(fileName, 'utf8'),
-    { targetLocale: locale }
-  );
+  const fileContent = fileParser.parse(fs.readFileSync(fileName, 'utf8'), { targetLocale: locale });
 
   let changed: boolean = false;
 

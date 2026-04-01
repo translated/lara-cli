@@ -30,9 +30,10 @@ interface StringsEntry {
  * "hello" = "Hello World";
  * ```
  */
-export class XcodeStringsParser
-  implements Parser<Record<string, unknown>, XcodeStringsParserOptionsType>
-{
+export class XcodeStringsParser implements Parser<
+  Record<string, unknown>,
+  XcodeStringsParserOptionsType
+> {
   private readonly fallbackContent = '';
 
   /**
