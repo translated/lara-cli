@@ -321,22 +321,37 @@ describe('Direct Translation Integration Tests', () => {
     });
   });
 
-  describe('file mode - plain text fallback', () => {
-    it('should translate unsupported file extensions as plain text', async () => {
+  describe('file mode - unsupported file types', () => {
+    it('should error when file type is not supported', async () => {
+      const inputFile = path.join(testDir, 'image.png');
+      await writeFile(inputFile, 'fake png content');
+
+      await expect(
+        executeCommand(translateCommand, [
+          '--file',
+          inputFile,
+          '--source',
+          'en',
+          '--target',
+          'fr',
+        ])
+      ).rejects.toThrow();
+    });
+
+    it('should error for csv files', async () => {
       const inputFile = path.join(testDir, 'data.csv');
-      await writeFile(inputFile, 'Hello, world!');
+      await writeFile(inputFile, 'col1,col2\nval1,val2');
 
-      await executeCommand(translateCommand, [
-        '--file',
-        inputFile,
-        '--source',
-        'en',
-        '--target',
-        'fr',
-      ]);
-
-      const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => call[0]);
-      expect(stdoutCalls).toContainEqual('[fr] Hello, world!');
+      await expect(
+        executeCommand(translateCommand, [
+          '--file',
+          inputFile,
+          '--source',
+          'en',
+          '--target',
+          'fr',
+        ])
+      ).rejects.toThrow();
     });
   });
 

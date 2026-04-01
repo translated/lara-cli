@@ -41,6 +41,8 @@ export const Messages = {
     emptyText: '--text cannot be empty',
     directModeSingleTarget: '--file and --text only support a single target locale',
     fileNotFound: (filePath: string) => `File not found: ${filePath}`,
+    unsupportedFileType: (extension: string, supported: string) =>
+      `Unsupported file type: .${extension}. Supported types: ${supported}`,
     gettingMemories: 'Error getting Translation Memories',
     gettingGlossaries: 'Error getting Glossaries',
     errorTranslatingFile: (filePath: string) => `Error translating ${filePath}`,

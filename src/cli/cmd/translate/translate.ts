@@ -2,13 +2,13 @@ import { Command, Option } from 'commander';
 import Ora from 'ora';
 import { readFile, writeFile } from 'fs/promises';
 
-import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
+import { COMMA_AND_SPACE_REGEX, SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '#modules/common/common.const.js';
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
 import { TranslationService, TextBlock } from '#modules/translation/translation.service.js';
-import { searchLocalePathsByPattern, ensureDirectoryExists } from '#utils/path.js';
+import { searchLocalePathsByPattern, ensureDirectoryExists, getFileType } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
 import picomatch from 'picomatch';
 import { handleLaraApiError } from '#utils/error.js';
@@ -233,6 +233,13 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
   const source = options.source!;
   const target = options.target[0]!;
 
+  const fileType = getFileType(filePath);
+  if (!SUPPORTED_FILE_TYPES.includes(fileType)) {
+    throw new Error(
+      Messages.errors.unsupportedFileType(fileType, SEARCHABLE_EXTENSIONS.join(', '))
+    );
+  }
+
   let content: string;
   try {
     content = await readFile(filePath, 'utf8');
@@ -244,43 +251,32 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
 
   try {
     const translationService = TranslationService.getInstance();
-    let result: string;
 
-    let parser: ParserFactory | null = null;
-    try {
-      parser = new ParserFactory(filePath);
-    } catch {
-      // Unsupported extension -> treat as plain text
+    const parser = new ParserFactory(filePath);
+    const parsed = parser.parse(content, { targetLocale: target });
+    const translatedData: Record<string, unknown> = { ...parsed };
+
+    const translatableEntries: [string, string][] = [];
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === 'string' && value.trim() !== '') {
+        translatableEntries.push([key, value]);
+      }
     }
 
-    if (parser) {
-      // Structured file: parse, batch-translate all string values, serialize
-      const parsed = parser.parse(content, { targetLocale: target });
-      const translatedData: Record<string, unknown> = { ...parsed };
-
-      const translatableEntries: [string, string][] = [];
-      for (const [key, value] of Object.entries(parsed)) {
-        if (typeof value === 'string' && value.trim() !== '') {
-          translatableEntries.push([key, value]);
-        }
+    if (translatableEntries.length > 0) {
+      const textBlocks: TextBlock[] = translatableEntries.map(([, v]) => ({ text: v, translatable: true }));
+      const translations = await translationService.translate(textBlocks, source, target, {});
+      for (let i = 0; i < translatableEntries.length; i++) {
+        translatedData[translatableEntries[i]![0]] = translations[i]?.text ?? translatableEntries[i]![1];
       }
-
-      if (translatableEntries.length > 0) {
-        const textBlocks: TextBlock[] = translatableEntries.map(([, v]) => ({ text: v, translatable: true }));
-        const translations = await translationService.translate(textBlocks, source, target, {});
-        for (let i = 0; i < translatableEntries.length; i++) {
-          translatedData[translatableEntries[i]![0]] = translations[i]?.text ?? translatableEntries[i]![1];
-        }
-      }
-      const formatting = detectFormatting(content);
-      result = parser.serialize(translatedData, {
-        ...formatting,
-        targetLocale: target,
-        originalContent: content,
-      }) as string;
-    } else {
-      result = await translateText(translationService, content, source, target);
     }
+
+    const formatting = detectFormatting(content);
+    const result = parser.serialize(translatedData, {
+      ...formatting,
+      targetLocale: target,
+      originalContent: content,
+    }) as string;
 
     spinner.succeed();
 
