@@ -129,7 +129,7 @@ Use `--force` when you need to:
 - Fix translation errors by regenerating all translations
 - Reset translations after configuration changes
 
-## Direct Translation (Pipeline Mode)
+## Direct Translation
 
 In addition to config-based translation, the `translate` command supports direct file and text translation. This mode is designed for CI/CD pipelines, scripting, and one-off translations — no `lara.yaml` configuration file is needed.
 
@@ -174,22 +174,6 @@ Only [supported file formats](../config/formats.md) are accepted (JSON, PO, XML,
 | `-s, --source <locale>` | Source locale (required with `--file` or `--text`) |
 | `-o, --output <path>` | Output file path (only with `--file`) |
 
-### Pipeline Examples
-
-Translate multiple files in a loop:
-
-```bash
-for lang in fr it de es; do
-  lara-cli translate --file "en.json" --source en --target $lang --output "$lang.json"
-done
-```
-
-Translate text inline in a script:
-
-```bash
-TRANSLATED=$(lara-cli translate --text "Hello" --source en --target fr)
-echo "Translation: $TRANSLATED"
-```
 
 ### Differences from Config-Based Mode
 
