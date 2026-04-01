@@ -173,7 +173,19 @@ Only [supported file formats](../config/formats.md) are accepted (JSON, PO, XML,
 | `--text <string>` | Text string to translate directly |
 | `-s, --source <locale>` | Source locale (required with `--file` or `--text`) |
 | `-o, --output <path>` | Output file path (only with `--file`) |
+| `-m, --translation-memories <ids>` | Translation Memory IDs (comma-separated) |
+| `-g, --glossaries <ids>` | Glossary IDs (comma-separated) |
 
+### Using Translation Memories & Glossaries
+
+You can use Translation Memories and Glossaries in direct mode by passing their IDs:
+
+```bash
+lara-cli translate --text "Hello" --source en --target fr -m "mem_abc123"
+lara-cli translate --file "messages.json" --source en --target fr -m "mem_abc,mem_def" -g "gls_xyz"
+```
+
+Use `lara-cli memory` and `lara-cli glossary` to list available IDs.
 
 ### Differences from Config-Based Mode
 
@@ -184,7 +196,7 @@ Only [supported file formats](../config/formats.md) are accepted (JSON, PO, XML,
 | Locked/ignored keys | Yes | No |
 | Translation instructions | Yes | No |
 | Multiple target locales per invocation | Yes | No (one at a time) |
-| Translation Memories & Glossaries | Yes | No |
+| Translation Memories & Glossaries | Yes | Yes |
 
 ### Prerequisites
 

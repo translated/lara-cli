@@ -43,6 +43,8 @@ export const Messages = {
     fileNotFound: (filePath: string) => `File not found: ${filePath}`,
     unsupportedFileType: (extension: string, supported: string) =>
       `Unsupported file type: .${extension}. Supported types: ${supported}`,
+    memoriesGlossariesOnlyWithDirect:
+      '--translation-memories and --glossaries can only be used with --file or --text',
     gettingMemories: 'Error getting Translation Memories',
     gettingGlossaries: 'Error getting Glossaries',
     errorTranslatingFile: (filePath: string) => `Error translating ${filePath}`,

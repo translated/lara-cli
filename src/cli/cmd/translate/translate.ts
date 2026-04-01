@@ -12,7 +12,7 @@ import { searchLocalePathsByPattern, ensureDirectoryExists, getFileType } from '
 import { detectFormatting } from '#utils/formatting.js';
 import picomatch from 'picomatch';
 import { handleLaraApiError } from '#utils/error.js';
-import { LaraApiError } from '@translated/lara';
+import { LaraApiError, TranslateOptions as LaraTranslateOptions } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { Messages } from '#messages/messages.js';
 import { displaySummaryBox } from '#utils/display.js';
@@ -28,6 +28,8 @@ type TranslateOptions = {
   text?: string;
   source?: string;
   output?: string;
+  translationMemories?: string[];
+  glossaries?: string[];
 };
 
 type TranslateMode = 'text' | 'file' | 'config';
@@ -88,6 +90,20 @@ export default new Command()
   )
   .addOption(
     new Option('-o, --output <path>', 'Output file path (only with --file)')
+  )
+  .addOption(
+    new Option(
+      '-m, --translation-memories <ids>',
+      'Translation Memory IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
+    )
+      .argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
+  )
+  .addOption(
+    new Option(
+      '-g, --glossaries <ids>',
+      'Glossary IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
+    )
+      .argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
   )
   .action(async (options: TranslateOptions) => {
     try {
@@ -157,6 +173,9 @@ function validateAndDetectMode(options: TranslateOptions): TranslateMode {
     if (options.output) {
       throw new Error(Messages.errors.outputOnlyWithFile);
     }
+    if (options.translationMemories || options.glossaries) {
+      throw new Error(Messages.errors.memoriesGlossariesOnlyWithDirect);
+    }
     return 'config';
   }
 
@@ -192,15 +211,11 @@ function validateAndDetectMode(options: TranslateOptions): TranslateMode {
   return options.text ? 'text' : 'file';
 }
 
-async function translateText(
-  service: TranslationService,
-  text: string,
-  source: string,
-  target: string
-): Promise<string> {
-  const textBlocks: TextBlock[] = [{ text, translatable: true }];
-  const translations = await service.translate(textBlocks, source, target, {});
-  return translations[0]?.text ?? '';
+function buildTranslateOptions(options: TranslateOptions): LaraTranslateOptions {
+  return {
+    adaptTo: options.translationMemories ?? [],
+    glossaries: options.glossaries && options.glossaries.length > 0 ? options.glossaries : undefined,
+  };
 }
 
 async function handleTextMode(options: TranslateOptions): Promise<void> {
@@ -216,11 +231,15 @@ async function handleTextMode(options: TranslateOptions): Promise<void> {
 
   try {
     const translationService = TranslationService.getInstance();
-    const translatedText = await translateText(translationService, text, source, target);
+    const translateOptions = buildTranslateOptions(options);
+    const textBlocks: TextBlock[] = [{ text, translatable: true }];
+    const translations = await translationService.translate(textBlocks, source, target, translateOptions);
+    const translatedText = translations[0]?.text ?? '';
 
     spinner.succeed();
     process.stdout.write(translatedText + '\n');
   } catch (error) {
+    spinner.fail();
     if (error instanceof LaraApiError) {
       handleLaraApiError(error, Messages.info.translatingText, spinner);
     }
@@ -251,6 +270,7 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
 
   try {
     const translationService = TranslationService.getInstance();
+    const translateOptions = buildTranslateOptions(options);
 
     const parser = new ParserFactory(filePath);
     const parsed = parser.parse(content, { targetLocale: target });
@@ -265,7 +285,7 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
 
     if (translatableEntries.length > 0) {
       const textBlocks: TextBlock[] = translatableEntries.map(([, v]) => ({ text: v, translatable: true }));
-      const translations = await translationService.translate(textBlocks, source, target, {});
+      const translations = await translationService.translate(textBlocks, source, target, translateOptions);
       for (let i = 0; i < translatableEntries.length; i++) {
         translatedData[translatableEntries[i]![0]] = translations[i]?.text ?? translatableEntries[i]![1];
       }
@@ -287,6 +307,7 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
       process.stdout.write(result);
     }
   } catch (error) {
+    spinner.fail();
     if (error instanceof LaraApiError) {
       handleLaraApiError(error, Messages.info.translatingDirectFile(filePath), spinner);
     }

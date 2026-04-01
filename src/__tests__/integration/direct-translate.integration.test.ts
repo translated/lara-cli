@@ -557,5 +557,72 @@ describe('Direct Translation Integration Tests', () => {
         ])
       ).rejects.toThrow();
     });
+
+    it('should error when --translation-memories is used without --file or --text', async () => {
+      await expect(
+        executeCommand(translateCommand, ['--translation-memories', 'mem_123'])
+      ).rejects.toThrow();
+    });
+
+    it('should error when --glossaries is used without --file or --text', async () => {
+      await expect(
+        executeCommand(translateCommand, ['--glossaries', 'gls_123'])
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('translation memories and glossaries', () => {
+    it('should accept --translation-memories with --text', async () => {
+      await executeCommand(translateCommand, [
+        '--text',
+        'Hello',
+        '--source',
+        'en',
+        '--target',
+        'fr',
+        '--translation-memories',
+        'mem_abc123',
+      ]);
+
+      const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => call[0]);
+      expect(stdoutCalls).toContainEqual('[fr] Hello\n');
+    });
+
+    it('should accept --glossaries with --file', async () => {
+      const inputFile = path.join(testDir, 'hello.txt');
+      await writeFile(inputFile, 'Hello');
+
+      await executeCommand(translateCommand, [
+        '--file',
+        inputFile,
+        '--source',
+        'en',
+        '--target',
+        'fr',
+        '--glossaries',
+        'gls_xyz789',
+      ]);
+
+      const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => call[0]);
+      expect(stdoutCalls).toContainEqual('[fr] Hello');
+    });
+
+    it('should accept both --translation-memories and --glossaries together', async () => {
+      await executeCommand(translateCommand, [
+        '--text',
+        'Hello',
+        '--source',
+        'en',
+        '--target',
+        'fr',
+        '--translation-memories',
+        'mem_abc,mem_def',
+        '--glossaries',
+        'gls_xyz',
+      ]);
+
+      const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => call[0]);
+      expect(stdoutCalls).toContainEqual('[fr] Hello\n');
+    });
   });
 });
