@@ -28,11 +28,23 @@ export type MarkdownParserOptionsType = BaseContentParserOptionsType;
 
 export type AndroidXmlParserOptionsType = BaseContentParserOptionsType;
 
+export type XcodeStringsParserOptionsType = BaseContentParserOptionsType;
+
+export type XcodeStringsdictParserOptionsType = BaseContentParserOptionsType;
+
+export type XcodeXcstringsParserOptionsType = BaseContentParserOptionsType;
+
+export type TxtParserOptionsType = BaseContentParserOptionsType;
+
 export type ParserOptionsType = Partial<
   PoParserOptionsType &
     JsonParserOptionsType &
     TsParserOptionsType &
     VueParserOptionsType &
     MarkdownParserOptionsType &
-    AndroidXmlParserOptionsType
+    AndroidXmlParserOptionsType &
+    XcodeStringsParserOptionsType &
+    XcodeStringsdictParserOptionsType &
+    XcodeXcstringsParserOptionsType &
+    TxtParserOptionsType
 >;

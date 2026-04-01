@@ -36,6 +36,48 @@ async function extractLocalesFromFile(
 }
 
 /**
+ * Extracts locales from an .xcstrings file by reading the localizations keys.
+ *
+ * @param filePath - Path to the .xcstrings file.
+ * @param filterOutLocale - Optional locale to exclude from results.
+ * @returns A promise that resolves to an array of locale codes found.
+ */
+async function extractLocalesFromXcstrings(
+  filePath: string,
+  filterOutLocale?: string
+): Promise<string[]> {
+  try {
+    const content = await readSafe(filePath);
+    const parsed = JSON.parse(content);
+    const locales = new Set<string>();
+
+    if (parsed?.strings && typeof parsed.strings === 'object') {
+      for (const entry of Object.values(parsed.strings) as Array<Record<string, unknown>>) {
+        const localizations = entry?.localizations;
+        if (localizations && typeof localizations === 'object') {
+          for (const locale of Object.keys(localizations as object)) {
+            if (availableLocales.has(locale) && (!filterOutLocale || locale !== filterOutLocale)) {
+              locales.add(locale);
+            }
+          }
+        }
+      }
+    }
+
+    // Also check sourceLanguage field
+    if (parsed?.sourceLanguage && availableLocales.has(parsed.sourceLanguage)) {
+      if (!filterOutLocale || parsed.sourceLanguage !== filterOutLocale) {
+        locales.add(parsed.sourceLanguage);
+      }
+    }
+
+    return Array.from(locales);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Extracts all locales found in paths.
  *
  * @param source - The source locale.
@@ -57,6 +99,15 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
 
     if (filePath.endsWith(SupportedExtensionEnum.VUE)) {
       const locales = await extractLocalesFromFile(filePath, source);
+      for (const locale of locales) {
+        targetLocales.add(locale);
+      }
+      continue;
+    }
+
+    // .xcstrings files contain all locales in one file — parse to extract
+    if (filePath.endsWith('.xcstrings')) {
+      const locales = await extractLocalesFromXcstrings(filePath, source);
       for (const locale of locales) {
         targetLocales.add(locale);
       }
@@ -87,10 +138,18 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
         }
       }
 
-      // There might be situations where there might be more than one locale in the path.
-      // If the locale is already set, we should treat the other locale as a normal part of the path.
-      //
-      // (e.g.) src/i18n/en/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
+      // Handle .lproj directories (e.g., en.lproj -> en)
+      const lprojMatch = part.match(/^(.+)\.lproj$/);
+      if (
+        lprojMatch &&
+        lprojMatch[1] &&
+        availableLocales.has(lprojMatch[1]) &&
+        lprojMatch[1] !== source
+      ) {
+        targetLocales.add(lprojMatch[1]);
+        continue;
+      }
+
       if (availableLocales.has(part) && part !== source) {
         targetLocales.add(part);
       }
@@ -127,6 +186,15 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
       continue;
     }
 
+    // .xcstrings files contain all locales in one file — parse to extract
+    if (filePath.endsWith('.xcstrings')) {
+      const locales = await extractLocalesFromXcstrings(filePath);
+      for (const locale of locales) {
+        foundLocales.add(locale);
+      }
+      continue;
+    }
+
     if (filePath.endsWith(`.${SupportedExtensionEnum.TS}`)) {
       continue;
     }
@@ -151,10 +219,13 @@ async function extractAllLocalesFromProject(): Promise<string[]> {
         }
       }
 
-      // There might be situations where there might be more than one locale in the path.
-      // If the locale is already set, we should treat the other locale as a normal part of the path.
-      //
-      // (e.g.) src/i18n/en/pages/it-IT/home.json -> src/i18n/[locale]/pages/it-IT/home.json
+      // Handle .lproj directories (e.g., en.lproj -> en)
+      const lprojMatch = part.match(/^(.+)\.lproj$/);
+      if (lprojMatch && lprojMatch[1] && availableLocales.has(lprojMatch[1])) {
+        foundLocales.add(lprojMatch[1]);
+        continue;
+      }
+
       if (availableLocales.has(part)) {
         foundLocales.add(part);
       }

@@ -14,6 +14,15 @@ To get started with Lara CLI, follow these steps:
 2. **Initialize your project**: Run `lara-cli init` to create a configuration file
 3. **Translate your files**: Run `lara-cli translate` to process translations
 
+For quick, one-off translations or CI/CD pipelines, you can also use **direct translation** without any configuration:
+
+```bash
+lara-cli translate --text "Hello, world!" --source en --target fr
+lara-cli translate --file "messages.json" --source en --target fr --output "messages-fr.json"
+```
+
+See the [Translate Command](commands/translate.md) documentation for details.
+
 ## Command Reference
 
 Lara CLI provides several commands to manage your internationalization:
@@ -43,3 +52,7 @@ The `lara.yaml` configuration file controls how Lara CLI works with your project
 - [Vue Files Guide](config/files/vue-files.md) - Complete guide for Vue I18n single-file components
 - [Markdown Files Guide](config/files/md-files.md) - Complete guide for Markdown and MDX files
 - [Android XML Files Guide](config/files/android-xml-files.md) - Complete guide for Android XML string resource files
+- [Xcode Strings Files Guide](config/files/xcode-strings-files.md) - Complete guide for Xcode .strings files
+- [Xcode Stringsdict Files Guide](config/files/xcode-stringsdict-files.md) - Complete guide for Xcode .stringsdict plural files
+- [Xcode String Catalogs Guide](config/files/xcode-xcstrings-files.md) - Complete guide for Xcode .xcstrings String Catalogs
+- [TXT Files Guide](config/files/txt-files.md) - Complete guide for plain text files

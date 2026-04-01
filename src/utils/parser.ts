@@ -1,4 +1,21 @@
 /**
+ * CLDR plural form categories supported by Apple localization formats.
+ */
+export const PLURAL_FORMS = new Set(['zero', 'one', 'two', 'few', 'many', 'other']);
+
+/**
+ * Escapes XML special characters for use in both attributes and text content.
+ */
+export function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
  * Checks if a value is a plain object (not null, not an array).
  *
  * @param value - The value to check

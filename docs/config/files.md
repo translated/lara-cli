@@ -24,6 +24,9 @@ files:
       - "config/*/url"
     ignoredKeys:
       - "internal/**"
+    includeKeys:
+      - "ui/**"
+      - "messages/**"
 ```
 
 ## Properties
@@ -56,7 +59,14 @@ files:
 - **Description**: Identifies keys that should be left untouched in target files (not translated, not added, not removed)
 - **Format**: Uses glob patterns for matching keys (e.g., `internal/**`, `**/debug`)
 
-## Locked vs Ignored Keys
+### includeKeys
+
+- **Type**: Array of strings (key patterns)
+- **Required**: No (defaults to empty array)
+- **Description**: When specified, only keys matching these patterns will be translated. All other keys are treated as ignored (preserved in existing target files, not added to new ones). When empty (default), all keys are included.
+- **Format**: Uses glob patterns for matching keys (e.g., `ui/**`, `messages/*`)
+
+## Locked vs Ignored vs Include Keys
 
 Understanding the difference between `lockedKeys` and `ignoredKeys`:
 
@@ -156,6 +166,57 @@ Target file (`es.json`) - if `debug` already existed:
 
 Note: The `debug` key is never translated or modified by Lara. If it already exists in the target, it is preserved as-is. If it does not exist, it is not added.
 
+### Include Keys
+
+Keys listed in `includeKeys` define a whitelist: only matching keys are translated. All non-matching keys behave as if they were ignored. When `includeKeys` is empty (the default), all keys are in scope.
+
+Use this for:
+
+- Translating only a specific subset of a large file
+- Gradually rolling out translations for new keys
+- Focusing translation on specific namespaces
+
+**Example:**
+
+Source file (`en.json`):
+
+```json
+{
+  "ui": {
+    "title": "My Application",
+    "subtitle": "Welcome"
+  },
+  "internal": {
+    "debug": "Debug mode",
+    "version": "1.0.0"
+  }
+}
+```
+
+Configuration:
+
+```yaml
+includeKeys:
+  - "ui/**"
+```
+
+Target file (`es.json`):
+
+```json
+{
+  "ui": {
+    "title": "Mi Aplicación",
+    "subtitle": "Bienvenido"
+  }
+}
+```
+
+Note: Only `ui/**` keys are translated. The `internal` keys are not added to the target file. If they already existed in the target, they would be preserved as-is.
+
+**Interaction with `lockedKeys` and `ignoredKeys`:**
+
+`includeKeys` is evaluated first. Among included keys, `lockedKeys` and `ignoredKeys` still apply normally. Non-included keys are always treated as ignored, regardless of other settings.
+
 ## Path Patterns
 
 Paths in the `include` and `exclude` arrays must use the `[locale]` placeholder to indicate where locale codes should appear.
@@ -196,6 +257,7 @@ files:
     exclude: []
     lockedKeys: []
     ignoredKeys: []
+    includeKeys: []
 ```
 
 ### Complex Configuration
@@ -216,4 +278,7 @@ files:
     ignoredKeys:
       - "internal/**"
       - "**/debug"
+    includeKeys:
+      - "ui/**"
+      - "messages/**"
 ```

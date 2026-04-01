@@ -9,9 +9,7 @@ vi.mock('#modules/translation/translation.service.js', () => {
         translate: vi.fn(async (textBlocks, _sourceLocale, targetLocale) => {
           // Return mock translations based on target locale
           return textBlocks.map((block: { text: string; translatable: boolean }) => ({
-            text: block.translatable
-              ? `[${targetLocale}] ${block.text}`
-              : block.text,
+            text: block.translatable ? `[${targetLocale}] ${block.text}` : block.text,
             translatable: block.translatable,
           }));
         }),
@@ -35,14 +33,15 @@ export async function executeCommand(command: Command, args: string[]): Promise<
 
   try {
     // Get command name - try both method and property access
-    const commandName = typeof command.name === 'function' ? command.name() : (command as any)._name || 'unknown';
-    
+    const commandName =
+      typeof command.name === 'function' ? command.name() : (command as any)._name || 'unknown';
+
     // Create a parent command to match the CLI structure
     // The non-interactive flag defaults to false, so we need to explicitly set it
     const parentCommand = new Command()
       .name('lara-cli')
       .addOption(new Option('-y --non-interactive', 'Run in non-interactive mode').default(false));
-    
+
     // Remove command from its current parent if it has one (to avoid conflicts)
     if ((command as any).parent) {
       try {
@@ -51,10 +50,10 @@ export async function executeCommand(command: Command, args: string[]): Promise<
         // Ignore if removal fails
       }
     }
-    
+
     // Add the command to the new parent
     parentCommand.addCommand(command);
-    
+
     // Parse with non-interactive flag set to true (via -y)
     // Commander.js parseAsync expects just the arguments (command name + options)
     await parentCommand.parseAsync(['-y', commandName, ...args], { from: 'user' });

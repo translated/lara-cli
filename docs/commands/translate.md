@@ -129,6 +129,86 @@ Use `--force` when you need to:
 - Fix translation errors by regenerating all translations
 - Reset translations after configuration changes
 
+## Direct Translation
+
+In addition to config-based translation, the `translate` command supports direct file and text translation. This mode is designed for CI/CD pipelines, scripting, and one-off translations — no `lara.yaml` configuration file is needed.
+
+### Direct Text Translation
+
+Translate a text string directly:
+
+```bash
+lara-cli translate --text "Hello, world!" --source en-US --target fr-FR
+```
+
+The translated text is printed to stdout, making it easy to pipe into other commands:
+
+```bash
+lara-cli translate --text "Welcome" --source en --target es | pbcopy
+```
+
+### Direct File Translation
+
+Translate a file directly:
+
+```bash
+lara-cli translate --file "/path/to/file.txt" --source en-US --target fr-FR
+```
+
+By default, the translated content is printed to stdout. Use `--output` to write to a file:
+
+```bash
+lara-cli translate --file "messages.json" --source en --target fr --output "messages-fr.json"
+```
+
+#### Structured vs Plain Text Files
+
+Only [supported file formats](../config/formats.md) are accepted (JSON, PO, XML, Markdown, TXT, etc.). Each format is parsed and translated preserving file structure, formatting, and non-string values. For `.txt` files, each non-empty line is translated independently while empty lines are preserved. Unsupported file types (e.g., `.png`, `.csv`) are rejected with an error.
+
+### Direct Translation Options
+
+| Option | Description |
+|--------|-------------|
+| `--file <path>` | Path to a file to translate directly |
+| `--text <string>` | Text string to translate directly |
+| `-s, --source <locale>` | Source locale (required with `--file` or `--text`) |
+| `-o, --output <path>` | Output file path (only with `--file`) |
+| `-m, --translation-memories <ids>` | Translation Memory IDs (comma-separated) |
+| `-g, --glossaries <ids>` | Glossary IDs (comma-separated) |
+
+### Using Translation Memories & Glossaries
+
+You can use Translation Memories and Glossaries in direct mode by passing their IDs:
+
+```bash
+lara-cli translate --text "Hello" --source en --target fr -m "mem_abc123"
+lara-cli translate --file "messages.json" --source en --target fr -m "mem_abc,mem_def" -g "gls_xyz"
+```
+
+Use `lara-cli memory` and `lara-cli glossary` to list available IDs.
+
+### Differences from Config-Based Mode
+
+| Feature | Config Mode | Direct Mode |
+|---------|-------------|-------------|
+| Requires `lara.yaml` | Yes | No |
+| Change detection (checksums) | Yes | No |
+| Locked/ignored keys | Yes | No |
+| Translation instructions | Yes | No |
+| Multiple target locales per invocation | Yes | No (one at a time) |
+| Translation Memories & Glossaries | Yes | Yes |
+
+### Prerequisites
+
+Direct translation only requires API credentials. No `lara-cli init` is needed:
+
+```
+LARA_ACCESS_KEY_ID=your_access_key_id
+LARA_ACCESS_KEY_SECRET=your_access_key_secret
+```
+
+Set these as environment variables or in a `.env` file in your working directory.
+
 ## Related
 
 - [Configuration Reference](../config/README.md) - Detailed configuration options

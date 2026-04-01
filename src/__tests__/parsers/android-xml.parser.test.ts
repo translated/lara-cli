@@ -353,7 +353,7 @@ describe('AndroidXmlParser', () => {
 
       expect(helloIndex).toBeLessThan(itemCountIndex);
       expect(itemCountIndex).toBeLessThan(goodbyeIndex);
-      
+
       // Verify non-translatable string is preserved
       expect(result).toContain('app_name');
       expect(result).toContain('translatable="false"');
@@ -398,7 +398,7 @@ describe('AndroidXmlParser', () => {
         goodbye: 'Goodbye',
       };
       const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
-      
+
       const helloIndex = result.toString().indexOf('hello');
       const itemCountIndex = result.toString().indexOf('item_count');
       const goodbyeIndex = result.toString().indexOf('goodbye');
@@ -445,12 +445,16 @@ describe('AndroidXmlParser', () => {
       expect(result).toContain('<string name="less_than">Text with &lt;</string>');
       expect(result).toContain('<string name="greater_than">Text with &gt;</string>');
       expect(result).toContain('<string name="quotes">Text with &quot;</string>');
-      expect(result).toContain("<string name=\"apostrophe\">Text with &apos;</string>");
-      expect(result).toContain('<string name="all_special">A &lt; B &gt; C &quot;quote&quot; &apos;apos&apos;</string>');
-      
+      expect(result).toContain('<string name="apostrophe">Text with &apos;</string>');
+      expect(result).toContain(
+        '<string name="all_special">A &lt; B &gt; C &quot;quote&quot; &apos;apos&apos;</string>'
+      );
+
       // Verify the XML is valid by checking it doesn't contain unescaped special characters
       const resultStr = result.toString();
-      expect(resultStr).not.toMatch(/<string[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/string>/);
+      expect(resultStr).not.toMatch(
+        /<string[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/string>/
+      );
     });
 
     it('should escape XML special characters in plural resources', () => {
@@ -477,8 +481,8 @@ describe('AndroidXmlParser', () => {
       expect(result).toContain('<item quantity="one">One &amp; item</item>');
       expect(result).toContain('<item quantity="other">Many &lt; items &gt;</item>');
       expect(result).toContain('<item quantity="&quot;one&quot;">Say &quot;hello&quot;</item>');
-      expect(result).toContain("<item quantity=\"other\">Say &apos;hi&apos;</item>");
-      
+      expect(result).toContain('<item quantity="other">Say &apos;hi&apos;</item>');
+
       // Verify the XML is valid by checking it doesn't contain unescaped special characters
       const resultStr = result.toString();
       expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/item>/);
@@ -588,7 +592,7 @@ describe('AndroidXmlParser', () => {
         goodbye: 'Goodbye',
       };
       const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
-      
+
       const helloIndex = result.toString().indexOf('hello');
       const colorsIndex = result.toString().indexOf('colors');
       const itemCountIndex = result.toString().indexOf('item_count');
@@ -618,7 +622,7 @@ describe('AndroidXmlParser', () => {
       expect(result).toContain('<item>Hello &amp; Welcome</item>');
       expect(result).toContain('<item>Say &quot;Hello&quot;</item>');
       expect(result).toContain('<item>A &lt; B &gt; C</item>');
-      
+
       // Verify the XML is valid by checking it doesn't contain unescaped special characters
       const resultStr = result.toString();
       expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/item>/);
@@ -636,10 +640,12 @@ describe('AndroidXmlParser', () => {
 
       // First parse
       const firstParse = parser.parse(originalContent);
-      
+
       // Serialize back
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
-      
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
+
       // Parse again
       const secondParse = parser.parse(serialized);
 
@@ -666,7 +672,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -692,7 +700,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -716,7 +726,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -740,7 +752,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -758,7 +772,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       // Non-translatable strings should not appear in parsed data
@@ -766,7 +782,7 @@ describe('AndroidXmlParser', () => {
       expect(secondParse).toEqual({
         hello: 'Hello World',
       });
-      
+
       // But they should be preserved in the serialized XML
       expect(serialized.toString()).toContain('translatable="false"');
       expect(serialized.toString()).toContain('app_name');
@@ -784,7 +800,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -815,7 +833,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -842,7 +862,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -869,7 +891,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -895,7 +919,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -918,7 +944,9 @@ describe('AndroidXmlParser', () => {
 </resources>`;
 
       const firstParse = parser.parse(originalContent);
-      const serialized = parser.serialize(firstParse, { originalContent } as AndroidXmlParserOptionsType);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
       const secondParse = parser.parse(serialized);
 
       expect(secondParse).toEqual(firstParse);
@@ -965,9 +993,7 @@ describe('AndroidXmlParser', () => {
     it('should return default XML structure', () => {
       const result = parser.getFallback();
 
-      expect(result).toBe(
-        '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>'
-      );
+      expect(result).toBe('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>');
     });
   });
 });

@@ -13,6 +13,10 @@ export enum SupportedExtensionEnum {
   MD = 'md',
   MDX = 'mdx',
   XML = 'xml',
+  XCODE_STRINGS = 'xcode-strings',
+  XCODE_STRINGSDICT = 'xcode-stringsdict',
+  XCODE_XCSTRINGS = 'xcode-xcstrings',
+  TXT = 'txt',
 }
 
 export type SearchLocalePathsOptions = {

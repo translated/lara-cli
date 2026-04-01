@@ -3,6 +3,7 @@ import picomatch, { Matcher } from 'picomatch';
 import { TranslationService } from './translation.service.js';
 import { calculateChecksum, ChecksumState } from '#utils/checksum.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
+import { detectFormatting } from '#utils/formatting.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
@@ -20,6 +21,7 @@ export type TranslationEngineOptions = {
 
   lockedKeys: string[];
   ignoredKeys: string[];
+  includeKeys: string[];
 
   projectInstruction: string | undefined;
   fileInstruction: string | undefined;
@@ -29,46 +31,6 @@ export type TranslationEngineOptions = {
   translationMemoryIds: Memory['id'][];
   glossaryIds: string[];
 };
-
-/**
- * Detects the formatting used in a JSON string by analyzing indentation patterns
- * and trailing newlines.
- *
- * @param jsonContent - The JSON string to analyze
- * @returns Object containing detected indentation (tabs or number of spaces) and trailing newline
- */
-function detectFormatting(jsonContent: string): {
-  indentation: string | number;
-  trailingNewline: string;
-} {
-  const lines = jsonContent.split('\n');
-  let indentation: string | number = 2; // default
-
-  // Detect indentation
-  for (const line of lines) {
-    const match = line.match(/^(\s+)\S/);
-    if (match && match[1]) {
-      const indent = match[1];
-
-      // Check if it's tabs
-      if (indent.includes('\t')) {
-        indentation = '\t';
-        break;
-      }
-
-      // Check if it's spaces
-      if (indent.match(/^ +$/)) {
-        indentation = indent.length;
-        break;
-      }
-    }
-  }
-
-  // Detect trailing newline
-  const trailingNewline = jsonContent.endsWith('\n') ? '\n' : '';
-
-  return { indentation, trailingNewline };
-}
 
 /**
  * Handles the translation of a given input path to a set of target locales.
@@ -92,6 +54,7 @@ export class TranslationEngine {
 
   private readonly lockedPatterns: Matcher[];
   private readonly ignoredPatterns: Matcher[];
+  private readonly includePatterns: Matcher[];
 
   private readonly projectInstruction: string | undefined;
   private readonly fileInstruction: string | undefined;
@@ -117,6 +80,7 @@ export class TranslationEngine {
 
     this.lockedPatterns = options.lockedKeys.map((pattern) => picomatch(pattern));
     this.ignoredPatterns = options.ignoredKeys.map((pattern) => picomatch(pattern));
+    this.includePatterns = options.includeKeys.map((pattern) => picomatch(pattern));
 
     this.projectInstruction = options.projectInstruction;
     this.fileInstruction = options.fileInstruction;
@@ -172,56 +136,34 @@ export class TranslationEngine {
 
       const entries = (
         await Promise.all(
-          Object.entries(changelog)
-            .map(async ([key, value]) => {
-              const userKey = TranslationEngine.toUserKey(key);
-              const state = value.state;
-              const sourceValue = value.value;
-              const targetValue = target[key];
+          Object.entries(changelog).map(async ([key, value]) => {
+            const userKey = TranslationEngine.toUserKey(key);
+            const state = value.state;
+            const sourceValue = value.value;
+            const targetValue = target[key];
 
-              // If the key is ignored, preserve existing target value or skip if not present in target
-              if (this.isIgnored(userKey)) {
-                return targetValue !== undefined ? [key, targetValue] : null;
-              }
+            // If includeKeys is configured and key is not included, treat as ignored
+            if (!this.isIncluded(userKey)) {
+              return targetValue !== undefined ? [key, targetValue] : null;
+            }
 
-              // If the key is deleted from source, remove it from target
-              if (state === ChecksumState.DELETED) {
-                return null;
-              }
+            // If the key is ignored, preserve existing target value or skip if not present in target
+            if (this.isIgnored(userKey)) {
+              return targetValue !== undefined ? [key, targetValue] : null;
+            }
 
-              // If the key is locked, we should NOT elaborate it and therefore return the source value
-              if (this.isLocked(userKey)) {
-                return [key, sourceValue];
-              }
+            // If the key is deleted from source, remove it from target
+            if (state === ChecksumState.DELETED) {
+              return null;
+            }
 
-              // If the target value does not exists or the forceTranslation flag is set, we should always translate the source value
-              if (!targetValue || this.forceTranslation) {
-                const translatedValue = await this.translateKey(
-                  userKey,
-                  sourceValue,
-                  this.sourceLocale,
-                  targetLocale
-                );
-                return [key, translatedValue];
-              }
+            // If the key is locked, we should NOT elaborate it and therefore return the source value
+            if (this.isLocked(userKey)) {
+              return [key, sourceValue];
+            }
 
-              // If the key is unchanged, we should keep the target value
-              if (state === 'unchanged') {
-                return [key, targetValue];
-              }
-
-              // If the key is new and the target value exists, we should keep the target value
-              if (state === 'new' && targetValue) {
-                return [key, targetValue];
-              }
-
-              // Last case where the key is updated
-
-              if (typeof sourceValue !== 'string') {
-                // If the source value is not a string, we take for granted that it cannot be translated, therefore we return the source value
-                return [key, sourceValue];
-              }
-
+            // If the target value does not exists or the forceTranslation flag is set, we should always translate the source value
+            if (!targetValue || this.forceTranslation) {
               const translatedValue = await this.translateKey(
                 userKey,
                 sourceValue,
@@ -229,7 +171,33 @@ export class TranslationEngine {
                 targetLocale
               );
               return [key, translatedValue];
-            })
+            }
+
+            // If the key is unchanged, we should keep the target value
+            if (state === 'unchanged') {
+              return [key, targetValue];
+            }
+
+            // If the key is new and the target value exists, we should keep the target value
+            if (state === 'new' && targetValue) {
+              return [key, targetValue];
+            }
+
+            // Last case where the key is updated
+
+            if (typeof sourceValue !== 'string') {
+              // If the source value is not a string, we take for granted that it cannot be translated, therefore we return the source value
+              return [key, sourceValue];
+            }
+
+            const translatedValue = await this.translateKey(
+              userKey,
+              sourceValue,
+              this.sourceLocale,
+              targetLocale
+            );
+            return [key, translatedValue];
+          })
         )
       ).filter((entry): entry is [string, unknown] => entry !== null);
 
@@ -305,6 +273,13 @@ export class TranslationEngine {
 
   private isLocked(userKey: string): boolean {
     return this.lockedPatterns.some((pattern) => pattern(userKey));
+  }
+
+  private isIncluded(userKey: string): boolean {
+    if (this.includePatterns.length === 0) {
+      return true;
+    }
+    return this.includePatterns.some((pattern) => pattern(userKey));
   }
 
   /**

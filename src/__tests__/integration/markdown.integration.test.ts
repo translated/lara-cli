@@ -29,7 +29,14 @@ describe('Markdown Repository Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-md-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-md-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -168,10 +175,7 @@ Thank you for reading.
   it('should add new lines to Markdown file when source is changed', async () => {
     // Set up Markdown repository structure
     await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'docs', 'en', 'guide.md'),
-      `# User Guide`
-    );
+    await writeFile(path.join(testDir, 'docs', 'en', 'guide.md'), `# User Guide`);
 
     // Initialize
     await executeCommand(initCommand, [
@@ -306,7 +310,10 @@ Final paragraph.
     await executeCommand(translateCommand, []);
 
     // Verify initial structure is preserved
-    const initialContent = await readFile(path.join(testDir, 'docs', 'it', 'documentation.md'), 'utf-8');
+    const initialContent = await readFile(
+      path.join(testDir, 'docs', 'it', 'documentation.md'),
+      'utf-8'
+    );
     expect(initialContent).toContain('#');
     expect(initialContent).toContain('##');
     expect(initialContent).toContain('###');
@@ -348,20 +355,23 @@ Updated final paragraph.
     await executeCommand(translateCommand, []);
 
     // Verify structure is still maintained after content change
-    const updatedContent = await readFile(path.join(testDir, 'docs', 'it', 'documentation.md'), 'utf-8');
-    
+    const updatedContent = await readFile(
+      path.join(testDir, 'docs', 'it', 'documentation.md'),
+      'utf-8'
+    );
+
     // Verify headings structure is preserved
     expect(updatedContent).toContain('#');
     expect(updatedContent).toContain('##');
     expect(updatedContent).toContain('###');
-    
+
     // Verify list structure is preserved (remark normalizes to *)
     expect(updatedContent).toMatch(/^\s*[\*\-]\s/m);
-    
+
     // Verify code block structure is preserved
     expect(updatedContent).toContain('```javascript');
     expect(updatedContent).toContain("const code = 'example';");
-    
+
     // Verify translated content is present
     expect(updatedContent).toContain('[it] Updated Title');
     expect(updatedContent).toContain('[it] New introduction paragraph');
@@ -370,16 +380,16 @@ Updated final paragraph.
     expect(updatedContent).toContain('[it] Updated Section Two');
     expect(updatedContent).toContain('[it] New first item');
     expect(updatedContent).toContain('[it] Updated final paragraph');
-    
+
     // Verify structure elements appear in correct order
     const lines = updatedContent.split('\n');
-    const h1Index = lines.findIndex(line => line.startsWith('# ') && !line.startsWith('##'));
-    const h2Index = lines.findIndex(line => line.startsWith('## ') && !line.startsWith('###'));
-    const h3Index = lines.findIndex(line => line.startsWith('### '));
+    const h1Index = lines.findIndex((line) => line.startsWith('# ') && !line.startsWith('##'));
+    const h2Index = lines.findIndex((line) => line.startsWith('## ') && !line.startsWith('###'));
+    const h3Index = lines.findIndex((line) => line.startsWith('### '));
     // Check for both * and - as list markers (remark normalizes to *)
-    const listIndex = lines.findIndex(line => line.trim().match(/^[\*\-]\s/));
-    const codeBlockIndex = lines.findIndex(line => line.trim().startsWith('```'));
-    
+    const listIndex = lines.findIndex((line) => line.trim().match(/^[\*\-]\s/));
+    const codeBlockIndex = lines.findIndex((line) => line.trim().startsWith('```'));
+
     // Verify structure order is maintained
     expect(h1Index).toBeGreaterThan(-1);
     expect(h2Index).toBeGreaterThan(h1Index);
@@ -452,16 +462,16 @@ Thank you for reading!
 
     // Verify translation
     const content = await readFile(path.join(testDir, 'content', 'it', 'article.mdx'), 'utf-8');
-    
+
     // Verify frontmatter is preserved (not translated)
     // Note: remark may transform frontmatter, so we check for the content
     expect(content).toContain('title: Getting Started Guide');
     expect(content).toContain('author: John Doe');
-    
+
     // Verify import statements are preserved
     expect(content).toContain("import { Card } from '@/components/Card';");
     expect(content).toContain("import { Button } from '@/components/Button';");
-    
+
     // Verify JSX components are preserved
     expect(content).toContain('<Card title="Important Notice">');
     expect(content).toContain('</Card>');
@@ -469,11 +479,11 @@ Thank you for reading!
     expect(content).toContain('</Button>');
     expect(content).toContain('<h3>');
     expect(content).toContain('<p>');
-    
+
     // Verify markdown structure is preserved
     expect(content).toContain('#');
     expect(content).toContain('##');
-    
+
     // Verify text content is translated
     expect(content).toContain('[it] Getting Started');
     expect(content).toContain('[it] Welcome to our documentation');
@@ -484,20 +494,20 @@ Thank you for reading!
     expect(content).toContain('[it] Feature two: Fast performance');
     expect(content).toContain('[it] Feature three: Great support');
     expect(content).toContain('[it] Thank you for reading');
-    
+
     // Verify text inside JSX components is preserved (not translated)
     // The parser skips HTML/JSX nodes, so text inside them is not extracted for translation
     expect(content).toContain('Please read this carefully before proceeding');
     expect(content).toContain('Additional Information');
     expect(content).toContain('This is important information inside a component');
-    
+
     // Note: Some JSX text may be translated if it's parsed as a text node
     // This depends on how remark parses the JSX structure
-    
+
     // Verify code blocks are preserved (not translated)
     expect(content).toContain('```javascript');
     expect(content).toContain("const example = 'code should not be translated';");
-    
+
     // Verify JSX component structure is maintained
     const cardOpenIndex = content.indexOf('<Card');
     const cardCloseIndex = content.lastIndexOf('</Card>');
@@ -542,7 +552,7 @@ This is an aside with a [link inside](https://aside-link.com).
 
     // Verify translation
     const content = await readFile(path.join(testDir, 'docs', 'it', 'links.md'), 'utf-8');
-    
+
     // Headings are translated
     expect(content).toContain('[it] Useful Links');
 
@@ -571,10 +581,7 @@ This is an aside with a [link inside](https://aside-link.com).
   it('should handle empty markdown files', async () => {
     // Set up Markdown repository structure
     await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'docs', 'en', 'guide.md'),
-      ``
-    );
+    await writeFile(path.join(testDir, 'docs', 'en', 'guide.md'), ``);
 
     // Initialize
     await executeCommand(initCommand, [
@@ -613,9 +620,12 @@ Follow these steps to install.
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'docs/[locale]/getting-started.md',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'docs/[locale]/getting-started.md',
     ]);
 
     // Add ignoredKeys - markdown uses segment_N keys
@@ -647,9 +657,12 @@ Welcome to our documentation.
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'docs/[locale]/getting-started.md',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'docs/[locale]/getting-started.md',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -657,7 +670,10 @@ Welcome to our documentation.
     // First translate without ignoredKeys
     await executeCommand(translateCommand, []);
 
-    const contentBefore = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    const contentBefore = await readFile(
+      path.join(testDir, 'docs', 'it', 'getting-started.md'),
+      'utf-8'
+    );
     expect(contentBefore).toContain('[it] Welcome to our documentation');
 
     // Add ignoredKeys and update source to trigger re-translate
@@ -677,10 +693,211 @@ Welcome to our documentation.
 
     await executeCommand(translateCommand, []);
 
-    const contentAfter = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    const contentAfter = await readFile(
+      path.join(testDir, 'docs', 'it', 'getting-started.md'),
+      'utf-8'
+    );
     expect(contentAfter).toContain('[it] Updated Title');
     // segment_1 preserved with its previous translated value
     expect(contentAfter).toContain('[it] Welcome to our documentation');
   });
 
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+
+## Installation
+
+Follow these steps to install.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'docs/[locale]/getting-started.md',
+    ]);
+
+    // Add lockedKeys - markdown uses segment_N keys
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.lockedKeys = ['segment_1'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    // segment_0 is "Getting Started" - should be translated
+    expect(content).toContain('[it] Getting Started');
+    // segment_1 is "Welcome to our documentation." - locked, should have source value
+    expect(content).toContain('Welcome to our documentation');
+    expect(content).not.toContain('[it] Welcome to our documentation');
+    // Other segments should be translated
+    expect(content).toContain('[it] Installation');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'docs/[locale]/getting-started.md',
+    ]);
+
+    // Add lockedKeys
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.lockedKeys = ['segment_1'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(
+      path.join(testDir, 'docs', 'it', 'getting-started.md'),
+      'utf-8'
+    );
+    expect(contentBefore).toContain('Welcome to our documentation');
+    expect(contentBefore).not.toContain('[it] Welcome to our documentation');
+
+    // Update source value of locked segment
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to the new docs.
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(
+      path.join(testDir, 'docs', 'it', 'getting-started.md'),
+      'utf-8'
+    );
+    // Locked segment should have new source value
+    expect(contentAfter).toContain('Welcome to the new docs');
+    expect(contentAfter).not.toContain('[it] Welcome to the new docs');
+    expect(contentAfter).toContain('[it] Getting Started');
+  });
+
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+
+## Installation
+
+Follow these steps to install.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'docs/[locale]/getting-started.md',
+    ]);
+
+    // Add includeKeys - only translate segment_0 (heading "Getting Started")
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.includeKeys = ['segment_0'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'docs', 'it', 'getting-started.md'), 'utf-8');
+    // Included segment should be translated
+    expect(content).toContain('[it] Getting Started');
+    // Non-included segments should NOT be present
+    expect(content).not.toContain('[it] Welcome to our documentation');
+    expect(content).not.toContain('[it] Installation');
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'docs', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started
+
+Welcome to our documentation.
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'docs/[locale]/getting-started.md',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(
+      path.join(testDir, 'docs', 'it', 'getting-started.md'),
+      'utf-8'
+    );
+    expect(contentBefore).toContain('[it] Welcome to our documentation');
+
+    // Add includeKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.md.includeKeys = ['segment_0'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'docs', 'en', 'getting-started.md'),
+      `# Getting Started Updated
+
+Welcome to our documentation.
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(
+      path.join(testDir, 'docs', 'it', 'getting-started.md'),
+      'utf-8'
+    );
+    // Included segment should be updated
+    expect(contentAfter).toContain('[it] Getting Started Updated');
+    // Non-included segment should be preserved
+    expect(contentAfter).toContain('[it] Welcome to our documentation');
+  });
 });

@@ -28,7 +28,14 @@ describe('CLI Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -71,10 +78,14 @@ describe('CLI Integration Tests', () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
-        JSON.stringify({
-          greeting: 'Hello',
-          farewell: 'Goodbye',
-        }, null, 2)
+        JSON.stringify(
+          {
+            greeting: 'Hello',
+            farewell: 'Goodbye',
+          },
+          null,
+          2
+        )
       );
 
       // Execute init command programmatically
@@ -141,6 +152,57 @@ describe('CLI Integration Tests', () => {
       expect(config.files.ts.include).toContain('src/i18n.ts');
     });
 
+    it('should create lara.yaml config file with TXT files', async () => {
+      await mkdir(path.join(testDir, 'texts', 'en'), { recursive: true });
+      await writeFile(path.join(testDir, 'texts', 'en', 'messages.txt'), 'Hello World\nWelcome\n');
+
+      await executeCommand(initCommand, [
+        '--non-interactive',
+        '--source',
+        'en',
+        '--target',
+        'it,fr',
+        '--paths',
+        'texts/[locale]/messages.txt',
+      ]);
+
+      const configPath = path.join(testDir, 'lara.yaml');
+      expect(existsSync(configPath)).toBe(true);
+
+      const configContent = await readFile(configPath, 'utf-8');
+      const config = yaml.parse(configContent);
+
+      expect(config.version).toBe('1.0.0');
+      expect(config.locales.source).toBe('en');
+      expect(config.locales.target).toEqual(['it', 'fr']);
+      expect(config.files.txt).toBeDefined();
+      expect(config.files.txt.include).toContain('texts/[locale]/messages.txt');
+    });
+
+    it('should create lara.yaml with TXT path starting with [locale]', async () => {
+      await mkdir(path.join(testDir, 'en'), { recursive: true });
+      await writeFile(path.join(testDir, 'en', 'messages.txt'), 'Hello World\n');
+
+      await executeCommand(initCommand, [
+        '--non-interactive',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--paths',
+        '[locale]/messages.txt',
+      ]);
+
+      const configPath = path.join(testDir, 'lara.yaml');
+      expect(existsSync(configPath)).toBe(true);
+
+      const configContent = await readFile(configPath, 'utf-8');
+      const config = yaml.parse(configContent);
+
+      expect(config.files.txt).toBeDefined();
+      expect(config.files.txt.include).toContain('[locale]/messages.txt');
+    });
+
     it('should create config file with project instruction', async () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
@@ -175,14 +237,18 @@ describe('CLI Integration Tests', () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
-        JSON.stringify({
-          greeting: 'Hello',
-          farewell: 'Goodbye',
-          welcome: {
-            title: 'Welcome',
-            message: 'Welcome to our app',
+        JSON.stringify(
+          {
+            greeting: 'Hello',
+            farewell: 'Goodbye',
+            welcome: {
+              title: 'Welcome',
+              message: 'Welcome to our app',
+            },
           },
-        }, null, 2)
+          null,
+          2
+        )
       );
     });
 
@@ -269,11 +335,15 @@ describe('CLI Integration Tests', () => {
       // Modify source file
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
-        JSON.stringify({
-          greeting: 'Hello',
-          farewell: 'Goodbye',
-          newKey: 'New Value',
-        }, null, 2)
+        JSON.stringify(
+          {
+            greeting: 'Hello',
+            farewell: 'Goodbye',
+            newKey: 'New Value',
+          },
+          null,
+          2
+        )
       );
 
       // Translate with force flag
@@ -281,7 +351,9 @@ describe('CLI Integration Tests', () => {
       await executeCommand(translateCommand, ['--force']);
 
       // Verify all keys were retranslated (including unchanged ones)
-      const itContent = JSON.parse(await readFile(path.join(testDir, 'src', 'i18n', 'it.json'), 'utf-8'));
+      const itContent = JSON.parse(
+        await readFile(path.join(testDir, 'src', 'i18n', 'it.json'), 'utf-8')
+      );
       expect(itContent.greeting).toBe('[it] Hello');
       expect(itContent.newKey).toBe('[it] New Value');
     });
@@ -308,19 +380,12 @@ describe('CLI Integration Tests', () => {
       (ConfigProvider as any).instance = null;
 
       // Translate only specific path
-      // Note: The --paths option maps to options.paths, but the code uses options.input
-      // So this test verifies that when --paths is provided, it should filter paths
-      // However, due to the code using options.input instead of options.paths,
-      // both paths from config will be translated. This test documents the current behavior.
       await executeCommand(translateCommand, ['--paths', 'src/locales/[locale].json']);
 
       // Verify the specified path was translated
       expect(existsSync(path.join(testDir, 'src', 'locales', 'it.json'))).toBe(true);
-      // Note: Due to a bug where --paths maps to options.paths but code uses options.input,
-      // both paths get translated. This test verifies the current (buggy) behavior.
-      // In a real fix, only src/locales/[locale].json should be translated.
-      // For now, we verify both are translated to match actual behavior
-      expect(existsSync(path.join(testDir, 'src', 'i18n', 'it.json'))).toBe(true);
+      // Verify the non-specified path was NOT translated
+      expect(existsSync(path.join(testDir, 'src', 'i18n', 'it.json'))).toBe(false);
     });
   });
 
@@ -330,16 +395,20 @@ describe('CLI Integration Tests', () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
-        JSON.stringify({
-          app: {
-            name: 'My App',
-            description: 'A great application',
+        JSON.stringify(
+          {
+            app: {
+              name: 'My App',
+              description: 'A great application',
+            },
+            common: {
+              save: 'Save',
+              cancel: 'Cancel',
+            },
           },
-          common: {
-            save: 'Save',
-            cancel: 'Cancel',
-          },
-        }, null, 2)
+          null,
+          2
+        )
       );
 
       // Step 1: Initialize
@@ -389,10 +458,14 @@ describe('CLI Integration Tests', () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
-        JSON.stringify({
-          greeting: 'Hello',
-          farewell: 'Goodbye',
-        }, null, 2)
+        JSON.stringify(
+          {
+            greeting: 'Hello',
+            farewell: 'Goodbye',
+          },
+          null,
+          2
+        )
       );
 
       // Initialize
@@ -412,18 +485,24 @@ describe('CLI Integration Tests', () => {
       await executeCommand(translateCommand, []);
 
       // Verify initial translation
-      let itContent = JSON.parse(await readFile(path.join(testDir, 'src', 'i18n', 'it.json'), 'utf-8'));
+      let itContent = JSON.parse(
+        await readFile(path.join(testDir, 'src', 'i18n', 'it.json'), 'utf-8')
+      );
       expect(itContent.greeting).toBe('[it] Hello');
       expect(itContent.farewell).toBe('[it] Goodbye');
 
       // Add a new key to source
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
-        JSON.stringify({
-          greeting: 'Hello',
-          farewell: 'Goodbye',
-          welcome: 'Welcome',
-        }, null, 2)
+        JSON.stringify(
+          {
+            greeting: 'Hello',
+            farewell: 'Goodbye',
+            welcome: 'Welcome',
+          },
+          null,
+          2
+        )
       );
 
       // Translate again (should only translate new key)
@@ -437,5 +516,4 @@ describe('CLI Integration Tests', () => {
       expect(itContent.welcome).toBe('[it] Welcome');
     });
   });
-
 });

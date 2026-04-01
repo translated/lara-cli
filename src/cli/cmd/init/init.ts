@@ -13,7 +13,7 @@ import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { Messages } from '#messages/messages.js';
 import { setCredentials, resolveProjectInstruction } from './init.utils.js';
-import { getFileExtension } from '#utils/path.js';
+import { getFileType } from '#utils/path.js';
 
 export default new Command()
   .command('init')
@@ -109,7 +109,7 @@ function groupPathsByExtension(paths: string[]): ConfigType['files'] {
   const filesByExtension: ConfigType['files'] = {};
 
   for (const path of paths) {
-    const extension = getFileExtension(path);
+    const extension = getFileType(path);
 
     if (!filesByExtension[extension]) {
       filesByExtension[extension] = {
@@ -119,6 +119,7 @@ function groupPathsByExtension(paths: string[]): ConfigType['files'] {
         keyInstructions: [],
         lockedKeys: [],
         ignoredKeys: [],
+        includeKeys: [],
       };
     }
 

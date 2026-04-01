@@ -136,16 +136,16 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
   private static isInsideComment(content: string, position: number): boolean {
     const commentRegex = /<!--[\s\S]*?-->/g;
     let commentMatch: RegExpExecArray | null;
-    
+
     while ((commentMatch = commentRegex.exec(content)) !== null) {
       const commentStart = commentMatch.index;
       const commentEnd = commentMatch.index + commentMatch[0].length;
-      
+
       if (position >= commentStart && position < commentEnd) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -159,15 +159,14 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
   private static extractI18nBlock(content: string): string | null {
     const i18nTagRegex = /<i18n(?:\s[^>]*)?>/gi;
     let match: RegExpExecArray | null;
-    
-    while ((match = i18nTagRegex.exec(content)) !== null) {
 
+    while ((match = i18nTagRegex.exec(content)) !== null) {
       if (match.index === undefined) {
         continue;
       }
 
       const matchPosition = match.index;
-      
+
       if (VueParser.isInsideComment(content, matchPosition)) {
         continue;
       }
@@ -181,7 +180,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       const i18nContent = content.substring(startIndex, endIndex).trim();
       return i18nContent || null;
     }
-    
+
     return null;
   }
 
@@ -197,24 +196,24 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     const i18nTagRegex = /<i18n(?:\s[^>]*)?>/gi;
     let match: RegExpExecArray | null;
     let validMatch: RegExpExecArray | null = null;
-    
+
     while ((match = i18nTagRegex.exec(content)) !== null) {
       const matchPosition = match.index!;
-      
+
       if (VueParser.isInsideComment(content, matchPosition)) {
         continue;
       }
-      
+
       const startIndex = matchPosition + match[0].length;
       const endTagRegex = /<\/i18n>/i;
       const endMatch = content.substring(startIndex).match(endTagRegex);
-      
+
       if (endMatch) {
         validMatch = match;
         break;
       }
     }
-    
+
     if (!validMatch) {
       // If no i18n block exists, add one before </template> or at the end
       const templateEndMatch = content.match(/<\/template>/i);
@@ -242,12 +241,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
 
     const endIndex = startIndex + endMatch.index!;
     return (
-      content.substring(0, startIndex) +
-      '\n' +
-      newJsonContent +
-      '\n' +
-      content.substring(endIndex)
+      content.substring(0, startIndex) + '\n' + newJsonContent + '\n' + content.substring(endIndex)
     );
   }
 }
-

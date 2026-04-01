@@ -29,7 +29,14 @@ describe('Android XML Repository Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-xml-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-xml-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -69,7 +76,9 @@ describe('Android XML Repository Integration Tests', () => {
   it('should handle an Android XML repository', async () => {
     // Set up Android XML repository structure
     // Android XML uses res/[locale]/strings.xml structure
-    await mkdir(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en'), { recursive: true });
+    await mkdir(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en'), {
+      recursive: true,
+    });
     await writeFile(
       path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en', 'strings.xml'),
       `<?xml version="1.0" encoding="utf-8"?>
@@ -164,7 +173,8 @@ describe('Android XML Repository Integration Tests', () => {
           <item>Blue</item>
         </string-array>
       </resources>
-    `);
+    `
+    );
 
     // Initialize
     await executeCommand(initCommand, [
@@ -191,7 +201,6 @@ describe('Android XML Repository Integration Tests', () => {
   });
 
   it('should add new lines to Android XML when source is changed', async () => {
-
     await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
     await writeFile(
       path.join(testDir, 'res', 'en', 'strings.xml'),
@@ -200,7 +209,8 @@ describe('Android XML Repository Integration Tests', () => {
         <string name="app_name">My App</string>
         <string name="welcome">Welcome</string>
       </resources>
-    `);
+    `
+    );
 
     // Initialize
     await executeCommand(initCommand, [
@@ -226,7 +236,8 @@ describe('Android XML Repository Integration Tests', () => {
         <string name="welcome">Welcome</string>
         <string name="goodbye">Goodbye</string>
       </resources>
-    `);
+    `
+    );
 
     // Translate
     await executeCommand(translateCommand, []);
@@ -241,7 +252,9 @@ describe('Android XML Repository Integration Tests', () => {
 
   it('should remove lines from Android XML when source is changed', async () => {
     // Set up Android XML repository structure
-    await mkdir(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en'), { recursive: true });
+    await mkdir(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en'), {
+      recursive: true,
+    });
     await writeFile(
       path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en', 'strings.xml'),
       `<?xml version="1.0" encoding="utf-8"?>
@@ -250,7 +263,8 @@ describe('Android XML Repository Integration Tests', () => {
         <string name="welcome">Welcome</string>
         <string name="goodbye">Goodbye</string>
       </resources>
-    `);
+    `
+    );
 
     // Initialize
     await executeCommand(initCommand, [
@@ -269,7 +283,10 @@ describe('Android XML Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify translation
-    const content = await readFile(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'), 'utf-8');
+    const content = await readFile(
+      path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'),
+      'utf-8'
+    );
     expect(content).toContain('[it] My App');
     expect(content).toContain('[it] Welcome');
     expect(content).toContain('[it] Goodbye');
@@ -280,13 +297,17 @@ describe('Android XML Repository Integration Tests', () => {
       <resources>
         <string name="app_name">My App</string>
       </resources>
-    `);
+    `
+    );
 
     // Translate
     await executeCommand(translateCommand, []);
 
     // Verify translation
-    const newContent = await readFile(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'), 'utf-8');
+    const newContent = await readFile(
+      path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'),
+      'utf-8'
+    );
     expect(newContent).toContain('[it] My App');
     expect(newContent).not.toContain('[it] Welcome');
     expect(newContent).not.toContain('[it] Goodbye');
@@ -294,7 +315,9 @@ describe('Android XML Repository Integration Tests', () => {
 
   it('should maintain Android XML file order when source is changed', async () => {
     // Set up Android XML repository structure with mixed element types
-    await mkdir(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en'), { recursive: true });
+    await mkdir(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en'), {
+      recursive: true,
+    });
     await writeFile(
       path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'en', 'strings.xml'),
       `<?xml version="1.0" encoding="utf-8"?>
@@ -311,7 +334,8 @@ describe('Android XML Repository Integration Tests', () => {
         </string-array>
         <string name="goodbye">Goodbye</string>
       </resources>
-    `);
+    `
+    );
 
     // Initialize
     await executeCommand(initCommand, [
@@ -330,13 +354,16 @@ describe('Android XML Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify initial translation and order
-    const initialContent = await readFile(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'), 'utf-8');
+    const initialContent = await readFile(
+      path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'),
+      'utf-8'
+    );
     expect(initialContent).toContain('[it] My App');
     expect(initialContent).toContain('[it] Welcome');
     expect(initialContent).toContain('[it] Goodbye');
     expect(initialContent).toContain('<plurals name="item_count">');
     expect(initialContent).toContain('<string-array name="colors">');
-    
+
     // Verify initial order: app_name < item_count (plurals) < welcome < colors (string-array) < goodbye
     const appNameIndex = initialContent.indexOf('app_name');
     const itemCountIndex = initialContent.indexOf('item_count');
@@ -366,21 +393,25 @@ describe('Android XML Repository Integration Tests', () => {
         </string-array>
         <string name="goodbye">Goodbye</string>
       </resources>
-    `);
+    `
+    );
 
     // Re-translate
     (ConfigProvider as any).instance = null;
     await executeCommand(translateCommand, []);
 
     // Verify translation includes new key and all elements are present
-    const newContent = await readFile(path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'), 'utf-8');
+    const newContent = await readFile(
+      path.join(testDir, 'android', 'app', 'src', 'main', 'res', 'it', 'strings.xml'),
+      'utf-8'
+    );
     expect(newContent).toContain('[it] My App');
     expect(newContent).toContain('[it] Welcome');
     expect(newContent).toContain('[it] Hello');
     expect(newContent).toContain('[it] Goodbye');
     expect(newContent).toContain('<plurals name="item_count">');
     expect(newContent).toContain('<string-array name="colors">');
-    
+
     // Verify order is maintained: app_name < item_count (plurals) < welcome < hello < colors (string-array) < goodbye
     const newAppNameIndex = newContent.indexOf('app_name');
     const newItemCountIndex = newContent.indexOf('item_count');
@@ -446,9 +477,12 @@ describe('Android XML Repository Integration Tests', () => {
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'res/[locale]/strings.xml',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'res/[locale]/strings.xml',
     ]);
 
     // Add ignoredKeys to config
@@ -481,9 +515,12 @@ describe('Android XML Repository Integration Tests', () => {
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'res/[locale]/strings.xml',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'res/[locale]/strings.xml',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -519,4 +556,192 @@ describe('Android XML Repository Integration Tests', () => {
     expect(contentAfter).toContain('[it] Welcome to the app');
   });
 
+  it('should copy locked keys from source without translation', async () => {
+    await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="hello">Hello World</string>
+    <string name="welcome">Welcome to the app</string>
+</resources>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'res/[locale]/strings.xml',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.xml.lockedKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    // Locked key should have source value (no [it] prefix)
+    expect(content).toContain('My Application');
+    expect(content).not.toContain('[it] My Application');
+    // Non-locked keys should be translated
+    expect(content).toContain('[it] Hello World');
+    expect(content).toContain('[it] Welcome to the app');
+  });
+
+  it('should update locked keys when source changes', async () => {
+    await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="hello">Hello World</string>
+</resources>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'res/[locale]/strings.xml',
+    ]);
+
+    // Add lockedKeys to config
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.xml.lockedKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    expect(contentBefore).toContain('My Application');
+    expect(contentBefore).not.toContain('[it] My Application');
+
+    // Update source value of locked key
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Updated Application</string>
+    <string name="hello">Hello World</string>
+</resources>`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    // Locked key should have the new source value
+    expect(contentAfter).toContain('My Updated Application');
+    expect(contentAfter).not.toContain('[it] My Updated Application');
+    expect(contentAfter).toContain('[it] Hello World');
+  });
+
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="hello">Hello World</string>
+    <string name="welcome">Welcome to the app</string>
+</resources>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'res/[locale]/strings.xml',
+    ]);
+
+    // Add includeKeys to config - only translate app_name
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.xml.includeKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    // Included key should be translated
+    expect(content).toContain('[it] My Application');
+    // Non-included keys should NOT be present
+    expect(content).not.toContain('[it] Hello World');
+    expect(content).not.toContain('[it] Welcome to the app');
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="hello">Hello World</string>
+    <string name="welcome">Welcome to the app</string>
+</resources>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'res/[locale]/strings.xml',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    expect(contentBefore).toContain('[it] Hello World');
+
+    // Add includeKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.xml.includeKeys = ['app_name'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Updated Application</string>
+    <string name="hello">Hello World</string>
+    <string name="welcome">Welcome to the app</string>
+</resources>`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'res', 'it', 'strings.xml'), 'utf-8');
+    // Included key should be updated
+    expect(contentAfter).toContain('[it] My Updated Application');
+    // Non-included keys should be preserved
+    expect(contentAfter).toContain('[it] Hello World');
+    expect(contentAfter).toContain('[it] Welcome to the app');
+  });
 });
