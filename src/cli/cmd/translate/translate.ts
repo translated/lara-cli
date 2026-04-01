@@ -273,7 +273,7 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
     const translateOptions = buildTranslateOptions(options);
 
     const parser = new ParserFactory(filePath);
-    const parsed = parser.parse(content, { targetLocale: target });
+    const parsed = parser.parse(content, { targetLocale: target, originalContent: content });
     const translatedData: Record<string, unknown> = { ...parsed };
 
     const translatableEntries: [string, string][] = [];
