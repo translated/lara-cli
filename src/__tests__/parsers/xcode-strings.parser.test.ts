@@ -325,9 +325,9 @@ describe('XcodeStringsParser', () => {
     it('should throw error when originalContent is missing', () => {
       const data = { key: 'value' };
 
-      expect(() =>
-        parser.serialize(data, {} as XcodeStringsParserOptionsType)
-      ).toThrow('Original content is required for Xcode .strings serialization');
+      expect(() => parser.serialize(data, {} as XcodeStringsParserOptionsType)).toThrow(
+        'Original content is required for Xcode .strings serialization'
+      );
     });
 
     it('should handle empty values', () => {
@@ -403,7 +403,7 @@ describe('XcodeStringsParser', () => {
     it('should escape special characters in keys', () => {
       const originalContent = `"key_with_special" = "value";`;
       const data: Record<string, unknown> = {
-        'key_with_special': 'new "value" with\nnewline',
+        key_with_special: 'new "value" with\nnewline',
       };
       const result = parser.serialize(data, {
         originalContent,

@@ -29,7 +29,14 @@ describe('PO (Gettext) Repository Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-po-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-po-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -341,10 +348,7 @@ msgstr "Cancel"
   it('should handle empty PO file', async () => {
     // Set up PO repository structure
     await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'locales', 'en', 'messages.po'),
-      ``
-    );
+    await writeFile(path.join(testDir, 'locales', 'en', 'messages.po'), ``);
 
     // Initialize
     await executeCommand(initCommand, [
@@ -549,9 +553,12 @@ msgstr "Welcome to our application"
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'locales/[locale]/messages.po',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'locales/[locale]/messages.po',
     ]);
 
     // Add lockedKeys to config
@@ -590,9 +597,12 @@ msgstr "World"
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'locales/[locale]/messages.po',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'locales/[locale]/messages.po',
     ]);
 
     // Add lockedKeys to config
@@ -604,7 +614,10 @@ msgstr "World"
 
     await executeCommand(translateCommand, []);
 
-    const contentBefore = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    const contentBefore = await readFile(
+      path.join(testDir, 'locales', 'it', 'messages.po'),
+      'utf-8'
+    );
     expect(contentBefore).not.toContain('[it] World');
 
     // Update source value of locked key
@@ -624,10 +637,129 @@ msgstr "World Updated"
 
     await executeCommand(translateCommand, []);
 
-    const contentAfter = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    const contentAfter = await readFile(
+      path.join(testDir, 'locales', 'it', 'messages.po'),
+      'utf-8'
+    );
     // Locked key should have the new source value
     expect(contentAfter).toContain('World Updated');
     expect(contentAfter).not.toContain('[it] World Updated');
     expect(contentAfter).toContain('[it] Hello');
+  });
+
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World"
+
+msgid "Welcome"
+msgstr "Welcome to our application"
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'locales/[locale]/messages.po',
+    ]);
+
+    // Add includeKeys to config - only translate Hello
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.po.includeKeys = ['*Hello*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'locales', 'it', 'messages.po'), 'utf-8');
+    // Included key should be translated
+    expect(content).toContain('[it] Hello');
+    // Non-included keys should NOT be present in new target
+    expect(content).not.toContain('[it] World');
+    expect(content).not.toContain('[it] Welcome to our application');
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello"
+
+msgid "World"
+msgstr "World"
+`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'locales/[locale]/messages.po',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys - all keys get translated
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(
+      path.join(testDir, 'locales', 'it', 'messages.po'),
+      'utf-8'
+    );
+    expect(contentBefore).toContain('[it] World');
+
+    // Add includeKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.po.includeKeys = ['*Hello*'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'locales', 'en', 'messages.po'),
+      `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Hello"
+msgstr "Hello updated"
+
+msgid "World"
+msgstr "World"
+`
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(
+      path.join(testDir, 'locales', 'it', 'messages.po'),
+      'utf-8'
+    );
+    // Included key should be updated
+    expect(contentAfter).toContain('[it] Hello updated');
+    // Non-included key should be preserved
+    expect(contentAfter).toContain('[it] World');
   });
 });

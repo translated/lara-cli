@@ -229,7 +229,9 @@ describe('TsParser', () => {
       const originalContent =
         'const messages = { moderation: { harassment: "Harassment", "harassment/threatening": "Harassment/Threatening" } };\n\nexport default messages;';
       const parsed = parser.parse(originalContent);
-      const serialized = parser.serialize(parsed, { originalContent } as unknown as TsParserOptionsType);
+      const serialized = parser.serialize(parsed, {
+        originalContent,
+      } as unknown as TsParserOptionsType);
 
       const resultStr = serialized.toString();
       const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);
@@ -437,7 +439,9 @@ describe('TsParser', () => {
       const originalContent =
         'const messages = { product: { "0": { title: "Multi-BM Ecosystem" }, "1": { title: "Bulk Campaign Launcher" } } };\n\nexport default messages;';
       const parsed = parser.parse(originalContent);
-      const serialized = parser.serialize(parsed, { originalContent } as unknown as TsParserOptionsType);
+      const serialized = parser.serialize(parsed, {
+        originalContent,
+      } as unknown as TsParserOptionsType);
 
       const resultStr = serialized.toString();
       const match = resultStr.match(/const\s+messages\s*=\s*({[\s\S]*?});/);

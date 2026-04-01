@@ -112,6 +112,7 @@ const Config = z
           .default([]),
         lockedKeys: z.array(KeyPath).default([]),
         ignoredKeys: z.array(KeyPath).default([]),
+        includeKeys: z.array(KeyPath).default([]),
       })
     ),
   })

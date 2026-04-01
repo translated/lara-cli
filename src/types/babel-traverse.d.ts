@@ -20,4 +20,3 @@ declare module '@babel/traverse' {
   const traverse: TraverseFunction;
   export default traverse;
 }
-

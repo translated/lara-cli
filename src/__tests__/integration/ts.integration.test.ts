@@ -137,7 +137,14 @@ describe('TypeScript (i18n.ts) Repository Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-ts-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-ts-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -433,12 +440,8 @@ export default messages;`
   });
 
   it('should handle empty message object', async () => {
-
     await mkdir(path.join(testDir, 'src'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'src', 'i18n.ts'),
-      'const messages = {}'
-    );
+    await writeFile(path.join(testDir, 'src', 'i18n.ts'), 'const messages = {}');
 
     await executeCommand(initCommand, [
       '--non-interactive',
@@ -458,7 +461,6 @@ export default messages;`
     // Verify translations
     const content = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
     expect(content).toEqual('const messages = {}');
-
   });
 
   it('should handle invalid json syntax', async () => {
@@ -628,9 +630,12 @@ export default messages;`
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'src/i18n.ts',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/i18n.ts',
     ]);
 
     // Add lockedKeys to config
@@ -669,9 +674,12 @@ export default messages;`
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'src/i18n.ts',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/i18n.ts',
     ]);
 
     // Add lockedKeys to config
@@ -702,4 +710,105 @@ export default messages;`
     expect(contentAfter).toContain('[it] My App');
   });
 
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await mkdir(path.join(testDir, 'src'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      `const messages = {
+  en: {
+    greeting: 'Hello',
+    app: {
+      name: 'My App',
+      version: '1.0.0',
+    },
+  },
+};
+
+export default messages;`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/i18n.ts',
+    ]);
+
+    // Add includeKeys to config - only translate greeting
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.ts.includeKeys = ['greeting'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const content = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    // Included key should be translated
+    expect(content).toContain('[it] Hello');
+    // Non-included keys should NOT be present
+    expect(content).not.toContain('[it] My App');
+    expect(content).not.toContain('[it] 1.0.0');
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'src'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      `const messages = {
+  en: {
+    greeting: 'Hello',
+    app: {
+      name: 'My App',
+      version: '1.0.0',
+    },
+  },
+};
+
+export default messages;`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'src/i18n.ts',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys - all keys get translated
+    await executeCommand(translateCommand, []);
+
+    const contentBefore = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    expect(contentBefore).toContain('[it] My App');
+
+    // Add includeKeys and modify source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.ts.includeKeys = ['greeting'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    const currentContent = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    await writeFile(
+      path.join(testDir, 'src', 'i18n.ts'),
+      currentContent.replace('"greeting": "Hello"', '"greeting": "Hi there"')
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const contentAfter = await readFile(path.join(testDir, 'src', 'i18n.ts'), 'utf-8');
+    // Included key should be updated
+    expect(contentAfter).toContain('[it] Hi there');
+    // Non-included keys should be preserved
+    expect(contentAfter).toContain('[it] My App');
+    expect(contentAfter).toContain('[it] 1.0.0');
+  });
 });

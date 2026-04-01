@@ -29,7 +29,14 @@ describe('JSON Repository Integration Tests', () => {
     process.exit = vi.fn() as any;
 
     // Create a temporary directory for each test
-    testDir = path.join(__dirname, '..', '..', '..', 'tmp', `test-json-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testDir = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'tmp',
+      `test-json-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    );
     await mkdir(testDir, { recursive: true });
 
     // Change to test directory
@@ -71,17 +78,17 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        author: {
-          name: "John Doe" 
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          author: {
+            name: 'John Doe',
+          },
+          messages: ['Welcome to MyApp', 'Hello, world!'],
         },
-        messages: [
-          "Welcome to MyApp",
-          "Hello, world!"
-        ]
-      }
-      , null, 2)
+        null,
+        2
+      )
     );
 
     // Initialize
@@ -101,8 +108,12 @@ describe('JSON Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify translations
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
-    const frContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    const frContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8')
+    );
 
     expect(itContent.title).toBe('[it] Hello, world!');
     expect(itContent.author.name).toBe('[it] John Doe');
@@ -119,9 +130,13 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!"
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
@@ -140,26 +155,38 @@ describe('JSON Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify translations
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
-    const frContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    const frContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8')
+    );
 
     expect(itContent.title).toBe('[it] Hello, world!');
     expect(frContent.title).toBe('[fr] Hello, world!');
 
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        subtitle: "Welcome to MyApp"
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          subtitle: 'Welcome to MyApp',
+        },
+        null,
+        2
+      )
     );
 
     // Translate
     await executeCommand(translateCommand, []);
 
     // Verify translations
-    const newItContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
-    const newFrContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+    const newItContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    const newFrContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8')
+    );
 
     expect(newItContent.title).toBe('[it] Hello, world!');
     expect(newItContent.subtitle).toBe('[it] Welcome to MyApp');
@@ -172,10 +199,14 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        subtitle: "Welcome to MyApp"
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          subtitle: 'Welcome to MyApp',
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
@@ -194,8 +225,12 @@ describe('JSON Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify translations
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
-    const frContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    const frContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8')
+    );
 
     expect(itContent.title).toBe('[it] Hello, world!');
     expect(itContent.subtitle).toBe('[it] Welcome to MyApp');
@@ -204,17 +239,25 @@ describe('JSON Repository Integration Tests', () => {
 
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!"
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+        },
+        null,
+        2
+      )
     );
 
     // Translate
     await executeCommand(translateCommand, []);
 
     // Verify translations
-    const newItContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
-    const newFrContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+    const newItContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    const newFrContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8')
+    );
 
     expect(newItContent.title).toBe('[it] Hello, world!');
     expect(newItContent.subtitle).toBeUndefined();
@@ -227,10 +270,14 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        subtitle: "Welcome to MyApp"
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          subtitle: 'Welcome to MyApp',
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
@@ -250,19 +297,27 @@ describe('JSON Repository Integration Tests', () => {
 
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        secondaryTitle: "Secondary Title",
-        subtitle: "Welcome to MyApp"
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          secondaryTitle: 'Secondary Title',
+          subtitle: 'Welcome to MyApp',
+        },
+        null,
+        2
+      )
     );
 
     // Translate
     await executeCommand(translateCommand, []);
 
     // Verify translations
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
-    const frContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    const frContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8')
+    );
 
     expect(Object.keys(itContent)[0]).toBe('title');
     expect(Object.keys(itContent)[1]).toBe('secondaryTitle');
@@ -275,10 +330,7 @@ describe('JSON Repository Integration Tests', () => {
   it('should handle empty JSON files', async () => {
     // Set up JSON repository structure
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'i18n', 'locales', 'en.json'),
-      '{}'
-    );
+    await writeFile(path.join(testDir, 'i18n', 'locales', 'en.json'), '{}');
 
     await executeCommand(initCommand, [
       '--non-interactive',
@@ -296,8 +348,12 @@ describe('JSON Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Verify translations
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
-    const frContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    const frContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'fr.json'), 'utf-8')
+    );
 
     expect(itContent).toEqual({});
     expect(frContent).toEqual({});
@@ -307,20 +363,27 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        app: {
-          debug: "Debug mode enabled",
-          version: "1.0.0"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            debug: 'Debug mode enabled',
+            version: '1.0.0',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'i18n/locales/[locale].json',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
     ]);
 
     // Add ignoredKeys to config
@@ -332,7 +395,9 @@ describe('JSON Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     expect(itContent.title).toBe('[it] Hello, world!');
     expect(itContent.app.version).toBe('[it] 1.0.0');
     expect(itContent.app.debug).toBeUndefined();
@@ -342,20 +407,27 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        app: {
-          debug: "Debug mode enabled",
-          version: "1.0.0"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            debug: 'Debug mode enabled',
+            version: '1.0.0',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'i18n/locales/[locale].json',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -363,7 +435,9 @@ describe('JSON Repository Integration Tests', () => {
     // First translate without ignoredKeys - all keys get translated
     await executeCommand(translateCommand, []);
 
-    const itContentBefore = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContentBefore = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     expect(itContentBefore.app.debug).toBe('[it] Debug mode enabled');
 
     // Now add ignoredKeys and update source to trigger re-translate
@@ -375,18 +449,24 @@ describe('JSON Repository Integration Tests', () => {
 
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, updated world!",
-        app: {
-          debug: "Debug mode enabled",
-          version: "1.0.0"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, updated world!',
+          app: {
+            debug: 'Debug mode enabled',
+            version: '1.0.0',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(translateCommand, []);
 
-    const itContentAfter = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContentAfter = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     expect(itContentAfter.title).toBe('[it] Hello, updated world!');
     expect(itContentAfter.app.debug).toBe('[it] Debug mode enabled'); // preserved, not removed
     expect(itContentAfter.app.version).toBe('[it] 1.0.0');
@@ -396,20 +476,27 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        app: {
-          debug: "Debug mode enabled",
-          version: "1.0.0"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            debug: 'Debug mode enabled',
+            version: '1.0.0',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'i18n/locales/[locale].json',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
     ]);
 
     (ConfigProvider as any).instance = null;
@@ -417,7 +504,9 @@ describe('JSON Repository Integration Tests', () => {
     // First translate without ignoredKeys
     await executeCommand(translateCommand, []);
 
-    const itContentBefore = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContentBefore = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     expect(itContentBefore.app.debug).toBe('[it] Debug mode enabled');
 
     // Add ignoredKeys and remove the key from source
@@ -429,17 +518,23 @@ describe('JSON Repository Integration Tests', () => {
 
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        app: {
-          version: "1.0.0"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            version: '1.0.0',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(translateCommand, []);
 
-    const itContentAfter = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContentAfter = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     expect(itContentAfter.title).toBe('[it] Hello, world!');
     expect(itContentAfter.app.debug).toBe('[it] Debug mode enabled'); // preserved despite deletion from source
     expect(itContentAfter.app.version).toBe('[it] 1.0.0');
@@ -449,20 +544,27 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        app: {
-          version: "1.0.0",
-          name: "My App"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            version: '1.0.0',
+            name: 'My App',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'i18n/locales/[locale].json',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
     ]);
 
     // Add lockedKeys to config
@@ -474,7 +576,9 @@ describe('JSON Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     // Locked key should have source value (no [it] prefix)
     expect(itContent.app.version).toBe('1.0.0');
     // Non-locked keys should be translated
@@ -486,20 +590,27 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        app: {
-          version: "1.0.0",
-          name: "My App"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            version: '1.0.0',
+            name: 'My App',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'i18n/locales/[locale].json',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
     ]);
 
     // Add lockedKeys to config
@@ -511,24 +622,32 @@ describe('JSON Repository Integration Tests', () => {
 
     await executeCommand(translateCommand, []);
 
-    const itContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     expect(itContent.app.version).toBe('1.0.0');
 
     // Update source value of locked key
     await writeFile(
       path.join(testDir, 'i18n', 'locales', 'en.json'),
-      JSON.stringify({
-        title: "Hello, world!",
-        app: {
-          version: "2.0.0",
-          name: "My App"
-        }
-      }, null, 2)
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            version: '2.0.0',
+            name: 'My App',
+          },
+        },
+        null,
+        2
+      )
     );
 
     await executeCommand(translateCommand, []);
 
-    const itContentAfterUpdate = JSON.parse(await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8'));
+    const itContentAfterUpdate = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
     // Locked key should have the new source value
     expect(itContentAfterUpdate.app.version).toBe('2.0.0');
     expect(itContentAfterUpdate.title).toBe('[it] Hello, world!');
@@ -541,18 +660,21 @@ describe('JSON Repository Integration Tests', () => {
     await mkdir(path.join(testDir, 'i18n', 'dev'), { recursive: true });
     await writeFile(
       path.join(testDir, 'i18n', 'main', 'en.json'),
-      JSON.stringify({ title: "Hello from main" }, null, 2)
+      JSON.stringify({ title: 'Hello from main' }, null, 2)
     );
     await writeFile(
       path.join(testDir, 'i18n', 'dev', 'en.json'),
-      JSON.stringify({ title: "Hello from dev" }, null, 2)
+      JSON.stringify({ title: 'Hello from dev' }, null, 2)
     );
 
     await executeCommand(initCommand, [
       '--non-interactive',
-      '--source', 'en',
-      '--target', 'it',
-      '--paths', 'i18n/*/[locale].json',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/*/[locale].json',
     ]);
 
     // Add exclude pattern to config
@@ -565,10 +687,176 @@ describe('JSON Repository Integration Tests', () => {
     await executeCommand(translateCommand, []);
 
     // Non-excluded file should be translated
-    const mainContent = JSON.parse(await readFile(path.join(testDir, 'i18n', 'main', 'it.json'), 'utf-8'));
+    const mainContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'main', 'it.json'), 'utf-8')
+    );
     expect(mainContent.title).toBe('[it] Hello from main');
 
     // Excluded file should NOT be translated
     expect(existsSync(path.join(testDir, 'i18n', 'dev', 'it.json'))).toBe(false);
+  });
+
+  it('should only translate included keys when includeKeys is configured', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            version: '1.0.0',
+            name: 'My App',
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
+    ]);
+
+    // Add includeKeys to config - only translate title
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.includeKeys = ['title'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    // Included key should be translated
+    expect(itContent.title).toBe('[it] Hello, world!');
+    // Non-included keys should NOT be present in new target file
+    expect(itContent.app).toBeUndefined();
+  });
+
+  it('should preserve non-included keys in existing target files', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            version: '1.0.0',
+            name: 'My App',
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // First translate without includeKeys - all keys get translated
+    await executeCommand(translateCommand, []);
+
+    const itContentBefore = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    expect(itContentBefore.app.name).toBe('[it] My App');
+
+    // Now add includeKeys and update source to trigger re-translate
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.includeKeys = ['title'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify(
+        {
+          title: 'Hello, updated world!',
+          app: {
+            version: '1.0.0',
+            name: 'My App',
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    await executeCommand(translateCommand, []);
+
+    const itContentAfter = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    // Included key should be updated
+    expect(itContentAfter.title).toBe('[it] Hello, updated world!');
+    // Non-included keys should be preserved as-is
+    expect(itContentAfter.app.name).toBe('[it] My App');
+    expect(itContentAfter.app.version).toBe('[it] 1.0.0');
+  });
+
+  it('should treat keys in both includeKeys and ignoredKeys as ignored', async () => {
+    await mkdir(path.join(testDir, 'i18n', 'locales'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'i18n', 'locales', 'en.json'),
+      JSON.stringify(
+        {
+          title: 'Hello, world!',
+          app: {
+            version: '1.0.0',
+            name: 'My App',
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'i18n/locales/[locale].json',
+    ]);
+
+    // Add both includeKeys and ignoredKeys with overlapping pattern
+    const configPath = path.join(testDir, 'lara.yaml');
+    const config = yaml.parse(await readFile(configPath, 'utf-8'));
+    config.files.json.includeKeys = ['title', 'app/version'];
+    config.files.json.ignoredKeys = ['app/version'];
+    await writeFile(configPath, yaml.stringify(config));
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    // Included and not ignored → translated
+    expect(itContent.title).toBe('[it] Hello, world!');
+    // Included BUT also ignored → ignoredKeys wins, not added to new target
+    expect(itContent.app?.version).toBeUndefined();
+    // Not included → not added to new target
+    expect(itContent.app?.name).toBeUndefined();
   });
 });

@@ -140,7 +140,12 @@ async function extractLocaleFromPath(source: string): Promise<string[]> {
 
       // Handle .lproj directories (e.g., en.lproj -> en)
       const lprojMatch = part.match(/^(.+)\.lproj$/);
-      if (lprojMatch && lprojMatch[1] && availableLocales.has(lprojMatch[1]) && lprojMatch[1] !== source) {
+      if (
+        lprojMatch &&
+        lprojMatch[1] &&
+        availableLocales.has(lprojMatch[1]) &&
+        lprojMatch[1] !== source
+      ) {
         targetLocales.add(lprojMatch[1]);
         continue;
       }

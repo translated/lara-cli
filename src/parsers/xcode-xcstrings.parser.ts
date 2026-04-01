@@ -66,9 +66,10 @@ interface XcstringsFile {
  * }
  * ```
  */
-export class XcodeXcstringsParser
-  implements Parser<Record<string, unknown>, XcodeXcstringsParserOptionsType>
-{
+export class XcodeXcstringsParser implements Parser<
+  Record<string, unknown>,
+  XcodeXcstringsParserOptionsType
+> {
   private readonly fallbackContent = JSON.stringify(
     { sourceLanguage: 'en', strings: {}, version: '1.0' },
     null,
@@ -126,10 +127,7 @@ export class XcodeXcstringsParser
   /**
    * Extracts flattened entries for a specific locale.
    */
-  private extractLocaleEntries(
-    xcstrings: XcstringsFile,
-    locale: string
-  ): Record<string, unknown> {
+  private extractLocaleEntries(xcstrings: XcstringsFile, locale: string): Record<string, unknown> {
     const translations: Record<string, unknown> = {};
 
     for (const [key, entry] of Object.entries(xcstrings.strings)) {

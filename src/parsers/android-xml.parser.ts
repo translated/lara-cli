@@ -83,8 +83,12 @@ interface AndroidXmlParsed {
  * </resources>
  * ```
  */
-export class AndroidXmlParser implements Parser<Record<string, unknown>, AndroidXmlParserOptionsType> {
-  private readonly fallbackContent = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>';
+export class AndroidXmlParser implements Parser<
+  Record<string, unknown>,
+  AndroidXmlParserOptionsType
+> {
+  private readonly fallbackContent =
+    '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>';
   private readonly parser: XMLParser;
   private orderMap: Map<string, number> = new Map();
 
@@ -163,9 +167,7 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         const name = plural['@_name'];
         if (!name) continue;
 
-        const items = plural.item
-          ? (Array.isArray(plural.item) ? plural.item : [plural.item])
-          : [];
+        const items = plural.item ? (Array.isArray(plural.item) ? plural.item : [plural.item]) : [];
         for (const item of items) {
           const quantity = item['@_quantity'];
           if (!quantity) continue;
@@ -188,7 +190,9 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         if (stringArray['@_translatable'] === 'false') continue;
 
         const items = stringArray.item
-          ? (Array.isArray(stringArray.item) ? stringArray.item : [stringArray.item])
+          ? Array.isArray(stringArray.item)
+            ? stringArray.item
+            : [stringArray.item]
           : [];
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
@@ -212,8 +216,8 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
    */
   private escapeTextContent(value: string): string {
     return value
-      .replace(/&/g, '&amp;')   // The ampersand (&) must be escaped first before other entities,
-      .replace(/</g, '&lt;')    // otherwise already-escaped entities like "&lt;" will be double-escaped to "&amp;lt;".
+      .replace(/&/g, '&amp;') // The ampersand (&) must be escaped first before other entities,
+      .replace(/</g, '&lt;') // otherwise already-escaped entities like "&lt;" will be double-escaped to "&amp;lt;".
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
@@ -326,7 +330,9 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
         if (stringArray['@_translatable'] === 'false') continue;
 
         const items = stringArray.item
-          ? (Array.isArray(stringArray.item) ? stringArray.item : [stringArray.item])
+          ? Array.isArray(stringArray.item)
+            ? stringArray.item
+            : [stringArray.item]
           : [];
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
@@ -417,52 +423,54 @@ export class AndroidXmlParser implements Parser<Record<string, unknown>, Android
       } else if (entry.type === 'plurals') {
         const plural = entry.resource;
         const name = plural['@_name'];
-        const items = plural.item
-          ? (Array.isArray(plural.item) ? plural.item : [plural.item])
-          : [];
-        
+        const items = plural.item ? (Array.isArray(plural.item) ? plural.item : [plural.item]) : [];
+
         const escapedName = this.escapeTextContent(String(name));
-        
+
         lines.push(`${indent}<plurals name="${escapedName}">`);
-        
+
         for (const item of items) {
           const quantity = item['@_quantity'];
           if (!quantity) continue;
-          
+
           const value = item['#text'] ?? '';
 
           const escapedQuantity = this.escapeTextContent(String(quantity));
           const escapedValue = this.escapeTextContent(String(value));
-          
-          lines.push(`${indent}${indent}<item quantity="${escapedQuantity}">${escapedValue}</item>`);
+
+          lines.push(
+            `${indent}${indent}<item quantity="${escapedQuantity}">${escapedValue}</item>`
+          );
         }
-        
+
         lines.push(`${indent}</plurals>`);
       } else if (entry.type === 'string-array') {
         const stringArray = entry.resource;
         const name = stringArray['@_name'];
         const translatable = stringArray['@_translatable'];
         const items = stringArray.item
-          ? (Array.isArray(stringArray.item) ? stringArray.item : [stringArray.item])
+          ? Array.isArray(stringArray.item)
+            ? stringArray.item
+            : [stringArray.item]
           : [];
-        
+
         const escapedName = this.escapeTextContent(String(name));
-        
+
         let attrs = `name="${escapedName}"`;
         if (translatable === 'false') {
           attrs += ` translatable="false"`;
         }
-        
+
         lines.push(`${indent}<string-array ${attrs}>`);
-        
+
         for (const item of items) {
           // Handle both object format ({'#text': 'value'}) and string format ('value')
           const value = typeof item === 'string' ? item : (item['#text'] ?? '');
           const escapedValue = this.escapeTextContent(String(value));
-          
+
           lines.push(`${indent}${indent}<item>${escapedValue}</item>`);
         }
-        
+
         lines.push(`${indent}</string-array>`);
       }
     }
