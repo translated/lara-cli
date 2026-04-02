@@ -8,7 +8,7 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import { pathsInput, sourceInput, targetInput } from './init.input.js';
+import { incognitoInput, pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { Messages } from '#messages/messages.js';
@@ -88,6 +88,12 @@ export default new Command()
       })
       .default([])
   )
+  .addOption(
+    new Option(
+      '--incognito',
+      'Enable incognito mode to prevent server-side storage of translated content'
+    ).default(false)
+  )
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
       ? await handleInteractiveMode(options)
@@ -152,6 +158,7 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     },
     memories: options.translationMemories,
     glossaries: options.glossaries,
+    incognito: options.incognito,
     files: groupPathsByExtension(options.paths),
   };
 }
@@ -205,6 +212,8 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     }
   }
 
+  const incognito = await incognitoInput();
+
   return {
     version: '1.0.0',
     locales: {
@@ -213,6 +222,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     },
     memories: [],
     glossaries: [],
+    incognito,
     files: groupPathsByExtension(inputPaths),
   };
 }

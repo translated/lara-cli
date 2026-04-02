@@ -15,6 +15,7 @@ lara-cli translate [options]
 | `-t, --target <locales>` | Comma-separated list of target locales to translate to |
 | `-p, --paths <paths>` | Comma-separated list of specific file paths to translate (overrides config) |
 | `-f, --force` | Force retranslation of all content, even if unchanged |
+| `--incognito` | Enable incognito mode to prevent server-side storage of translated content |
 | `-h, --help` | Display help information |
 
 ## Examples
@@ -129,6 +130,24 @@ Use `--force` when you need to:
 - Fix translation errors by regenerating all translations
 - Reset translations after configuration changes
 
+## Incognito Mode
+
+Use `--incognito` to prevent the translation API from storing or logging your content server-side:
+
+```bash
+lara-cli translate --incognito
+lara-cli translate --text "Sensitive data" --source en --target fr --incognito
+lara-cli translate --file "confidential.json" --source en --target de --incognito
+```
+
+This can also be set permanently in `lara.yaml`:
+
+```yaml
+incognito: true
+```
+
+The CLI flag overrides the config value. When enabled, the `X-No-Trace` header is sent with every translation request.
+
 ## Direct Translation
 
 In addition to config-based translation, the `translate` command supports direct file and text translation. This mode is designed for CI/CD pipelines, scripting, and one-off translations — no `lara.yaml` configuration file is needed.
@@ -175,6 +194,7 @@ Only [supported file formats](../config/formats.md) are accepted (JSON, PO, XML,
 | `-o, --output <path>` | Output file path (only with `--file`) |
 | `-m, --translation-memories <ids>` | Translation Memory IDs (comma-separated) |
 | `-g, --glossaries <ids>` | Glossary IDs (comma-separated) |
+| `--incognito` | Enable incognito mode to prevent server-side storage of translated content |
 
 ### Using Translation Memories & Glossaries
 

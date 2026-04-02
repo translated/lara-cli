@@ -30,6 +30,8 @@ export type TranslationEngineOptions = {
 
   translationMemoryIds: Memory['id'][];
   glossaryIds: string[];
+
+  incognito: boolean;
 };
 
 /**
@@ -64,6 +66,8 @@ export class TranslationEngine {
   private readonly translationMemoryIds: Memory['id'][];
   private readonly glossaryIds: string[];
 
+  private readonly incognito: boolean;
+
   private readonly translatorService: TranslationService;
 
   // Parser instance used to parse and serialize translation files.
@@ -97,6 +101,8 @@ export class TranslationEngine {
 
     this.translationMemoryIds = options.translationMemoryIds;
     this.glossaryIds = options.glossaryIds;
+
+    this.incognito = options.incognito;
 
     this.translatorService = TranslationService.getInstance();
 
@@ -242,6 +248,7 @@ export class TranslationEngine {
       instructions: instruction ? [instruction] : undefined,
       adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
       glossaries: this.glossaryIds.length > 0 ? this.glossaryIds : undefined,
+      noTrace: this.incognito || undefined,
     };
 
     const translations = await this.translatorService.translate(

@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
-import { executeCommand } from './test-helpers.js';
+import { executeCommand, mockTranslate } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -514,6 +514,139 @@ describe('CLI Integration Tests', () => {
       expect(itContent.greeting).toBe('[it] Hello');
       expect(itContent.farewell).toBe('[it] Goodbye');
       expect(itContent.welcome).toBe('[it] Welcome');
+    });
+  });
+
+  describe('incognito mode', () => {
+    it('should save incognito: true to lara.yaml when --incognito flag is passed to init', async () => {
+      await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
+      await writeFile(
+        path.join(testDir, 'src', 'i18n', 'en.json'),
+        JSON.stringify({ greeting: 'Hello' }, null, 2)
+      );
+
+      await executeCommand(initCommand, [
+        '--non-interactive',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--paths',
+        'src/i18n/[locale].json',
+        '--incognito',
+      ]);
+
+      const configPath = path.join(testDir, 'lara.yaml');
+      const configContent = await readFile(configPath, 'utf-8');
+      const config = yaml.parse(configContent);
+
+      expect(config.incognito).toBe(true);
+    });
+
+    it('should default incognito to false in lara.yaml when --incognito flag is not passed', async () => {
+      await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
+      await writeFile(
+        path.join(testDir, 'src', 'i18n', 'en.json'),
+        JSON.stringify({ greeting: 'Hello' }, null, 2)
+      );
+
+      await executeCommand(initCommand, [
+        '--non-interactive',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--paths',
+        'src/i18n/[locale].json',
+      ]);
+
+      const configPath = path.join(testDir, 'lara.yaml');
+      const configContent = await readFile(configPath, 'utf-8');
+      const config = yaml.parse(configContent);
+
+      expect(config.incognito).toBe(false);
+    });
+
+    it('should pass noTrace: true when incognito is enabled in config', async () => {
+      await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
+      await writeFile(
+        path.join(testDir, 'src', 'i18n', 'en.json'),
+        JSON.stringify({ greeting: 'Hello' }, null, 2)
+      );
+
+      await executeCommand(initCommand, [
+        '--non-interactive',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--paths',
+        'src/i18n/[locale].json',
+        '--incognito',
+      ]);
+
+      (ConfigProvider as any).instance = null;
+      mockTranslate.mockClear();
+
+      await executeCommand(translateCommand, []);
+
+      expect(mockTranslate).toHaveBeenCalled();
+      const lastCallOptions = mockTranslate.mock.calls[0]![3];
+      expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
+    });
+
+    it('should pass noTrace: true when --incognito flag is used on translate command', async () => {
+      await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
+      await writeFile(
+        path.join(testDir, 'src', 'i18n', 'en.json'),
+        JSON.stringify({ greeting: 'Hello' }, null, 2)
+      );
+
+      await executeCommand(initCommand, [
+        '--non-interactive',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--paths',
+        'src/i18n/[locale].json',
+      ]);
+
+      (ConfigProvider as any).instance = null;
+      mockTranslate.mockClear();
+
+      await executeCommand(translateCommand, ['--incognito']);
+
+      expect(mockTranslate).toHaveBeenCalled();
+      const lastCallOptions = mockTranslate.mock.calls[0]![3];
+      expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
+    });
+
+    it('should not pass noTrace when incognito is disabled', async () => {
+      await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
+      await writeFile(
+        path.join(testDir, 'src', 'i18n', 'en.json'),
+        JSON.stringify({ greeting: 'Hello' }, null, 2)
+      );
+
+      await executeCommand(initCommand, [
+        '--non-interactive',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--paths',
+        'src/i18n/[locale].json',
+      ]);
+
+      (ConfigProvider as any).instance = null;
+      mockTranslate.mockClear();
+
+      await executeCommand(translateCommand, []);
+
+      expect(mockTranslate).toHaveBeenCalled();
+      const lastCallOptions = mockTranslate.mock.calls[0]![3] as Record<string, unknown>;
+      expect(lastCallOptions.noTrace).toBeUndefined();
     });
   });
 });
