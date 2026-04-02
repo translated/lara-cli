@@ -95,7 +95,9 @@ The diagram below shows how the different configuration sections relate to each 
 ┌─────────────────┐           ┌───────────────────┐
 │ memories        │           │ files             │
 │ glossaries      │           │ (paths & rules)   │
-│ (terminology)   │           │                   │
+│ noTrace         │           │                   │
+│ (terminology &  │           │                   │
+│  privacy)       │           │                   │
 └─────────────────┘           └───────────────────┘
 ```
 

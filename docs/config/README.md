@@ -21,6 +21,7 @@ memories:
   - mem_abc123
 glossaries:
   - gls_xyz789
+noTrace: false
 files:
   json:
     include:

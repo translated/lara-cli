@@ -132,7 +132,11 @@ Use `--force` when you need to:
 
 ## No-Trace Mode
 
-Use `--no-trace` to prevent the translation API from storing or logging your content server-side:
+Use `--no-trace` to prevent the translation API from storing or logging your content server-side. This is useful when translating sensitive or confidential content.
+
+### Per-Invocation
+
+Pass `--no-trace` to any translate command:
 
 ```bash
 lara-cli translate --no-trace
@@ -140,13 +144,23 @@ lara-cli translate --text "Sensitive data" --source en --target fr --no-trace
 lara-cli translate --file "confidential.json" --source en --target de --no-trace
 ```
 
-This can also be set permanently in `lara.yaml`:
+### Permanent Configuration
 
-```yaml
-noTrace: true
-```
+To enable no-trace for all translations in a project, either:
 
-The CLI flag overrides the config value. When enabled, the `X-No-Trace` header is sent with every translation request.
+1. Initialize with `--no-trace`:
+
+   ```bash
+   lara-cli init --no-trace
+   ```
+
+2. Or add it manually to `lara.yaml`:
+
+   ```yaml
+   noTrace: true
+   ```
+
+When set in the config, all `lara-cli translate` runs will use no-trace mode automatically. The `--no-trace` CLI flag always takes precedence over the config value.
 
 ## Direct Translation
 
