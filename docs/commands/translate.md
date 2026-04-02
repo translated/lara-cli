@@ -15,6 +15,7 @@ lara-cli translate [options]
 | `-t, --target <locales>` | Comma-separated list of target locales to translate to |
 | `-p, --paths <paths>` | Comma-separated list of specific file paths to translate (overrides config) |
 | `-f, --force` | Force retranslation of all content, even if unchanged |
+| `--no-trace` | Prevent server-side storage of translated content |
 | `-h, --help` | Display help information |
 
 ## Examples
@@ -129,6 +130,38 @@ Use `--force` when you need to:
 - Fix translation errors by regenerating all translations
 - Reset translations after configuration changes
 
+## No-Trace Mode
+
+Use `--no-trace` to prevent the translation API from storing or logging your content server-side. This is useful when translating sensitive or confidential content.
+
+### Per-Invocation
+
+Pass `--no-trace` to any translate command:
+
+```bash
+lara-cli translate --no-trace
+lara-cli translate --text "Sensitive data" --source en --target fr --no-trace
+lara-cli translate --file "confidential.json" --source en --target de --no-trace
+```
+
+### Permanent Configuration
+
+To enable no-trace for all translations in a project, either:
+
+1. Initialize with `--no-trace`:
+
+   ```bash
+   lara-cli init --no-trace
+   ```
+
+2. Or add it manually to `lara.yaml`:
+
+   ```yaml
+   noTrace: true
+   ```
+
+When set in the config, all `lara-cli translate` runs will use no-trace mode automatically. The `--no-trace` CLI flag always takes precedence over the config value.
+
 ## Direct Translation
 
 In addition to config-based translation, the `translate` command supports direct file and text translation. This mode is designed for CI/CD pipelines, scripting, and one-off translations — no `lara.yaml` configuration file is needed.
@@ -175,6 +208,7 @@ Only [supported file formats](../config/formats.md) are accepted (JSON, PO, XML,
 | `-o, --output <path>` | Output file path (only with `--file`) |
 | `-m, --translation-memories <ids>` | Translation Memory IDs (comma-separated) |
 | `-g, --glossaries <ids>` | Glossary IDs (comma-separated) |
+| `--no-trace` | Prevent server-side storage of translated content |
 
 ### Using Translation Memories & Glossaries
 

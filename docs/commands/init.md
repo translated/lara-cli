@@ -21,6 +21,7 @@ lara-cli init [options]
 | `-i, --instruction <instruction>` | Set project instruction for translation quality |
 | `-m, --translation-memories <memories>` | Set comma-separated Translation Memory IDs |
 | `-g, --glossaries <glossaries>` | Set comma-separated Glossary IDs |
+| `--no-trace` | Prevent server-side storage of translated content |
 | `-h, --help` | Display help information |
 
 ## Operating Modes
@@ -91,6 +92,14 @@ lara-cli init --source "en" --target "de, fr, it" \
 ```bash
 lara-cli init --reset-credentials
 ```
+
+### Initialize with No-Trace Mode
+
+```bash
+lara-cli init --no-trace
+```
+
+This sets `noTrace: true` in `lara.yaml`, which prevents the translation API from storing or logging your content server-side. All subsequent `lara-cli translate` runs will automatically use no-trace mode. You can also pass `--no-trace` directly to the translate command for one-off usage.
 
 ## Related
 

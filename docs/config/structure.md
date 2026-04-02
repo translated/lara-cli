@@ -13,6 +13,7 @@ lara.yaml
 ├── locales         # Language settings
 ├── memories        # Translation memory settings
 ├── glossaries      # Terminology settings
+├── noTrace         # No-trace mode (prevents server-side storage)
 └── files           # File path and processing rules
 ```
 
@@ -45,6 +46,9 @@ memories:
 glossaries:
   - gls_xyz789
   - gls_uvw012
+
+# No-trace mode — prevents server-side storage of translated content
+noTrace: false
 
 # File path and processing rules
 files:
@@ -91,7 +95,9 @@ The diagram below shows how the different configuration sections relate to each 
 ┌─────────────────┐           ┌───────────────────┐
 │ memories        │           │ files             │
 │ glossaries      │           │ (paths & rules)   │
-│ (terminology)   │           │                   │
+│ noTrace         │           │                   │
+│ (terminology &  │           │                   │
+│  privacy)       │           │                   │
 └─────────────────┘           └───────────────────┘
 ```
 

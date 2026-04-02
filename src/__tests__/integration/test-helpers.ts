@@ -1,18 +1,27 @@
 import { vi } from 'vitest';
 import { Command, Option } from 'commander';
 
+// Shared mock translate function, exported so tests can assert on call args
+export const mockTranslate = vi.fn(
+  async (
+    textBlocks: { text: string; translatable: boolean }[],
+    _sourceLocale: string,
+    targetLocale: string,
+    _options?: Record<string, unknown>
+  ) => {
+    return textBlocks.map((block: { text: string; translatable: boolean }) => ({
+      text: block.translatable ? `[${targetLocale}] ${block.text}` : block.text,
+      translatable: block.translatable,
+    }));
+  }
+);
+
 // Mock translation service
 vi.mock('#modules/translation/translation.service.js', () => {
   return {
     TranslationService: {
       getInstance: vi.fn(() => ({
-        translate: vi.fn(async (textBlocks, _sourceLocale, targetLocale) => {
-          // Return mock translations based on target locale
-          return textBlocks.map((block: { text: string; translatable: boolean }) => ({
-            text: block.translatable ? `[${targetLocale}] ${block.text}` : block.text,
-            translatable: block.translatable,
-          }));
-        }),
+        translate: mockTranslate,
       })),
     },
   };

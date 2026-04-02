@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { executeCommand } from './test-helpers.js';
+import { executeCommand, mockTranslate } from './test-helpers.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 
@@ -595,6 +595,64 @@ describe('Direct Translation Integration Tests', () => {
 
       const stdoutCalls = stdoutWriteSpy.mock.calls.map((call: unknown[]) => call[0]);
       expect(stdoutCalls).toContainEqual('[fr] Hello\n');
+    });
+  });
+
+  describe('no-trace mode', () => {
+    it('should pass noTrace: true when --no-trace is used with --text', async () => {
+      mockTranslate.mockClear();
+
+      await executeCommand(translateCommand, [
+        '--text',
+        'Hello',
+        '--source',
+        'en',
+        '--target',
+        'fr',
+        '--no-trace',
+      ]);
+
+      expect(mockTranslate).toHaveBeenCalled();
+      const lastCallOptions = mockTranslate.mock.calls[0]![3];
+      expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
+    });
+
+    it('should pass noTrace: true when --no-trace is used with --file', async () => {
+      const inputFile = path.join(testDir, 'hello.txt');
+      await writeFile(inputFile, 'Hello');
+
+      mockTranslate.mockClear();
+
+      await executeCommand(translateCommand, [
+        '--file',
+        inputFile,
+        '--source',
+        'en',
+        '--target',
+        'fr',
+        '--no-trace',
+      ]);
+
+      expect(mockTranslate).toHaveBeenCalled();
+      const lastCallOptions = mockTranslate.mock.calls[0]![3];
+      expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
+    });
+
+    it('should not pass noTrace when --no-trace is not used with --text', async () => {
+      mockTranslate.mockClear();
+
+      await executeCommand(translateCommand, [
+        '--text',
+        'Hello',
+        '--source',
+        'en',
+        '--target',
+        'fr',
+      ]);
+
+      expect(mockTranslate).toHaveBeenCalled();
+      const lastCallOptions = mockTranslate.mock.calls[0]![3] as Record<string, unknown>;
+      expect(lastCallOptions.noTrace).toBeUndefined();
     });
   });
 });

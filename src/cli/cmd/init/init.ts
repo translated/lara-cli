@@ -88,6 +88,7 @@ export default new Command()
       })
       .default([])
   )
+  .addOption(new Option('--no-trace', 'Prevent server-side storage of translated content'))
   .action(async (options: InitOptions, command: Command) => {
     const config = isRunningInInteractiveMode(command)
       ? await handleInteractiveMode(options)
@@ -152,6 +153,7 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     },
     memories: options.translationMemories,
     glossaries: options.glossaries,
+    noTrace: !options.trace,
     files: groupPathsByExtension(options.paths),
   };
 }
@@ -213,6 +215,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     },
     memories: [],
     glossaries: [],
+    noTrace: !options.trace,
     files: groupPathsByExtension(inputPaths),
   };
 }

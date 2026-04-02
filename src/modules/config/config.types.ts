@@ -81,6 +81,8 @@ const Config = z
 
     glossaries: z.array(z.string()).default([]),
 
+    noTrace: z.boolean().optional().default(false),
+
     files: z.partialRecord(
       SupportedFileTypesEnum,
       z.object({
