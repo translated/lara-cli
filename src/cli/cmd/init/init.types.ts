@@ -7,4 +7,5 @@ export interface InitOptions {
   instruction?: string;
   translationMemories: string[];
   glossaries: string[];
+  trace: boolean;
 }
