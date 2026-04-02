@@ -21,7 +21,7 @@ lara-cli init [options]
 | `-i, --instruction <instruction>` | Set project instruction for translation quality |
 | `-m, --translation-memories <memories>` | Set comma-separated Translation Memory IDs |
 | `-g, --glossaries <glossaries>` | Set comma-separated Glossary IDs |
-| `--incognito` | Enable incognito mode to prevent server-side storage of translated content |
+| `--no-trace` | Prevent server-side storage of translated content |
 | `-h, --help` | Display help information |
 
 ## Operating Modes

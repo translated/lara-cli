@@ -13,7 +13,7 @@ lara.yaml
 ├── locales         # Language settings
 ├── memories        # Translation memory settings
 ├── glossaries      # Terminology settings
-├── incognito       # Incognito mode (prevents server-side storage)
+├── noTrace         # No-trace mode (prevents server-side storage)
 └── files           # File path and processing rules
 ```
 
@@ -47,8 +47,8 @@ glossaries:
   - gls_xyz789
   - gls_uvw012
 
-# Incognito mode — prevents server-side storage of translated content
-incognito: false
+# No-trace mode — prevents server-side storage of translated content
+noTrace: false
 
 # File path and processing rules
 files:

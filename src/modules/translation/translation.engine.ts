@@ -31,7 +31,7 @@ export type TranslationEngineOptions = {
   translationMemoryIds: Memory['id'][];
   glossaryIds: string[];
 
-  incognito: boolean;
+  noTrace: boolean;
 };
 
 /**
@@ -66,7 +66,7 @@ export class TranslationEngine {
   private readonly translationMemoryIds: Memory['id'][];
   private readonly glossaryIds: string[];
 
-  private readonly incognito: boolean;
+  private readonly noTrace: boolean;
 
   private readonly translatorService: TranslationService;
 
@@ -102,7 +102,7 @@ export class TranslationEngine {
     this.translationMemoryIds = options.translationMemoryIds;
     this.glossaryIds = options.glossaryIds;
 
-    this.incognito = options.incognito;
+    this.noTrace = options.noTrace;
 
     this.translatorService = TranslationService.getInstance();
 
@@ -248,7 +248,7 @@ export class TranslationEngine {
       instructions: instruction ? [instruction] : undefined,
       adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
       glossaries: this.glossaryIds.length > 0 ? this.glossaryIds : undefined,
-      noTrace: this.incognito || undefined,
+      noTrace: this.noTrace || undefined,
     };
 
     const translations = await this.translatorService.translate(

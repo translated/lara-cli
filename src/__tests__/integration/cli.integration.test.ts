@@ -517,8 +517,8 @@ describe('CLI Integration Tests', () => {
     });
   });
 
-  describe('incognito mode', () => {
-    it('should save incognito: true to lara.yaml when --incognito flag is passed to init', async () => {
+  describe('no-trace mode', () => {
+    it('should save noTrace: true to lara.yaml when --no-trace flag is passed to init', async () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
@@ -533,17 +533,17 @@ describe('CLI Integration Tests', () => {
         'it',
         '--paths',
         'src/i18n/[locale].json',
-        '--incognito',
+        '--no-trace',
       ]);
 
       const configPath = path.join(testDir, 'lara.yaml');
       const configContent = await readFile(configPath, 'utf-8');
       const config = yaml.parse(configContent);
 
-      expect(config.incognito).toBe(true);
+      expect(config.noTrace).toBe(true);
     });
 
-    it('should default incognito to false in lara.yaml when --incognito flag is not passed', async () => {
+    it('should default noTrace to false in lara.yaml when --no-trace flag is not passed', async () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
@@ -564,10 +564,10 @@ describe('CLI Integration Tests', () => {
       const configContent = await readFile(configPath, 'utf-8');
       const config = yaml.parse(configContent);
 
-      expect(config.incognito).toBe(false);
+      expect(config.noTrace).toBe(false);
     });
 
-    it('should pass noTrace: true when incognito is enabled in config', async () => {
+    it('should pass noTrace: true when noTrace is enabled in config', async () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
@@ -582,7 +582,7 @@ describe('CLI Integration Tests', () => {
         'it',
         '--paths',
         'src/i18n/[locale].json',
-        '--incognito',
+        '--no-trace',
       ]);
 
       (ConfigProvider as any).instance = null;
@@ -595,7 +595,7 @@ describe('CLI Integration Tests', () => {
       expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
     });
 
-    it('should pass noTrace: true when --incognito flag is used on translate command', async () => {
+    it('should pass noTrace: true when --no-trace flag is used on translate command', async () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),
@@ -615,14 +615,14 @@ describe('CLI Integration Tests', () => {
       (ConfigProvider as any).instance = null;
       mockTranslate.mockClear();
 
-      await executeCommand(translateCommand, ['--incognito']);
+      await executeCommand(translateCommand, ['--no-trace']);
 
       expect(mockTranslate).toHaveBeenCalled();
       const lastCallOptions = mockTranslate.mock.calls[0]![3];
       expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
     });
 
-    it('should not pass noTrace when incognito is disabled', async () => {
+    it('should not pass noTrace when noTrace is disabled', async () => {
       await mkdir(path.join(testDir, 'src', 'i18n'), { recursive: true });
       await writeFile(
         path.join(testDir, 'src', 'i18n', 'en.json'),

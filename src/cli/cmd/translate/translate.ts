@@ -27,7 +27,7 @@ type TranslateOptions = {
   paths: string[];
   force: boolean;
   parallel: boolean;
-  incognito: boolean;
+  trace: boolean;
   // Direct translation options
   file?: string;
   text?: string;
@@ -103,12 +103,7 @@ export default new Command()
       'Glossary IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
     ).argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
   )
-  .addOption(
-    new Option(
-      '--incognito',
-      'Enable incognito mode to prevent server-side storage of translated content'
-    ).default(false)
-  )
+  .addOption(new Option('--no-trace', 'Prevent server-side storage of translated content'))
   .action(async (options: TranslateOptions) => {
     try {
       const mode = validateAndDetectMode(options);
@@ -220,7 +215,7 @@ function buildTranslateOptions(options: TranslateOptions): LaraTranslateOptions 
     adaptTo: options.translationMemories ?? [],
     glossaries:
       options.glossaries && options.glossaries.length > 0 ? options.glossaries : undefined,
-    noTrace: options.incognito || undefined,
+    noTrace: !options.trace || undefined,
   };
 }
 
@@ -367,7 +362,7 @@ async function handleFileType(
       globalKeyInstructions: fileConfig.keyInstructions,
       translationMemoryIds: config.memories,
       glossaryIds: config.glossaries,
-      incognito: options.incognito || config.incognito,
+      noTrace: !options.trace || config.noTrace,
     });
 
     try {

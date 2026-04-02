@@ -167,9 +167,9 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
   return allTargetLocales;
 }
 
-export async function incognitoInput(): Promise<boolean> {
+export async function noTraceInput(): Promise<boolean> {
   return confirm({
-    message: Messages.prompts.enableIncognito,
+    message: Messages.prompts.enableNoTrace,
   });
 }
 

@@ -598,8 +598,8 @@ describe('Direct Translation Integration Tests', () => {
     });
   });
 
-  describe('incognito mode', () => {
-    it('should pass noTrace: true when --incognito is used with --text', async () => {
+  describe('no-trace mode', () => {
+    it('should pass noTrace: true when --no-trace is used with --text', async () => {
       mockTranslate.mockClear();
 
       await executeCommand(translateCommand, [
@@ -609,7 +609,7 @@ describe('Direct Translation Integration Tests', () => {
         'en',
         '--target',
         'fr',
-        '--incognito',
+        '--no-trace',
       ]);
 
       expect(mockTranslate).toHaveBeenCalled();
@@ -617,7 +617,7 @@ describe('Direct Translation Integration Tests', () => {
       expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
     });
 
-    it('should pass noTrace: true when --incognito is used with --file', async () => {
+    it('should pass noTrace: true when --no-trace is used with --file', async () => {
       const inputFile = path.join(testDir, 'hello.txt');
       await writeFile(inputFile, 'Hello');
 
@@ -630,7 +630,7 @@ describe('Direct Translation Integration Tests', () => {
         'en',
         '--target',
         'fr',
-        '--incognito',
+        '--no-trace',
       ]);
 
       expect(mockTranslate).toHaveBeenCalled();
@@ -638,7 +638,7 @@ describe('Direct Translation Integration Tests', () => {
       expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
     });
 
-    it('should not pass noTrace when --incognito is not used with --text', async () => {
+    it('should not pass noTrace when --no-trace is not used with --text', async () => {
       mockTranslate.mockClear();
 
       await executeCommand(translateCommand, [
