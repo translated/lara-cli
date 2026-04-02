@@ -167,12 +167,6 @@ export async function targetInput(source: string, defaults: string[] = []): Prom
   return allTargetLocales;
 }
 
-export async function noTraceInput(): Promise<boolean> {
-  return confirm({
-    message: Messages.prompts.enableNoTrace,
-  });
-}
-
 export async function pathsInput(options: InitOptions) {
   const spinner = Ora({ text: Messages.info.searchingPaths, color: 'yellow' }).start();
 

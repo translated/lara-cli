@@ -164,6 +164,5 @@ export const Messages = {
     useMemories: 'Do you want to use Translation Memories?',
     updateGlossaries: 'Do you want to update the selected Glossaries?',
     useGlossaries: 'Do you want to use Glossaries?',
-    enableNoTrace: 'Enable no-trace mode? (prevents server-side storage of translated content)',
   },
 } as const;

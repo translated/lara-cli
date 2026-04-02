@@ -8,7 +8,7 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { isRunningInInteractiveMode } from '#utils/cli.js';
 
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
-import { noTraceInput, pathsInput, sourceInput, targetInput } from './init.input.js';
+import { pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
 import { ConfigType } from '#modules/config/config.types.js';
 import { Messages } from '#messages/messages.js';
@@ -207,8 +207,6 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     }
   }
 
-  const noTrace = await noTraceInput();
-
   return {
     version: '1.0.0',
     locales: {
@@ -217,7 +215,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     },
     memories: [],
     glossaries: [],
-    noTrace,
+    noTrace: !options.trace,
     files: groupPathsByExtension(inputPaths),
   };
 }
