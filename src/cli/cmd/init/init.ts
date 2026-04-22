@@ -10,7 +10,7 @@ import { isRunningInInteractiveMode } from '#utils/cli.js';
 import { COMMA_AND_SPACE_REGEX } from '#modules/common/common.const.js';
 import { pathsInput, sourceInput, targetInput } from './init.input.js';
 import { InitOptions } from './init.types.js';
-import { ConfigType } from '#modules/config/config.types.js';
+import { ConfigType, DEFAULT_BATCH_SIZE } from '#modules/config/config.types.js';
 import { Messages } from '#messages/messages.js';
 import { setCredentials, resolveProjectInstruction } from './init.utils.js';
 import { getFileType } from '#utils/path.js';
@@ -154,6 +154,7 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     memories: options.translationMemories,
     glossaries: options.glossaries,
     noTrace: !options.trace,
+    translation: { batchSize: DEFAULT_BATCH_SIZE },
     files: groupPathsByExtension(options.paths),
   };
 }
@@ -216,6 +217,7 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     memories: [],
     glossaries: [],
     noTrace: !options.trace,
+    translation: { batchSize: DEFAULT_BATCH_SIZE },
     files: groupPathsByExtension(inputPaths),
   };
 }

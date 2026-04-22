@@ -64,6 +64,37 @@ export class TranslationService {
     throw new Error(Messages.errors.maxRetriesExceeded);
   }
 
+  /**
+   * Translate a batch of text blocks with a single API call; if the batch
+   * call fails after retries, fall back to translating each block individually
+   * so one bad item does not block the rest of the batch.
+   */
+  public async translateBatchWithFallback(
+    textBlocks: TextBlock[],
+    sourceLocale: string,
+    targetLocale: string,
+    options: TranslateOptions
+  ): Promise<TextBlock[]> {
+    if (textBlocks.length === 0) {
+      return [];
+    }
+
+    try {
+      return await this.translate(textBlocks, sourceLocale, targetLocale, options);
+    } catch {
+      const results: TextBlock[] = [];
+      for (const block of textBlocks) {
+        const single = await this.translate([block], sourceLocale, targetLocale, options);
+        const translated = single[0];
+        if (!translated) {
+          throw new Error(Messages.errors.emptyTranslationResult(block.text));
+        }
+        results.push(translated);
+      }
+      return results;
+    }
+  }
+
   public async getTranslationMemories(): Promise<Memory[]> {
     return this.client.memories.list();
   }

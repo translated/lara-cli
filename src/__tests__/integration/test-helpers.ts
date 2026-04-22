@@ -16,12 +16,30 @@ export const mockTranslate = vi.fn(
   }
 );
 
+// Batch mock produces identical translations to mockTranslate but is counted independently,
+// so tests can assert on solo-vs-batch call distribution. Tests that care about batch-specific
+// failure behavior should override this mock directly.
+export const mockTranslateBatchWithFallback = vi.fn(
+  async (
+    textBlocks: { text: string; translatable: boolean }[],
+    _sourceLocale: string,
+    targetLocale: string,
+    _options?: Record<string, unknown>
+  ) => {
+    return textBlocks.map((block: { text: string; translatable: boolean }) => ({
+      text: block.translatable ? `[${targetLocale}] ${block.text}` : block.text,
+      translatable: block.translatable,
+    }));
+  }
+);
+
 // Mock translation service
 vi.mock('#modules/translation/translation.service.js', () => {
   return {
     TranslationService: {
       getInstance: vi.fn(() => ({
         translate: mockTranslate,
+        translateBatchWithFallback: mockTranslateBatchWithFallback,
       })),
     },
   };

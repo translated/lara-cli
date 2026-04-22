@@ -14,6 +14,7 @@ lara.yaml
 ├── memories        # Translation memory settings
 ├── glossaries      # Terminology settings
 ├── noTrace         # No-trace mode (prevents server-side storage)
+├── translation     # Translation tuning (batch size)
 └── files           # File path and processing rules
 ```
 
@@ -49,6 +50,10 @@ glossaries:
 
 # No-trace mode — prevents server-side storage of translated content
 noTrace: false
+
+# Translation tuning
+translation:
+  batchSize: 50    # Max keys sent per translation request (default: 50)
 
 # File path and processing rules
 files:
@@ -110,6 +115,20 @@ Configuration settings follow a specific inheritance pattern:
 3. **Key level** settings override file settings for specific keys
 
 This allows for progressive refinement of translation instructions and rules.
+
+## Translation Batching
+
+When a single file contains multiple translatable keys, Lara CLI sends them together in a single API request instead of one request per key. This reduces round trips and makes translation noticeably faster on large files.
+
+```yaml
+translation:
+  batchSize: 50
+```
+
+- Keys that share a file- or project-level instruction (or no instruction at all) are grouped into batches of at most `batchSize` items.
+- Keys that match a per-key instruction (`fileInstructions[*].keyInstructions` or `keyInstructions`) are translated individually so each keeps its own instruction.
+- If a batch request fails after retries, the engine automatically falls back to translating each key in that batch one by one, so a single problematic string cannot block the rest of the file.
+- `batchSize` defaults to `50` when the `translation` section is omitted. Existing `lara.yaml` files continue to work without changes.
 
 ## Related Topics
 

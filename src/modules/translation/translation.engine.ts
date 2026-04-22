@@ -32,19 +32,27 @@ export type TranslationEngineOptions = {
   glossaryIds: string[];
 
   noTrace: boolean;
+
+  batchSize: number;
+};
+
+type OutputSlot = { kind: 'omit' } | { kind: 'keep'; value: unknown } | { kind: 'translate' };
+
+type TranslateTask = {
+  key: string;
+  text: string;
+  instruction: string | undefined;
+};
+
+type ClassifiedEntries = {
+  ordered: Array<[string, OutputSlot]>;
+  solo: TranslateTask[];
+  batch: TranslateTask[];
 };
 
 /**
  * Handles the translation of a given input path to a set of target locales.
  * Every instance of this class is responsible for translating a single input path.
- *
- * Options:
- *  - sourceLocale: The locale to translate from
- *  - targetLocales: The locales to translate to
- *  - inputPath: The path to the input file
- *  - forceTranslation: Whether to force translation even if the files have not changed
- *  - lockedKeys: The keys to lock
- *  - ignoredKeys: The keys to ignore
  */
 export class TranslationEngine {
   private readonly sourceLocale: string;
@@ -67,6 +75,8 @@ export class TranslationEngine {
   private readonly glossaryIds: string[];
 
   private readonly noTrace: boolean;
+
+  private readonly batchSize: number;
 
   private readonly translatorService: TranslationService;
 
@@ -104,6 +114,8 @@ export class TranslationEngine {
 
     this.noTrace = options.noTrace;
 
+    this.batchSize = options.batchSize;
+
     this.translatorService = TranslationService.getInstance();
 
     this.parser = new ParserFactory(this.inputPath);
@@ -140,72 +152,24 @@ export class TranslationEngine {
 
       const target = this.parser.parse(targetContent, { targetLocale });
 
-      const entries = (
-        await Promise.all(
-          Object.entries(changelog).map(async ([key, value]) => {
-            const userKey = TranslationEngine.toUserKey(key);
-            const state = value.state;
-            const sourceValue = value.value;
-            const targetValue = target[key];
+      const classified = this.classifyEntries(changelog, target);
+      const translations = await this.executeTasks(classified, targetLocale);
 
-            // If includeKeys is configured and key is not included, treat as ignored
-            if (!this.isIncluded(userKey)) {
-              return targetValue !== undefined ? [key, targetValue] : null;
-            }
-
-            // If the key is ignored, preserve existing target value or skip if not present in target
-            if (this.isIgnored(userKey)) {
-              return targetValue !== undefined ? [key, targetValue] : null;
-            }
-
-            // If the key is deleted from source, remove it from target
-            if (state === ChecksumState.DELETED) {
-              return null;
-            }
-
-            // If the key is locked, we should NOT elaborate it and therefore return the source value
-            if (this.isLocked(userKey)) {
-              return [key, sourceValue];
-            }
-
-            // If the target value does not exists or the forceTranslation flag is set, we should always translate the source value
-            if (!targetValue || this.forceTranslation) {
-              const translatedValue = await this.translateKey(
-                userKey,
-                sourceValue,
-                this.sourceLocale,
-                targetLocale
-              );
-              return [key, translatedValue];
-            }
-
-            // If the key is unchanged, we should keep the target value
-            if (state === 'unchanged') {
-              return [key, targetValue];
-            }
-
-            // If the key is new and the target value exists, we should keep the target value
-            if (state === 'new' && targetValue) {
-              return [key, targetValue];
-            }
-
-            // Last case where the key is updated
-
-            if (typeof sourceValue !== 'string') {
-              // If the source value is not a string, we take for granted that it cannot be translated, therefore we return the source value
-              return [key, sourceValue];
-            }
-
-            const translatedValue = await this.translateKey(
-              userKey,
-              sourceValue,
-              this.sourceLocale,
-              targetLocale
-            );
-            return [key, translatedValue];
-          })
-        )
-      ).filter((entry): entry is [string, unknown] => entry !== null);
+      const entries: Array<[string, unknown]> = [];
+      for (const [key, slot] of classified.ordered) {
+        if (slot.kind === 'omit') {
+          continue;
+        }
+        if (slot.kind === 'keep') {
+          entries.push([key, slot.value]);
+          continue;
+        }
+        const translated = translations.get(key);
+        if (translated === undefined) {
+          throw new Error(Messages.errors.emptyTranslationResult(key));
+        }
+        entries.push([key, translated]);
+      }
 
       const newContent = Object.fromEntries(entries);
 
@@ -225,45 +189,125 @@ export class TranslationEngine {
     }
   }
 
-  private async translateKey(
-    userKey: string,
-    value: unknown,
-    sourceLocale: string,
+  private classifyEntries(
+    changelog: ReturnType<typeof calculateChecksum>,
+    target: Record<string, unknown>
+  ): ClassifiedEntries {
+    const ordered: Array<[string, OutputSlot]> = [];
+    const solo: TranslateTask[] = [];
+    const batch: TranslateTask[] = [];
+
+    for (const [key, entry] of Object.entries(changelog)) {
+      const userKey = TranslationEngine.toUserKey(key);
+      const state = entry.state;
+      const sourceValue = entry.value;
+      const targetValue = target[key];
+
+      if (!this.isIncluded(userKey) || this.isIgnored(userKey)) {
+        ordered.push([
+          key,
+          targetValue !== undefined ? { kind: 'keep', value: targetValue } : { kind: 'omit' },
+        ]);
+        continue;
+      }
+
+      if (state === ChecksumState.DELETED) {
+        ordered.push([key, { kind: 'omit' }]);
+        continue;
+      }
+
+      if (this.isLocked(userKey)) {
+        ordered.push([key, { kind: 'keep', value: sourceValue }]);
+        continue;
+      }
+
+      const shouldTranslate = !targetValue || this.forceTranslation;
+
+      if (!shouldTranslate) {
+        if (state === 'unchanged' || (state === 'new' && targetValue)) {
+          ordered.push([key, { kind: 'keep', value: targetValue }]);
+          continue;
+        }
+      }
+
+      if (typeof sourceValue !== 'string' || sourceValue.trim() === '') {
+        ordered.push([key, { kind: 'keep', value: sourceValue }]);
+        continue;
+      }
+
+      const { instruction, isKeySpecific } = this.resolveInstructionForKey(userKey);
+      const task: TranslateTask = { key, text: sourceValue, instruction };
+      (isKeySpecific ? solo : batch).push(task);
+      ordered.push([key, { kind: 'translate' }]);
+    }
+
+    return { ordered, solo, batch };
+  }
+
+  private async executeTasks(
+    classified: ClassifiedEntries,
     targetLocale: string
-  ) {
-    // If the value is not a string, we return it as is. We take for granted that it cannot be translated
-    if (typeof value !== 'string') {
-      return value;
+  ): Promise<Map<string, string>> {
+    const translations = new Map<string, string>();
+
+    const soloPromises = classified.solo.map(async (task) => {
+      const result = await this.translatorService.translate(
+        [{ text: task.text, translatable: true }],
+        this.sourceLocale,
+        targetLocale,
+        this.buildTranslateOptions(task.instruction)
+      );
+      const translated = result[0];
+      if (!translated) {
+        throw new Error(Messages.errors.emptyTranslationResult(task.text));
+      }
+      translations.set(task.key, translated.text);
+    });
+
+    const batchPromises: Promise<void>[] = [];
+    // All batch tasks share the same effective instruction (fileInstruction /
+    // projectInstruction / none) — isKeySpecific=false implies this. Read it
+    // off the first task instead of re-resolving.
+    const batchInstruction = classified.batch[0]?.instruction;
+    const batchOptions = this.buildTranslateOptions(batchInstruction);
+
+    for (let i = 0; i < classified.batch.length; i += this.batchSize) {
+      const chunk = classified.batch.slice(i, i + this.batchSize);
+      const textBlocks: TextBlock[] = chunk.map((task) => ({
+        text: task.text,
+        translatable: true,
+      }));
+
+      batchPromises.push(
+        (async () => {
+          const result = await this.translatorService.translateBatchWithFallback(
+            textBlocks,
+            this.sourceLocale,
+            targetLocale,
+            batchOptions
+          );
+          chunk.forEach((task, idx) => {
+            const translated = result[idx];
+            if (!translated) {
+              throw new Error(Messages.errors.emptyTranslationResult(task.text));
+            }
+            translations.set(task.key, translated.text);
+          });
+        })()
+      );
     }
 
-    // If the value is an empty string, we return it as is
-    if (value.trim() === '') {
-      return value;
-    }
+    await Promise.all([...soloPromises, ...batchPromises]);
+    return translations;
+  }
 
-    const textBlocks: TextBlock[] = [{ text: value, translatable: true }];
-    const instruction = this.getInstructionForKey(userKey);
-
-    const options: TranslateOptions = {
+  private buildTranslateOptions(instruction: string | undefined): TranslateOptions {
+    return {
       instructions: instruction ? [instruction] : undefined,
       adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
       glossaries: this.glossaryIds.length > 0 ? this.glossaryIds : undefined,
       noTrace: this.noTrace || undefined,
     };
-
-    const translations = await this.translatorService.translate(
-      textBlocks,
-      sourceLocale,
-      targetLocale,
-      options
-    );
-
-    const lastTranslation = translations.pop();
-    if (!lastTranslation) {
-      throw new Error(Messages.errors.emptyTranslationResult(value));
-    }
-
-    return lastTranslation.text;
   }
 
   /**
@@ -290,41 +334,42 @@ export class TranslationEngine {
   }
 
   /**
-   * Retrieves the most specific instruction for a key using override strategy.
-   * Priority (highest to lowest):
-   * 1. File-specific key instruction
-   * 2. Global key instruction
-   * 3. File instruction
-   * 4. Project instruction
+   * Resolves the most specific instruction for a key and reports whether it
+   * comes from a key-level match (fileKeyInstructions / globalKeyInstructions)
+   * or from a file/project-level fallback. Key-specific matches mean the key
+   * must be translated in its own API call; fallback-level instructions are
+   * shared across the file and can be batched.
    *
-   * @param userKey - The user-facing translation key path (using "/" delimiter)
-   * @returns Instruction string or undefined
+   * Priority (highest to lowest):
+   * 1. File-specific key instruction  (isKeySpecific = true)
+   * 2. Global key instruction          (isKeySpecific = true)
+   * 3. File instruction                (isKeySpecific = false)
+   * 4. Project instruction             (isKeySpecific = false)
    */
-  private getInstructionForKey(userKey: string): string | undefined {
-    // Priority 1: File-specific key instructions (highest)
+  private resolveInstructionForKey(userKey: string): {
+    instruction: string | undefined;
+    isKeySpecific: boolean;
+  } {
     for (const { matcher, instruction } of this.fileKeyInstructionPatterns) {
       if (matcher(userKey)) {
-        return instruction;
+        return { instruction, isKeySpecific: true };
       }
     }
 
-    // Priority 2: Global key instructions
     for (const { matcher, instruction } of this.globalKeyInstructionPatterns) {
       if (matcher(userKey)) {
-        return instruction;
+        return { instruction, isKeySpecific: true };
       }
     }
 
-    // Priority 3: File instruction
     if (this.fileInstruction) {
-      return this.fileInstruction;
+      return { instruction: this.fileInstruction, isKeySpecific: false };
     }
 
-    // Priority 4: Project instruction (lowest)
     if (this.projectInstruction) {
-      return this.projectInstruction;
+      return { instruction: this.projectInstruction, isKeySpecific: false };
     }
 
-    return undefined;
+    return { instruction: undefined, isKeySpecific: false };
   }
 }
