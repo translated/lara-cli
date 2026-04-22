@@ -166,7 +166,7 @@ export class TranslationEngine {
         }
         const translated = translations.get(key);
         if (translated === undefined) {
-          throw new Error(Messages.errors.emptyTranslationResult(key));
+          throw new Error(Messages.errors.emptyTranslationResult(TranslationEngine.toUserKey(key)));
         }
         entries.push([key, translated]);
       }

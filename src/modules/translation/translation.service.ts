@@ -79,20 +79,36 @@ export class TranslationService {
       return [];
     }
 
+    let batchError: unknown;
     try {
-      return await this.translate(textBlocks, sourceLocale, targetLocale, options);
-    } catch {
-      const results: TextBlock[] = [];
-      for (const block of textBlocks) {
+      const result = await this.translate(textBlocks, sourceLocale, targetLocale, options);
+      if (result.length === textBlocks.length && result.every((block) => block !== undefined)) {
+        return result;
+      }
+      batchError = new Error(
+        `Batch returned ${result.length} translations for ${textBlocks.length} inputs`
+      );
+    } catch (error) {
+      batchError = error;
+    }
+
+    const results: TextBlock[] = [];
+    for (const block of textBlocks) {
+      try {
         const single = await this.translate([block], sourceLocale, targetLocale, options);
         const translated = single[0];
         if (!translated) {
           throw new Error(Messages.errors.emptyTranslationResult(block.text));
         }
         results.push(translated);
+      } catch (fallbackError) {
+        throw new AggregateError(
+          [batchError, fallbackError],
+          `Batch translation failed and per-item fallback failed for: ${block.text}`
+        );
       }
-      return results;
     }
+    return results;
   }
 
   public async getTranslationMemories(): Promise<Memory[]> {
