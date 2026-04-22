@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
-import { executeCommand, mockTranslate } from './test-helpers.js';
+import { executeCommand, mockTranslateBatchWithFallback } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -586,12 +586,12 @@ describe('CLI Integration Tests', () => {
       ]);
 
       (ConfigProvider as any).instance = null;
-      mockTranslate.mockClear();
+      mockTranslateBatchWithFallback.mockClear();
 
       await executeCommand(translateCommand, []);
 
-      expect(mockTranslate).toHaveBeenCalled();
-      const lastCallOptions = mockTranslate.mock.calls[0]![3];
+      expect(mockTranslateBatchWithFallback).toHaveBeenCalled();
+      const lastCallOptions = mockTranslateBatchWithFallback.mock.calls[0]![3];
       expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
     });
 
@@ -613,12 +613,12 @@ describe('CLI Integration Tests', () => {
       ]);
 
       (ConfigProvider as any).instance = null;
-      mockTranslate.mockClear();
+      mockTranslateBatchWithFallback.mockClear();
 
       await executeCommand(translateCommand, ['--no-trace']);
 
-      expect(mockTranslate).toHaveBeenCalled();
-      const lastCallOptions = mockTranslate.mock.calls[0]![3];
+      expect(mockTranslateBatchWithFallback).toHaveBeenCalled();
+      const lastCallOptions = mockTranslateBatchWithFallback.mock.calls[0]![3];
       expect(lastCallOptions).toEqual(expect.objectContaining({ noTrace: true }));
     });
 
@@ -640,12 +640,15 @@ describe('CLI Integration Tests', () => {
       ]);
 
       (ConfigProvider as any).instance = null;
-      mockTranslate.mockClear();
+      mockTranslateBatchWithFallback.mockClear();
 
       await executeCommand(translateCommand, []);
 
-      expect(mockTranslate).toHaveBeenCalled();
-      const lastCallOptions = mockTranslate.mock.calls[0]![3] as Record<string, unknown>;
+      expect(mockTranslateBatchWithFallback).toHaveBeenCalled();
+      const lastCallOptions = mockTranslateBatchWithFallback.mock.calls[0]![3] as Record<
+        string,
+        unknown
+      >;
       expect(lastCallOptions.noTrace).toBeUndefined();
     });
   });

@@ -64,6 +64,53 @@ export class TranslationService {
     throw new Error(Messages.errors.maxRetriesExceeded);
   }
 
+  /**
+   * Translate a batch of text blocks with a single API call; if the batch
+   * call fails after retries, fall back to translating each block individually
+   * so one bad item does not block the rest of the batch.
+   */
+  public async translateBatchWithFallback(
+    textBlocks: TextBlock[],
+    sourceLocale: string,
+    targetLocale: string,
+    options: TranslateOptions
+  ): Promise<TextBlock[]> {
+    if (textBlocks.length === 0) {
+      return [];
+    }
+
+    let batchError: unknown;
+    try {
+      const result = await this.translate(textBlocks, sourceLocale, targetLocale, options);
+      if (result.length === textBlocks.length && result.every((block) => block !== undefined)) {
+        return result;
+      }
+      batchError = new Error(
+        `Batch returned ${result.length} translations for ${textBlocks.length} inputs`
+      );
+    } catch (error) {
+      batchError = error;
+    }
+
+    const results: TextBlock[] = [];
+    for (const block of textBlocks) {
+      try {
+        const single = await this.translate([block], sourceLocale, targetLocale, options);
+        const translated = single[0];
+        if (!translated) {
+          throw new Error(Messages.errors.emptyTranslationResult(block.text));
+        }
+        results.push(translated);
+      } catch (fallbackError) {
+        throw new AggregateError(
+          [batchError, fallbackError],
+          `Batch translation failed and per-item fallback failed for: ${block.text}`
+        );
+      }
+    }
+    return results;
+  }
+
   public async getTranslationMemories(): Promise<Memory[]> {
     return this.client.memories.list();
   }
