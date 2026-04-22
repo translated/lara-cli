@@ -363,6 +363,7 @@ async function handleFileType(
       translationMemoryIds: config.memories,
       glossaryIds: config.glossaries,
       noTrace: !options.trace || config.noTrace,
+      batchSize: config.translation.batchSize,
     });
 
     try {

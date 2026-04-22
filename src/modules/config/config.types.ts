@@ -10,6 +10,8 @@ import {
 import { SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { getFileType, isRelative } from '#utils/path.js';
 
+export const DEFAULT_BATCH_SIZE = 50;
+
 const LOCALE_FILENAME_PATTERN = new RegExp(
   `[^/]*\\[locale\\][^/]*\\.(${SEARCHABLE_EXTENSIONS.join('|')})$`
 );
@@ -82,6 +84,12 @@ const Config = z
     glossaries: z.array(z.string()).default([]),
 
     noTrace: z.boolean().optional().default(false),
+
+    translation: z
+      .object({
+        batchSize: z.number().int().positive().default(DEFAULT_BATCH_SIZE),
+      })
+      .default({ batchSize: DEFAULT_BATCH_SIZE }),
 
     files: z.partialRecord(
       SupportedFileTypesEnum,
