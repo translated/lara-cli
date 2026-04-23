@@ -39,6 +39,10 @@ describe('normalizeEntities', () => {
       expect(normalizeEntities('space', '&#xa0;&#x26;')).toBe(`${NBSP}&`);
     });
 
+    it('decodes hex numeric entities with uppercase X', () => {
+      expect(normalizeEntities('angle', '&#X3C;&#XA0;')).toBe(`<${NBSP}`);
+    });
+
     it('leaves unknown named entities untouched', () => {
       expect(normalizeEntities('foo', 'bar &notARealEntity; baz')).toBe('bar &notARealEntity; baz');
     });
