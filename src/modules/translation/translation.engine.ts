@@ -4,6 +4,7 @@ import { TranslationService } from './translation.service.js';
 import { calculateChecksum, commitChecksum, ChecksumState } from '#utils/checksum.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
+import { normalizeEntities } from '#utils/entities.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
@@ -268,7 +269,7 @@ export class TranslationEngine {
       if (!translated) {
         throw new Error(Messages.errors.emptyTranslationResult(task.text));
       }
-      translations.set(task.key, translated.text);
+      translations.set(task.key, normalizeEntities(task.text, translated.text));
     });
 
     const batchPromises: Promise<void>[] = [];
@@ -298,7 +299,7 @@ export class TranslationEngine {
             if (!translated) {
               throw new Error(Messages.errors.emptyTranslationResult(task.text));
             }
-            translations.set(task.key, translated.text);
+            translations.set(task.key, normalizeEntities(task.text, translated.text));
           });
         })()
       );
