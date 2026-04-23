@@ -19,6 +19,11 @@ type ChecksumChangelog = Record<
   }
 >;
 
+type ChecksumResult = {
+  changelog: ChecksumChangelog;
+  hasChanges: boolean;
+};
+
 type ChecksumFile = {
   version: string;
   // File hash -> key - hashed value mapping
@@ -26,23 +31,31 @@ type ChecksumFile = {
 };
 
 const CHECKSUM_FILE = 'lara.lock';
+const LOCK_FILE_VERSION = '1.1.0';
 const checksumFilePath = path.join(process.cwd(), CHECKSUM_FILE);
 
 let cachedChecksumFile: ChecksumFile | null = null;
 
 /**
- * Calculates the checksum of a file. And saves the checksum.
+ * Computes the changelog for a source file by diffing it against the lock.
+ *
+ * IMPORTANT: This function does NOT persist anything to the lock file. The lock
+ * must only be updated AFTER translation has successfully written target files,
+ * otherwise a partial/failed run would leave the lock in sync with the source
+ * while targets remain stale — causing subsequent runs to skip keys as
+ * "unchanged" even though their translations were never produced. Call
+ * `commitChecksum` once all targets have been written.
  *
  * @param fileName - The name of the file.
  * @param parser - Optional ParserFactory instance to reuse (preserves metadata like PO headers)
  * @param locale - Optional locale to filter keys (for multi-locale files like TS)
- * @returns The changelog of the file.
+ * @returns The changelog and a flag indicating whether anything changed.
  */
 function calculateChecksum(
   fileName: string,
   parser: ParserFactory,
   locale: string
-): ChecksumChangelog {
+): ChecksumResult {
   const checksumFile = getChecksumFile();
   const checksum = checksumFile.files[getHash(fileName)] || {};
 
@@ -90,11 +103,21 @@ function calculateChecksum(
     }
   }
 
-  if (changed) {
-    updateChecksum(fileName, fileContent);
-  }
+  return { changelog, hasChanges: changed };
+}
 
-  return changelog;
+/**
+ * Persists the source hashes derived from a changelog to the lock file. Call
+ * this after all target locales have been successfully translated and written.
+ * Deleted keys are excluded from the stored hashes.
+ */
+function commitChecksum(fileName: string, changelog: ChecksumChangelog) {
+  const values: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(changelog)) {
+    if (entry.state === ChecksumState.DELETED) continue;
+    values[key] = entry.value;
+  }
+  updateChecksum(fileName, values);
 }
 
 /**
@@ -130,7 +153,7 @@ function getChecksumFile(): ChecksumFile {
 
   if (!fs.existsSync(checksumFilePath)) {
     cachedChecksumFile = {
-      version: '1.0.0',
+      version: LOCK_FILE_VERSION,
       files: {},
     };
 
@@ -138,8 +161,46 @@ function getChecksumFile(): ChecksumFile {
     return cachedChecksumFile;
   }
 
-  cachedChecksumFile = yaml.parse(fs.readFileSync(checksumFilePath, 'utf8')) as ChecksumFile;
+  const parsed = yaml.parse(fs.readFileSync(checksumFilePath, 'utf8')) as ChecksumFile;
+  cachedChecksumFile = migrateChecksumFile(parsed);
   return cachedChecksumFile;
+}
+
+// Safe because the old format could not correctly represent keys containing a
+// literal `/` — so every `/` in an old-format entry is always a separator.
+function migrateChecksumFile(file: ChecksumFile): ChecksumFile {
+  if (file.version === LOCK_FILE_VERSION) {
+    return file;
+  }
+
+  let migrated = false;
+  const migratedFiles: ChecksumFile['files'] = {};
+
+  for (const [fileHash, entry] of Object.entries(file.files || {})) {
+    const keys = Object.keys(entry);
+    const hasNullByte = keys.some((k) => k.includes('\0'));
+    const hasSlash = keys.some((k) => k.includes('/'));
+
+    if (!hasNullByte && hasSlash) {
+      migratedFiles[fileHash] = Object.fromEntries(
+        Object.entries(entry).map(([key, value]) => [key.replaceAll('/', '\0'), value])
+      );
+      migrated = true;
+    } else {
+      migratedFiles[fileHash] = entry;
+    }
+  }
+
+  const result: ChecksumFile = {
+    version: LOCK_FILE_VERSION,
+    files: migratedFiles,
+  };
+
+  if (migrated) {
+    fs.writeFileSync(checksumFilePath, yaml.stringify(result));
+  }
+
+  return result;
 }
 
 /**
@@ -157,4 +218,4 @@ function resetChecksumCache() {
   cachedChecksumFile = null;
 }
 
-export { calculateChecksum, resetChecksumCache, ChecksumState };
+export { calculateChecksum, commitChecksum, resetChecksumCache, ChecksumState };
