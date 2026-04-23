@@ -1,7 +1,7 @@
 import picomatch, { Matcher } from 'picomatch';
 
 import { TranslationService } from './translation.service.js';
-import { calculateChecksum, ChecksumState } from '#utils/checksum.js';
+import { calculateChecksum, commitChecksum, ChecksumState } from '#utils/checksum.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
 import { writeFile } from 'fs/promises';
@@ -127,7 +127,7 @@ export class TranslationEngine {
 
   private async handleInputPath(inputPath: string): Promise<void> {
     const sourcePath = buildLocalePath(inputPath, this.sourceLocale);
-    const changelog = calculateChecksum(sourcePath, this.parser, this.sourceLocale);
+    const { changelog, hasChanges } = calculateChecksum(sourcePath, this.parser, this.sourceLocale);
     const keysCount = Object.keys(changelog).length;
 
     // Read source content to use as structure template when target is empty
@@ -187,10 +187,17 @@ export class TranslationEngine {
       );
       progressWithOra.tick(1);
     }
+
+    // Persist source hashes only after every target locale has been written.
+    // If any target above throws, we skip this step so the next run still sees
+    // the source as changed and retries.
+    if (hasChanges) {
+      commitChecksum(sourcePath, changelog);
+    }
   }
 
   private classifyEntries(
-    changelog: ReturnType<typeof calculateChecksum>,
+    changelog: ReturnType<typeof calculateChecksum>['changelog'],
     target: Record<string, unknown>
   ): ClassifiedEntries {
     const ordered: Array<[string, OutputSlot]> = [];

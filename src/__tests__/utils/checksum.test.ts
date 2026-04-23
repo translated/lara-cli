@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as yaml from 'yaml';
 import * as crypto from 'crypto';
-import { calculateChecksum, resetChecksumCache } from '#utils/checksum.js';
+import { calculateChecksum, commitChecksum, resetChecksumCache } from '#utils/checksum.js';
 import { ParserFactory } from '../../parsers/parser.factory.js';
 
 // Helper function to calculate hash
@@ -51,13 +51,17 @@ describe('checksum utils', () => {
       vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
       vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
 
-      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
+      const { changelog, hasChanges } = calculateChecksum(
+        mockFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
 
-      expect(result).toEqual({
+      expect(changelog).toEqual({
         key1: { value: 'value1', state: 'new' },
         key2: { value: 'value2', state: 'new' },
       });
-      expect(fs.writeFileSync).toHaveBeenCalled();
+      expect(hasChanges).toBe(true);
     });
 
     it('should return unchanged state when checksums match', () => {
@@ -76,7 +80,7 @@ describe('checksum utils', () => {
       const value2Hash = getHash('value2');
 
       const existingChecksum = {
-        version: '1.0.0',
+        version: '1.1.0',
         files: {
           [fileNameHash]: {
             key1: value1Hash,
@@ -90,12 +94,17 @@ describe('checksum utils', () => {
       vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
       vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
 
-      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
+      const { changelog, hasChanges } = calculateChecksum(
+        mockFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
 
-      expect(result).toEqual({
+      expect(changelog).toEqual({
         key1: { value: 'value1', state: 'unchanged' },
         key2: { value: 'value2', state: 'unchanged' },
       });
+      expect(hasChanges).toBe(false);
       expect(fs.writeFileSync).not.toHaveBeenCalled();
     });
 
@@ -115,7 +124,7 @@ describe('checksum utils', () => {
       const value2Hash = getHash('value2');
 
       const existingChecksum = {
-        version: '1.0.0',
+        version: '1.1.0',
         files: {
           [fileNameHash]: {
             key1: oldValue1Hash, // Old hash that won't match newvalue1
@@ -128,19 +137,50 @@ describe('checksum utils', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
       vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
-      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
+      const { changelog, hasChanges } = calculateChecksum(
+        mockFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
 
-      expect(result).toEqual({
+      expect(changelog).toEqual({
         key1: { value: 'newvalue1', state: 'updated' },
         key2: { value: 'value2', state: 'unchanged' },
       });
-      expect(fs.writeFileSync).toHaveBeenCalled();
+      expect(hasChanges).toBe(true);
+    });
+
+    it('should not write to the lock file (read-only)', () => {
+      // Regression test: premature lock writes caused stale targets to be
+      // classified as "unchanged" on subsequent runs, skipping re-translation.
+      const fileContent = { key1: 'newvalue' };
+      const mockParser = { parse: vi.fn().mockReturnValue(fileContent) };
+
+      const fileNameHash = getHash(mockFileName);
+      const existingChecksum = {
+        version: '1.1.0',
+        files: {
+          [fileNameHash]: { key1: getHash('oldvalue') },
+        },
+      };
+
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
+      vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
+      vi.mocked(yaml.stringify).mockReturnValue('mock yaml');
+
+      calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
+
+      // No write should happen on read — only commitChecksum persists.
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
     });
 
     it('should create checksum file if it does not exist', () => {
-      // Use a unique file name to avoid cache conflicts
+      // getChecksumFile creates an empty lock when none exists. That write is
+      // fine: it doesn't carry any stale source state.
       const uniqueFileName = 'test/new-file.json';
       const fileContent = {
         key1: 'value1',
@@ -151,18 +191,17 @@ describe('checksum utils', () => {
       };
 
       vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
-      // File doesn't exist - this will trigger file creation
-      // Note: if cachedChecksumFile is already set, existsSync won't be called in getChecksumFile
-      // but updateChecksum will still call writeFileSync
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
-      vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
       calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
 
-      // Verify that writeFileSync was called (for updating checksums when changed is true)
-      expect(fs.writeFileSync).toHaveBeenCalled();
+      // Only the initial empty-lock creation should fire, with no per-file entry.
+      const writeCalls = vi.mocked(fs.writeFileSync).mock.calls;
+      expect(writeCalls.length).toBe(1);
+      expect(writeCalls[0]![1] as string).not.toContain(uniqueFileName);
     });
 
     it('should use provided parser instance instead of creating new one', () => {
@@ -176,8 +215,8 @@ describe('checksum utils', () => {
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
-      vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
       calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
 
@@ -199,8 +238,8 @@ describe('checksum utils', () => {
       } as unknown as () => void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('file content');
-      vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
       calculateChecksum(mockFileName, null as unknown as ParserFactory, '');
 
@@ -220,8 +259,8 @@ describe('checksum utils', () => {
       vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('file content');
-      vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
       calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, 'en');
 
@@ -238,25 +277,20 @@ describe('checksum utils', () => {
       vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
-      vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
-      const result = calculateChecksum(mockFileName, mockParser as unknown as ParserFactory, '');
+      const { changelog, hasChanges } = calculateChecksum(
+        mockFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
 
-      expect(result).toEqual({});
-      // writeFileSync may be called once for initial checksum file creation,
-      // but updateChecksum should not be called (no changes detected)
-      const writeCalls = vi.mocked(fs.writeFileSync).mock.calls;
-      // If called, it should only be the initial file creation, not an update
-      for (const call of writeCalls) {
-        const content = call[1] as string;
-        // The initial creation writes an empty files object
-        expect(content).not.toContain(mockFileName);
-      }
+      expect(changelog).toEqual({});
+      expect(hasChanges).toBe(false);
     });
 
     it('should handle file with no existing checksum entry', () => {
-      // Use a unique file name to avoid cache conflicts
       const uniqueFileName = 'test/no-entry-file.json';
       const fileContent = {
         key1: 'value1',
@@ -266,13 +300,11 @@ describe('checksum utils', () => {
         parse: vi.fn().mockReturnValue(fileContent),
       };
 
-      // Use a different file name so this file's entry doesn't exist
       const differentFileName = 'test/other-file.json';
       const differentFileHash = getHash(differentFileName);
       const existingChecksum = {
-        version: '1.0.0',
+        version: '1.1.0',
         files: {
-          // No entry for uniqueFileName
           [differentFileHash]: {
             otherkey: getHash('othervalue'),
           },
@@ -283,20 +315,22 @@ describe('checksum utils', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
       vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
-      const result = calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
+      const { changelog, hasChanges } = calculateChecksum(
+        uniqueFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
 
-      expect(result).toEqual({
+      expect(changelog).toEqual({
         key1: { value: 'value1', state: 'new' },
       });
-      expect(fs.writeFileSync).toHaveBeenCalled();
+      expect(hasChanges).toBe(true);
     });
 
     it('should detect deleted keys with state deleted', () => {
-      // Use a unique file name to avoid cache conflicts
       const uniqueFileName = 'test/deleted-keys.json';
-      // File now only has key1 and key2, but checksum has key1, key2, key3
       const fileContent = {
         key1: 'value1',
         key2: 'value2',
@@ -308,7 +342,7 @@ describe('checksum utils', () => {
 
       const fileNameHash = getHash(uniqueFileName);
       const existingChecksum = {
-        version: '1.0.0',
+        version: '1.1.0',
         files: {
           [fileNameHash]: {
             key1: getHash('value1'),
@@ -322,21 +356,23 @@ describe('checksum utils', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
       vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
-      const result = calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
+      const { changelog, hasChanges } = calculateChecksum(
+        uniqueFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
 
-      expect(result).toEqual({
+      expect(changelog).toEqual({
         key1: { value: 'value1', state: 'unchanged' },
         key2: { value: 'value2', state: 'unchanged' },
         key3: { value: null, state: 'deleted' },
       });
-      // changed should be true because of the deleted key
-      expect(fs.writeFileSync).toHaveBeenCalled();
+      expect(hasChanges).toBe(true);
     });
 
     it('should handle object values correctly when hashing', () => {
-      // Use a unique file name to avoid cache conflicts
       const uniqueFileName = 'test/object-values.json';
       const fileContent = {
         key1: { nested: 'value' },
@@ -350,20 +386,322 @@ describe('checksum utils', () => {
       vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.readFileSync).mockReturnValue('');
-      vi.mocked(yaml.parse).mockReturnValue({ version: '1.0.0', files: {} });
-      vi.mocked(yaml.stringify).mockReturnValue('version: 1.0.0\nfiles: {}');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockReturnValue('version: 1.1.0\nfiles: {}');
 
-      const result = calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
+      const { changelog } = calculateChecksum(
+        uniqueFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
 
-      // Verify that object values are handled correctly
-      expect(result.key1).toBeDefined();
-      const key1 = result.key1!;
+      expect(changelog.key1).toBeDefined();
+      const key1 = changelog.key1!;
       expect(key1.value).toEqual({ nested: 'value' });
       expect(key1.state).toBe('new');
-      expect(result.key2).toBeDefined();
-      const key2 = result.key2!;
+      expect(changelog.key2).toBeDefined();
+      const key2 = changelog.key2!;
       expect(key2.value).toEqual(['array', 'values']);
       expect(key2.state).toBe('new');
+    });
+  });
+
+  describe('commitChecksum', () => {
+    it('should persist hashes of current source values', () => {
+      const uniqueFileName = 'test/commit.json';
+      const fileNameHash = getHash(uniqueFileName);
+
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockImplementation((obj) => JSON.stringify(obj));
+
+      commitChecksum(uniqueFileName, {
+        key1: { value: 'new value', state: 'updated' },
+        key2: { value: 'fresh', state: 'new' },
+        key3: { value: 'kept', state: 'unchanged' },
+      });
+
+      const writeCalls = vi.mocked(fs.writeFileSync).mock.calls;
+      expect(writeCalls.length).toBe(1);
+      const payload = JSON.parse(writeCalls[0]![1] as string) as {
+        files: Record<string, Record<string, string>>;
+      };
+      expect(payload.files[fileNameHash]).toEqual({
+        key1: getHash('new value'),
+        key2: getHash('fresh'),
+        key3: getHash('kept'),
+      });
+    });
+
+    it('should exclude deleted keys from persisted hashes', () => {
+      const uniqueFileName = 'test/commit-deleted.json';
+      const fileNameHash = getHash(uniqueFileName);
+
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml');
+      vi.mocked(yaml.parse).mockReturnValue({ version: '1.1.0', files: {} });
+      vi.mocked(yaml.stringify).mockImplementation((obj) => JSON.stringify(obj));
+
+      commitChecksum(uniqueFileName, {
+        kept: { value: 'hello', state: 'unchanged' },
+        gone: { value: null, state: 'deleted' },
+      });
+
+      const writeCalls = vi.mocked(fs.writeFileSync).mock.calls;
+      expect(writeCalls.length).toBe(1);
+      const payload = JSON.parse(writeCalls[0]![1] as string) as {
+        files: Record<string, Record<string, string>>;
+      };
+      expect(payload.files[fileNameHash]).toEqual({
+        kept: getHash('hello'),
+      });
+    });
+  });
+
+  describe('stale target regression', () => {
+    // Reproduces the original bug report: if a prior run wrote hashes to the
+    // lock but the target file never got the matching translation, the source
+    // now looks "unchanged" even though the target is stale. With the
+    // read-only calculateChecksum, the lock is only ever written after targets
+    // are successfully produced — so this scenario can no longer be reached
+    // through normal use. This test documents the contract.
+    it('calculateChecksum never writes, even when source differs from lock', () => {
+      const uniqueFileName = 'test/stale-regression.json';
+      const fileNameHash = getHash(uniqueFileName);
+      const mockParser = {
+        parse: vi.fn().mockReturnValue({
+          'faq\u0000items\u00000\u0000title': 'new question',
+        }),
+      };
+
+      const existingChecksum = {
+        version: '1.1.0',
+        files: {
+          [fileNameHash]: {
+            'faq\u0000items\u00000\u0000title': getHash('old question'),
+          },
+        },
+      };
+
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml');
+      vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
+      vi.mocked(yaml.stringify).mockImplementation((obj) => JSON.stringify(obj));
+
+      const { changelog, hasChanges } = calculateChecksum(
+        uniqueFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
+
+      expect(changelog['faq\u0000items\u00000\u0000title']).toEqual({
+        value: 'new question',
+        state: 'updated',
+      });
+      expect(hasChanges).toBe(true);
+      // Crucially, no lock write yet — that's the caller's job via commitChecksum.
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('lock file migration (slash → null byte)', () => {
+    it('should migrate / keys to \\0 and find them on lookup', () => {
+      const uniqueFileName = 'test/migrate-slash.json';
+      const fileNameHash = getHash(uniqueFileName);
+
+      // Source parses to new-format keys (flat library with \0 delimiter)
+      const fileContent = {
+        'faq\u0000items\u00000\u0000title': 'Q1',
+        'meta\0title': 'Title',
+      };
+
+      const mockParser = {
+        parse: vi.fn().mockReturnValue(fileContent),
+      };
+
+      // Lock is in old v1.0.0 format with / separator
+      const existingChecksum = {
+        version: '1.0.0',
+        files: {
+          [fileNameHash]: {
+            'faq/items/0/title': getHash('Q1'),
+            'meta/title': getHash('Title'),
+          },
+        },
+      };
+
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
+      vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
+      vi.mocked(yaml.stringify).mockImplementation((obj) => JSON.stringify(obj));
+
+      const { changelog } = calculateChecksum(
+        uniqueFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
+
+      // After migration, lookups hit → both keys unchanged
+      expect(changelog).toEqual({
+        'faq\u0000items\u00000\u0000title': { value: 'Q1', state: 'unchanged' },
+        'meta\0title': { value: 'Title', state: 'unchanged' },
+      });
+
+      // Migration should have written the lock back with v1.1.0 and \0 keys
+      const stringifyCalls = vi.mocked(yaml.stringify).mock.calls;
+      const migrationPayload = stringifyCalls.find((call) => {
+        const arg = call[0] as {
+          version?: string;
+          files?: Record<string, Record<string, unknown>>;
+        };
+        return arg.version === '1.1.0';
+      });
+      expect(migrationPayload).toBeDefined();
+      const payload = migrationPayload![0] as {
+        version: string;
+        files: Record<string, Record<string, unknown>>;
+      };
+      expect(payload.files[fileNameHash]).toEqual({
+        'faq\u0000items\u00000\u0000title': getHash('Q1'),
+        'meta\0title': getHash('Title'),
+      });
+    });
+
+    it('should only migrate entries in old format, leaving \\0 entries alone', () => {
+      const oldFileName = 'test/old.json';
+      const newFileName = 'test/new.json';
+      const oldHash = getHash(oldFileName);
+      const newHash = getHash(newFileName);
+
+      const mockParser = {
+        parse: vi.fn().mockReturnValue({ 'a\0b': 'v' }),
+      };
+
+      const existingChecksum = {
+        version: '1.0.0',
+        files: {
+          [oldHash]: { 'a/b': getHash('v') },
+          [newHash]: { 'a\0b': getHash('v') },
+        },
+      };
+
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
+      vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
+      vi.mocked(yaml.stringify).mockImplementation((obj) => JSON.stringify(obj));
+
+      calculateChecksum(oldFileName, mockParser as unknown as ParserFactory, '');
+
+      const migrationCall = vi
+        .mocked(yaml.stringify)
+        .mock.calls.find((call) => (call[0] as { version?: string }).version === '1.1.0');
+      expect(migrationCall).toBeDefined();
+      const payload = migrationCall![0] as {
+        files: Record<string, Record<string, unknown>>;
+      };
+
+      expect(payload.files[oldHash]).toEqual({ 'a\0b': getHash('v') });
+      expect(payload.files[newHash]).toEqual({ 'a\0b': getHash('v') });
+    });
+
+    it('should not write lock on load when no entries need migration', () => {
+      const uniqueFileName = 'test/flat-keys.json';
+      const fileNameHash = getHash(uniqueFileName);
+
+      const mockParser = {
+        parse: vi.fn().mockReturnValue({ login: 'Log in', sign_up: 'Sign up' }),
+      };
+
+      const existingChecksum = {
+        version: '1.0.0',
+        files: {
+          [fileNameHash]: {
+            login: getHash('Log in'),
+            sign_up: getHash('Sign up'),
+          },
+        },
+      };
+
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
+      vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
+      vi.mocked(yaml.stringify).mockReturnValue('mock yaml output');
+
+      calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
+
+      // No writes at all: flat-keys entry doesn't need migration and all values unchanged
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
+    });
+
+    it('should be idempotent on already-migrated (v1.1.0) lock', () => {
+      const uniqueFileName = 'test/already-migrated.json';
+      const fileNameHash = getHash(uniqueFileName);
+
+      const mockParser = {
+        parse: vi.fn().mockReturnValue({ 'a\0b': 'v' }),
+      };
+
+      const existingChecksum = {
+        version: '1.1.0',
+        files: {
+          [fileNameHash]: { 'a\0b': getHash('v') },
+        },
+      };
+
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
+      vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
+      vi.mocked(yaml.stringify).mockReturnValue('mock yaml output');
+
+      calculateChecksum(uniqueFileName, mockParser as unknown as ParserFactory, '');
+
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
+    });
+
+    it('should not touch new-format keys that literally contain /', () => {
+      const uniqueFileName = 'test/literal-slash.json';
+      const fileNameHash = getHash(uniqueFileName);
+
+      const mockParser = {
+        parse: vi.fn().mockReturnValue({
+          'harassment/threatening': 'Message',
+          'category\0sub': 'Value',
+        }),
+      };
+
+      const existingChecksum = {
+        version: '1.1.0',
+        files: {
+          [fileNameHash]: {
+            'harassment/threatening': getHash('Message'),
+            'category\0sub': getHash('Value'),
+          },
+        },
+      };
+
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue('mock yaml content');
+      vi.mocked(yaml.parse).mockReturnValue(existingChecksum);
+      vi.mocked(yaml.stringify).mockReturnValue('mock yaml output');
+
+      const { changelog } = calculateChecksum(
+        uniqueFileName,
+        mockParser as unknown as ParserFactory,
+        ''
+      );
+
+      expect(changelog).toEqual({
+        'harassment/threatening': { value: 'Message', state: 'unchanged' },
+        'category\0sub': { value: 'Value', state: 'unchanged' },
+      });
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
     });
   });
 });
