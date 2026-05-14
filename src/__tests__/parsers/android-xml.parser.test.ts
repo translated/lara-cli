@@ -688,6 +688,26 @@ describe('AndroidXmlParser', () => {
 
       expect(result.toString()).toContain('<string name="newline">Line one\\nLine two</string>');
     });
+
+    it('should round-trip literal `\\\\` (escaped backslash) through parse and serialize', () => {
+      // Defends against an over-eager normalize step that would collapse `\\` to a
+      // single backslash on parse without re-escaping it on serialize, which would
+      // change the AAPT2-compiled value (e.g. a Windows path C:\\folder becoming
+      // C:\folder, where `\f` is then misinterpreted).
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="path">C:\\\\folder</string>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(serialized.toString()).toContain('<string name="path">C:\\\\folder</string>');
+    });
   });
 
   describe('round-trip (parse -> serialize -> parse)', () => {

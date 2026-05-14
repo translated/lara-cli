@@ -209,14 +209,21 @@ export class AndroidXmlParser implements Parser<
   }
 
   /**
-   * Unescapes Android backslash escapes (`\\`, `\'`, `\"`) in text content read
-   * from XML, so round-trips through parse/serialize preserve the logical string.
+   * Unescapes the Android backslash escapes that the serializer re-emits (`\'`, `\"`),
+   * so round-trips through parse/serialize preserve the logical string.
+   *
+   * Other escapes are left intact:
+   *  - `\\` is preserved verbatim (AAPT2 handles it natively, and unescaping it here
+   *    would force serialize to re-escape lone backslashes, regressing Windows-path
+   *    and intentional `\n`/`\t` inputs).
+   *  - `\n`, `\t`, `\uXXXX`, etc. pass through so AAPT2 can interpret them.
+   *
    * Non-string values (e.g. numbers from fast-xml-parser auto-parsing) pass through.
    */
   private unescapeTextContent<T>(value: T): T | string {
     if (typeof value !== 'string') return value;
     return value.replace(/\\(.)/g, (match, ch) => {
-      if (ch === "'" || ch === '"' || ch === '\\') return ch;
+      if (ch === "'" || ch === '"') return ch;
       return match;
     });
   }
@@ -240,8 +247,11 @@ export class AndroidXmlParser implements Parser<
    * Android's AAPT2 compiler rejects strings that mix backslash escapes with XML
    * entities for the same character (e.g. `\&apos;`). Translation APIs sometimes
    * pre-escape values in Android style (`\'`) or HTML style (`&apos;`), so we first
-   * normalize both representations back to the raw character, then re-escape using
-   * the Android-recommended form: `\'` and `\"` for quotes, XML entities for `&<>`.
+   * normalize those two characters back to their raw form, then re-escape using the
+   * Android-recommended `\'` and `\"`. XML entities are used for `&<>`.
+   *
+   * Other backslash sequences (`\\`, `\n`, `\t`, `\uXXXX`, …) are passed through
+   * verbatim so AAPT2 can interpret them at compile time.
    */
   private escapeTextContent(value: string): string {
     const xmlUnescaped = value
@@ -252,7 +262,7 @@ export class AndroidXmlParser implements Parser<
       .replace(/&amp;/g, '&');
 
     const androidUnescaped = xmlUnescaped.replace(/\\(.)/g, (match, ch) => {
-      if (ch === "'" || ch === '"' || ch === '\\') return ch;
+      if (ch === "'" || ch === '"') return ch;
       return match;
     });
 
