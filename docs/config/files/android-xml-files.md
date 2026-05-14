@@ -193,7 +193,7 @@ You can combine strings, plurals, and string arrays in the same file:
 
 ### Special Characters
 
-Android XML supports XML entities for special characters:
+In input files, Lara CLI accepts either XML entities or Android backslash escapes for apostrophes and double quotes inside `<string>` / `<item>` **text content**. Note: Android backslash escapes are not valid inside XML **attribute values** (e.g. `name="..."`, `quantity="..."`) — attributes must use XML entities only.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -206,7 +206,12 @@ Android XML supports XML entities for special characters:
 </resources>
 ```
 
-Lara CLI automatically handles XML entity encoding and decoding.
+In output (translated) files, Lara CLI emits special characters using the form AAPT2 expects:
+
+- `&`, `<`, `>` → XML entities (`&amp;`, `&lt;`, `&gt;`)
+- `'`, `"` → Android backslash escapes (`\'`, `\"`)
+
+This avoids AAPT2 compilation errors that occur when backslash escapes and XML entities are combined for the same character (e.g. `\&apos;`).
 
 ## How Lara CLI Handles Android XML Files
 
@@ -394,9 +399,8 @@ Lara CLI preserves resource order. If you notice changes:
 
 If special characters aren't displaying correctly:
 
-- Lara CLI automatically handles XML entity encoding/decoding
-- Ensure your source file uses proper XML entities (`&amp;`, `&quot;`, etc.)
-- The parser converts entities during parsing and re-encodes during serialization
+- Source files may use either XML entities (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&apos;`) or Android backslash escapes (`\'`, `\"`) for special characters — both are accepted on input.
+- On output, Lara CLI emits `&amp;`, `&lt;`, `&gt;` as XML entities and `'`, `"` as `\'`, `\"` (Android backslash escapes). This matches AAPT2's expectations and prevents the "Can not extract resource from ParsedResource" build error caused by mixing both escape styles.
 
 ### Non-Translatable Strings
 

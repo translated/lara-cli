@@ -156,7 +156,7 @@ export class AndroidXmlParser implements Parser<
         if (str['@_translatable'] === 'false') continue;
 
         const value = str['#text'] ?? '';
-        translations[name] = value;
+        translations[name] = this.unescapeTextContent(value);
       }
     }
 
@@ -173,7 +173,7 @@ export class AndroidXmlParser implements Parser<
           if (!quantity) continue;
           const value = item['#text'] ?? '';
           const key = `${name}/${quantity}`;
-          translations[key] = value;
+          translations[key] = this.unescapeTextContent(value);
         }
       }
     }
@@ -200,7 +200,7 @@ export class AndroidXmlParser implements Parser<
           // Handle both object format ({'#text': 'value'}) and string format ('value')
           const value = typeof item === 'string' ? item : (item['#text'] ?? '');
           const key = `${name}/${i}`;
-          translations[key] = value;
+          translations[key] = this.unescapeTextContent(value);
         }
       }
     }
@@ -209,18 +209,69 @@ export class AndroidXmlParser implements Parser<
   }
 
   /**
-   * Escapes XML special characters for use in both attributes and text content.
+   * Unescapes the Android backslash escapes that the serializer re-emits (`\'`, `\"`),
+   * so round-trips through parse/serialize preserve the logical string.
    *
-   * @param value - The XML content to escape
-   * @returns The escaped XML content
+   * Other escapes are left intact:
+   *  - `\\` is preserved verbatim (AAPT2 handles it natively, and unescaping it here
+   *    would force serialize to re-escape lone backslashes, regressing Windows-path
+   *    and intentional `\n`/`\t` inputs).
+   *  - `\n`, `\t`, `\uXXXX`, etc. pass through so AAPT2 can interpret them.
+   *
+   * Non-string values (e.g. numbers from fast-xml-parser auto-parsing) pass through.
    */
-  private escapeTextContent(value: string): string {
+  private unescapeTextContent<T>(value: T): T | string {
+    if (typeof value !== 'string') return value;
+    return value.replace(/\\(.)/g, (match, ch) => {
+      if (ch === "'" || ch === '"') return ch;
+      return match;
+    });
+  }
+
+  /**
+   * Escapes a value for use inside an XML attribute (e.g. name="...").
+   * Attributes cannot use Android backslash escapes, so all five XML entities are needed.
+   */
+  private escapeAttributeValue(value: string): string {
     return value
-      .replace(/&/g, '&amp;') // The ampersand (&) must be escaped first before other entities,
-      .replace(/</g, '&lt;') // otherwise already-escaped entities like "&lt;" will be double-escaped to "&amp;lt;".
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
+  }
+
+  /**
+   * Escapes a value for use as text content of <string>, <item>, etc.
+   *
+   * Android's AAPT2 compiler rejects strings that mix backslash escapes with XML
+   * entities for the same character (e.g. `\&apos;`). Translation APIs sometimes
+   * pre-escape values in Android style (`\'`) or HTML style (`&apos;`), so we first
+   * normalize those two characters back to their raw form, then re-escape using the
+   * Android-recommended `\'` and `\"`. XML entities are used for `&<>`.
+   *
+   * Other backslash sequences (`\\`, `\n`, `\t`, `\uXXXX`, …) are passed through
+   * verbatim so AAPT2 can interpret them at compile time.
+   */
+  private escapeTextContent(value: string): string {
+    const xmlUnescaped = value
+      .replace(/&apos;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+
+    const androidUnescaped = xmlUnescaped.replace(/\\(.)/g, (match, ch) => {
+      if (ch === "'" || ch === '"') return ch;
+      return match;
+    });
+
+    return androidUnescaped
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '\\"')
+      .replace(/'/g, "\\'");
   }
 
   /**
@@ -411,7 +462,7 @@ export class AndroidXmlParser implements Parser<
         const translatable = str['@_translatable'];
         const value = str['#text'] ?? '';
 
-        const escapedName = this.escapeTextContent(String(name));
+        const escapedName = this.escapeAttributeValue(String(name));
         const escapedValue = this.escapeTextContent(String(value));
 
         let attrs = `name="${escapedName}"`;
@@ -425,7 +476,7 @@ export class AndroidXmlParser implements Parser<
         const name = plural['@_name'];
         const items = plural.item ? (Array.isArray(plural.item) ? plural.item : [plural.item]) : [];
 
-        const escapedName = this.escapeTextContent(String(name));
+        const escapedName = this.escapeAttributeValue(String(name));
 
         lines.push(`${indent}<plurals name="${escapedName}">`);
 
@@ -435,7 +486,7 @@ export class AndroidXmlParser implements Parser<
 
           const value = item['#text'] ?? '';
 
-          const escapedQuantity = this.escapeTextContent(String(quantity));
+          const escapedQuantity = this.escapeAttributeValue(String(quantity));
           const escapedValue = this.escapeTextContent(String(value));
 
           lines.push(
@@ -454,7 +505,7 @@ export class AndroidXmlParser implements Parser<
             : [stringArray.item]
           : [];
 
-        const escapedName = this.escapeTextContent(String(name));
+        const escapedName = this.escapeAttributeValue(String(name));
 
         let attrs = `name="${escapedName}"`;
         if (translatable === 'false') {
