@@ -704,4 +704,56 @@ describe('checksum utils', () => {
       expect(fs.writeFileSync).not.toHaveBeenCalled();
     });
   });
+
+  describe('cwd-aware lock path', () => {
+    it("reads/writes the new cwd's lara.lock when cwd changes between calls", () => {
+      // Regression: the lock path is resolved lazily on each call and the
+      // in-memory cache is keyed by path. Switching cwd must invalidate the
+      // cache so the second call reads/writes the new dir's lara.lock instead
+      // of reusing the previous cwd's lock.
+      const fileName = 'locales/en.json';
+      const fileNameHash = getHash(fileName);
+
+      const lockA = {
+        version: '1.1.0',
+        files: {
+          [fileNameHash]: { greeting: getHash('hi') },
+        },
+      };
+
+      const mockParser = {
+        parse: vi.fn().mockReturnValue({ greeting: 'hi' }),
+      };
+      vi.mocked(ParserFactory).mockImplementation(() => mockParser as unknown as void);
+      vi.mocked(yaml.stringify).mockReturnValue('mock yaml output');
+
+      // First call from /cwd-a — its lock exists and the key matches.
+      vi.spyOn(process, 'cwd').mockReturnValue('/cwd-a');
+      vi.mocked(fs.existsSync).mockImplementation((p) => p === '/cwd-a/lara.lock');
+      vi.mocked(fs.readFileSync).mockReturnValue('lock-a yaml');
+      vi.mocked(yaml.parse).mockReturnValue(lockA);
+
+      const first = calculateChecksum(fileName, mockParser as unknown as ParserFactory, '');
+      expect(first.changelog).toEqual({
+        greeting: { value: 'hi', state: 'unchanged' },
+      });
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
+
+      // Second call from /cwd-b — no lock there yet. If the cwd-a cache were
+      // wrongly reused, the key would resolve to "unchanged" again.
+      vi.spyOn(process, 'cwd').mockReturnValue('/cwd-b');
+      vi.mocked(fs.existsSync).mockImplementation((p) => p === '/cwd-a/lara.lock');
+
+      const second = calculateChecksum(fileName, mockParser as unknown as ParserFactory, '');
+
+      expect(second.changelog).toEqual({
+        greeting: { value: 'hi', state: 'new' },
+      });
+
+      // The empty bootstrap lock must be written at /cwd-b's path, not /cwd-a's.
+      const writeCalls = vi.mocked(fs.writeFileSync).mock.calls;
+      expect(writeCalls.length).toBe(1);
+      expect(writeCalls[0]![0]).toBe('/cwd-b/lara.lock');
+    });
+  });
 });
