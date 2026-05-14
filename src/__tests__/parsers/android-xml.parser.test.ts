@@ -440,21 +440,22 @@ describe('AndroidXmlParser', () => {
       };
       const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
 
-      // Verify each special character is properly escaped
+      // Attribute values use XML entities; text content uses Android backslash escapes
+      // for apostrophes and double quotes (mixing them with XML entities breaks AAPT2).
       expect(result).toContain('<string name="ampersand&amp;">Text with &amp;</string>');
       expect(result).toContain('<string name="less_than">Text with &lt;</string>');
       expect(result).toContain('<string name="greater_than">Text with &gt;</string>');
-      expect(result).toContain('<string name="quotes">Text with &quot;</string>');
-      expect(result).toContain('<string name="apostrophe">Text with &apos;</string>');
+      expect(result).toContain('<string name="quotes">Text with \\"</string>');
+      expect(result).toContain('<string name="apostrophe">Text with \\\'</string>');
       expect(result).toContain(
-        '<string name="all_special">A &lt; B &gt; C &quot;quote&quot; &apos;apos&apos;</string>'
+        '<string name="all_special">A &lt; B &gt; C \\"quote\\" \\\'apos\\\'</string>'
       );
 
-      // Verify the XML is valid by checking it doesn't contain unescaped special characters
+      // The output must never contain an XML entity for apostrophe or quote in text
+      // content, since AAPT2 rejects backslash + entity combos for the same character.
       const resultStr = result.toString();
-      expect(resultStr).not.toMatch(
-        /<string[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/string>/
-      );
+      expect(resultStr).not.toMatch(/<string[^>]*>[^<]*&apos;[^<]*<\/string>/);
+      expect(resultStr).not.toMatch(/<string[^>]*>[^<]*&quot;[^<]*<\/string>/);
     });
 
     it('should escape XML special characters in plural resources', () => {
@@ -477,15 +478,15 @@ describe('AndroidXmlParser', () => {
       };
       const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
 
-      // Verify special characters are properly escaped in plural items
+      // Attribute values use XML entities; text content uses Android backslash escapes.
       expect(result).toContain('<item quantity="one">One &amp; item</item>');
       expect(result).toContain('<item quantity="other">Many &lt; items &gt;</item>');
-      expect(result).toContain('<item quantity="&quot;one&quot;">Say &quot;hello&quot;</item>');
-      expect(result).toContain('<item quantity="other">Say &apos;hi&apos;</item>');
+      expect(result).toContain('<item quantity="&quot;one&quot;">Say \\"hello\\"</item>');
+      expect(result).toContain('<item quantity="other">Say \\\'hi\\\'</item>');
 
-      // Verify the XML is valid by checking it doesn't contain unescaped special characters
       const resultStr = result.toString();
-      expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/item>/);
+      expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&apos;[^<]*<\/item>/);
+      expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&quot;[^<]*<\/item>/);
     });
 
     it('should throw error when originalContent is missing', () => {
@@ -620,12 +621,92 @@ describe('AndroidXmlParser', () => {
       const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
 
       expect(result).toContain('<item>Hello &amp; Welcome</item>');
-      expect(result).toContain('<item>Say &quot;Hello&quot;</item>');
+      expect(result).toContain('<item>Say \\"Hello\\"</item>');
       expect(result).toContain('<item>A &lt; B &gt; C</item>');
 
-      // Verify the XML is valid by checking it doesn't contain unescaped special characters
       const resultStr = result.toString();
-      expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&(?!amp;|lt;|gt;|quot;|apos;)[^<]*<\/item>/);
+      expect(resultStr).not.toMatch(/<item[^>]*>[^<]*&quot;[^<]*<\/item>/);
+    });
+
+    it("should emit \\' instead of \\&apos; when input already has Android-style escape", () => {
+      // Regression for the customer report: when the translation API returns a
+      // value with a backslash-escaped apostrophe (`\'`), the serializer must
+      // emit `\'` (not `\&apos;`, which AAPT2 rejects with:
+      // "Can not extract resource from com.android.aaptcompiler.ParsedResource@...").
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="edit_user">Edit User</string>
+</resources>`;
+      const data = { edit_user: "Modifier l\\'Utilisateur" };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+
+      const resultStr = result.toString();
+      expect(resultStr).toContain('<string name="edit_user">Modifier l\\\'Utilisateur</string>');
+      expect(resultStr).not.toContain('\\&apos;');
+      expect(resultStr).not.toContain('&apos;');
+    });
+
+    it("should emit \\' for plain apostrophes (no XML entity in text content)", () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="edit_user">Edit User</string>
+</resources>`;
+      const data = { edit_user: "Modifier l'Utilisateur" };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+
+      const resultStr = result.toString();
+      expect(resultStr).toContain('<string name="edit_user">Modifier l\\\'Utilisateur</string>');
+      expect(resultStr).not.toContain('&apos;');
+    });
+
+    it("should normalize HTML-style entities and emit \\' (defends against HTML-mode API responses)", () => {
+      // If Lara translates content as HTML, it can return values with raw XML
+      // entities (e.g. `&apos;`). Without normalization the serializer would
+      // re-escape the `&` to `&amp;` and ship literal `&apos;` text to users.
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="edit_user">Edit User</string>
+</resources>`;
+      const data = { edit_user: 'Modifier l&apos;Utilisateur' };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+
+      const resultStr = result.toString();
+      expect(resultStr).toContain('<string name="edit_user">Modifier l\\\'Utilisateur</string>');
+      expect(resultStr).not.toContain('&amp;apos;');
+      expect(resultStr).not.toContain('&apos;');
+    });
+
+    it('should preserve a lone backslash that does not start a known escape', () => {
+      // `\n` and friends must survive the normalize step so AAPT2 can interpret
+      // them at compile time.
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="newline">x</string>
+</resources>`;
+      const data = { newline: 'Line one\\nLine two' };
+      const result = parser.serialize(data, { originalContent } as AndroidXmlParserOptionsType);
+
+      expect(result.toString()).toContain('<string name="newline">Line one\\nLine two</string>');
+    });
+
+    it('should round-trip literal `\\\\` (escaped backslash) through parse and serialize', () => {
+      // Defends against an over-eager normalize step that would collapse `\\` to a
+      // single backslash on parse without re-escaping it on serialize, which would
+      // change the AAPT2-compiled value (e.g. a Windows path C:\\folder becoming
+      // C:\folder, where `\f` is then misinterpreted).
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="path">C:\\\\folder</string>
+</resources>`;
+
+      const firstParse = parser.parse(originalContent);
+      const serialized = parser.serialize(firstParse, {
+        originalContent,
+      } as AndroidXmlParserOptionsType);
+      const secondParse = parser.parse(serialized);
+
+      expect(secondParse).toEqual(firstParse);
+      expect(serialized.toString()).toContain('<string name="path">C:\\\\folder</string>');
     });
   });
 
