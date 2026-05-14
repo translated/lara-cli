@@ -32,9 +32,15 @@ type ChecksumFile = {
 
 const CHECKSUM_FILE = 'lara.lock';
 const LOCK_FILE_VERSION = '1.1.0';
-const checksumFilePath = path.join(process.cwd(), CHECKSUM_FILE);
+
+// Resolve lazily so the lock file always tracks the current working directory
+// at call time, not the cwd captured when this module first loaded.
+function getChecksumFilePath(): string {
+  return path.join(process.cwd(), CHECKSUM_FILE);
+}
 
 let cachedChecksumFile: ChecksumFile | null = null;
+let cachedChecksumPath: string | null = null;
 
 /**
  * Computes the changelog for a source file by diffing it against the lock.
@@ -136,8 +142,10 @@ function updateChecksum(fileName: string, values: Record<string, unknown>) {
 
   checksumFile.files[fileNameHash] = hashedValues;
 
+  const targetPath = getChecksumFilePath();
   cachedChecksumFile = checksumFile;
-  fs.writeFileSync(checksumFilePath, yaml.stringify(checksumFile));
+  cachedChecksumPath = targetPath;
+  fs.writeFileSync(targetPath, yaml.stringify(checksumFile));
 }
 
 /**
@@ -147,28 +155,32 @@ function updateChecksum(fileName: string, values: Record<string, unknown>) {
  * @returns The checksum lock of the file.
  */
 function getChecksumFile(): ChecksumFile {
-  if (cachedChecksumFile) {
+  const currentPath = getChecksumFilePath();
+
+  if (cachedChecksumFile && cachedChecksumPath === currentPath) {
     return cachedChecksumFile;
   }
 
-  if (!fs.existsSync(checksumFilePath)) {
+  if (!fs.existsSync(currentPath)) {
     cachedChecksumFile = {
       version: LOCK_FILE_VERSION,
       files: {},
     };
+    cachedChecksumPath = currentPath;
 
-    fs.writeFileSync(checksumFilePath, yaml.stringify(cachedChecksumFile));
+    fs.writeFileSync(currentPath, yaml.stringify(cachedChecksumFile));
     return cachedChecksumFile;
   }
 
-  const parsed = yaml.parse(fs.readFileSync(checksumFilePath, 'utf8')) as ChecksumFile;
-  cachedChecksumFile = migrateChecksumFile(parsed);
+  const parsed = yaml.parse(fs.readFileSync(currentPath, 'utf8')) as ChecksumFile;
+  cachedChecksumFile = migrateChecksumFile(parsed, currentPath);
+  cachedChecksumPath = currentPath;
   return cachedChecksumFile;
 }
 
 // Safe because the old format could not correctly represent keys containing a
 // literal `/` — so every `/` in an old-format entry is always a separator.
-function migrateChecksumFile(file: ChecksumFile): ChecksumFile {
+function migrateChecksumFile(file: ChecksumFile, filePath: string): ChecksumFile {
   if (file.version === LOCK_FILE_VERSION) {
     return file;
   }
@@ -197,7 +209,7 @@ function migrateChecksumFile(file: ChecksumFile): ChecksumFile {
   };
 
   if (migrated) {
-    fs.writeFileSync(checksumFilePath, yaml.stringify(result));
+    fs.writeFileSync(filePath, yaml.stringify(result));
   }
 
   return result;
@@ -216,6 +228,7 @@ function getHash(s: unknown) {
 
 function resetChecksumCache() {
   cachedChecksumFile = null;
+  cachedChecksumPath = null;
 }
 
 export { calculateChecksum, commitChecksum, resetChecksumCache, ChecksumState };
