@@ -193,7 +193,7 @@ You can combine strings, plurals, and string arrays in the same file:
 
 ### Special Characters
 
-In input files, Lara CLI accepts either XML entities or Android backslash escapes for apostrophes and double quotes:
+In input files, Lara CLI accepts either XML entities or Android backslash escapes for apostrophes and double quotes inside `<string>` / `<item>` **text content**. Note: Android backslash escapes are not valid inside XML **attribute values** (e.g. `name="..."`, `quantity="..."`) — attributes must use XML entities only.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
