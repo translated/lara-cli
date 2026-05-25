@@ -271,4 +271,8 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
   getFallback(): string {
     return this.fallbackContent;
   }
+
+  getContentType(): string {
+    return 'text/plain';
+  }
 }

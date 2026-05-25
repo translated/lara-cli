@@ -338,4 +338,8 @@ export class XcodeStringsdictParser implements Parser<
   getFallback(): string {
     return this.fallbackContent;
   }
+
+  getContentType(): string {
+    return 'text/plain';
+  }
 }

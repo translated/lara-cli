@@ -67,6 +67,10 @@ export class MarkdownParser implements Parser<Record<string, unknown>, MarkdownP
     return this.fallbackContent;
   }
 
+  getContentType(): string {
+    return 'text/plain';
+  }
+
   /**
    * Extracts all translatable text segments from the markdown AST.
    *

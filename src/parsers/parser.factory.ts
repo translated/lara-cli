@@ -130,4 +130,12 @@ export class ParserFactory {
   getFallback(): string {
     return this.parser.getFallback();
   }
+
+  /**
+   * Returns the Lara API content type to use when translating values
+   * parsed from this format.
+   */
+  getContentType(): string {
+    return this.parser.getContentType();
+  }
 }

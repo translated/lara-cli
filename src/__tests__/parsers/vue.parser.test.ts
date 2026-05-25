@@ -535,6 +535,12 @@ describe('VueParser', () => {
     });
   });
 
+  describe('getContentType', () => {
+    it('should return text/plain', () => {
+      expect(parser.getContentType()).toBe('text/plain');
+    });
+  });
+
   describe('hasI18nTag', () => {
     it('should return true when i18n tag exists', () => {
       const content = '<template></template>\n<i18n>\n{"key": "value"}\n</i18n>';
