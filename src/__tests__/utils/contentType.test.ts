@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hasHtmlMarkup, resolveContentType } from '../../utils/contentType.js';
+import { hasHtmlMarkup, resolveContentType } from '#utils/contentType.js';
 
 describe('hasHtmlMarkup', () => {
   it('detects simple opening tags', () => {
