@@ -1077,4 +1077,10 @@ describe('AndroidXmlParser', () => {
       expect(result).toBe('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>');
     });
   });
+
+  describe('getContentType', () => {
+    it('should return text/html (Android string resources allow inline HTML markup)', () => {
+      expect(parser.getContentType()).toBe('text/html');
+    });
+  });
 });

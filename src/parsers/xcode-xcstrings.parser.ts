@@ -283,4 +283,8 @@ export class XcodeXcstringsParser implements Parser<
   getFallback(): string {
     return this.fallbackContent;
   }
+
+  getContentType(): string {
+    return 'text/plain';
+  }
 }

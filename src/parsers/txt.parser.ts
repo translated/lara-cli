@@ -67,4 +67,8 @@ export class TxtParser implements Parser<Record<string, unknown>, TxtParserOptio
   getFallback(): string {
     return this.fallbackContent;
   }
+
+  getContentType(): string {
+    return 'text/plain';
+  }
 }

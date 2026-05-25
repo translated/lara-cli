@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 
 import yaml from 'yaml';
 
-import { executeCommand } from './test-helpers.js';
+import { executeCommand, mockTranslateBatchWithFallback } from './test-helpers.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -743,5 +743,37 @@ describe('Android XML Repository Integration Tests', () => {
     // Non-included keys should be preserved
     expect(contentAfter).toContain('[it] Hello World');
     expect(contentAfter).toContain('[it] Welcome to the app');
+  });
+
+  // Android string resources support inline HTML markup (<b>, <i>, <u>, <br/>),
+  // so the engine should declare contentType=text/html — that tells Lara to
+  // preserve the markup instead of stripping or escaping it.
+  it('passes contentType=text/html for Android XML sources', async () => {
+    mockTranslateBatchWithFallback.mockClear();
+    await mkdir(path.join(testDir, 'res', 'en'), { recursive: true });
+    await writeFile(
+      path.join(testDir, 'res', 'en', 'strings.xml'),
+      `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello</string>
+</resources>`
+    );
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'res/[locale]/strings.xml',
+    ]);
+    (ConfigProvider as any).instance = null;
+
+    await executeCommand(translateCommand, []);
+
+    expect(mockTranslateBatchWithFallback).toHaveBeenCalled();
+    const [, , , batchOptions] = mockTranslateBatchWithFallback.mock.calls[0]!;
+    expect((batchOptions as any).contentType).toBe('text/html');
   });
 });

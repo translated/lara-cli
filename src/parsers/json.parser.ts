@@ -89,4 +89,8 @@ export class JsonParser implements Parser<Record<string, unknown>, JsonParserOpt
   getFallback(): string {
     return this.fallbackContent;
   }
+
+  getContentType(): string {
+    return 'text/plain';
+  }
 }

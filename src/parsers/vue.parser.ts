@@ -116,6 +116,10 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     return this.fallbackContent;
   }
 
+  getContentType(): string {
+    return 'text/plain';
+  }
+
   /**
    * Checks if a Vue file contains an i18n tag.
    *

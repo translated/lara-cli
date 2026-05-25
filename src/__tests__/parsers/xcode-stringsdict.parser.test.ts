@@ -768,4 +768,10 @@ describe('XcodeStringsdictParser', () => {
       expect(result).toEqual({});
     });
   });
+
+  describe('getContentType', () => {
+    it('should return text/plain', () => {
+      expect(parser.getContentType()).toBe('text/plain');
+    });
+  });
 });

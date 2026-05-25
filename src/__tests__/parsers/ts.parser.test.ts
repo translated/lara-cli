@@ -475,4 +475,10 @@ describe('TsParser', () => {
       expect(result).toBe('const messages = {};\n\nexport default messages;');
     });
   });
+
+  describe('getContentType', () => {
+    it('should return text/plain', () => {
+      expect(parser.getContentType()).toBe('text/plain');
+    });
+  });
 });
