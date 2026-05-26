@@ -546,4 +546,8 @@ export class AndroidXmlParser implements Parser<
   getFallback(): string {
     return this.fallbackContent;
   }
+
+  getContentType(): string {
+    return 'text/html';
+  }
 }

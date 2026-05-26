@@ -540,6 +540,12 @@ For help, contact [support](mailto:support@example.com).`;
     });
   });
 
+  describe('getContentType', () => {
+    it('should return text/plain', () => {
+      expect(parser.getContentType()).toBe('text/plain');
+    });
+  });
+
   describe('parse and serialize roundtrip', () => {
     it('should maintain structure through parse and serialize', () => {
       const originalContent = `# Document Title

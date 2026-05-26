@@ -89,6 +89,10 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
     return this.fallbackContent;
   }
 
+  getContentType(): string {
+    return 'text/plain';
+  }
+
   private extractMessagesObject(content: string): Record<string, unknown> | null {
     try {
       // Parse the TypeScript file into an AST

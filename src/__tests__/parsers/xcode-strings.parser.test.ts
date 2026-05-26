@@ -422,4 +422,10 @@ describe('XcodeStringsParser', () => {
       expect(result).toBe('');
     });
   });
+
+  describe('getContentType', () => {
+    it('should return text/plain', () => {
+      expect(parser.getContentType()).toBe('text/plain');
+    });
+  });
 });

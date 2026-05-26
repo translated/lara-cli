@@ -702,4 +702,10 @@ describe('XcodeXcstringsParser', () => {
       expect(parsed.version).toBe('1.0');
     });
   });
+
+  describe('getContentType', () => {
+    it('should return text/plain', () => {
+      expect(parser.getContentType()).toBe('text/plain');
+    });
+  });
 });

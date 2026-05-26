@@ -45,4 +45,16 @@ export interface Parser<T = Record<string, unknown>, TOptions = void> {
    * @returns The default content string
    */
   getFallback(): string;
+
+  /**
+   * Returns the Lara API content type to use when translating values
+   * parsed from this format. Use `"text/plain"` for formats whose values
+   * are plain strings, or `"text/html"` for formats whose values may
+   * contain inline markup that the API should preserve as HTML.
+   *
+   * Setting this explicitly prevents Lara from auto-detecting structured
+   * input as HTML-flavored content, which can otherwise corrupt plain
+   * text (replacing characters with `?` placeholders).
+   */
+  getContentType(): string;
 }

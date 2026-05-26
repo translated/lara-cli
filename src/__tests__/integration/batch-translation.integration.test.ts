@@ -254,4 +254,62 @@ describe('Batch translation', () => {
       a: '[it] third',
     });
   });
+
+  // Regression test: Lara auto-detects TextBlock[] input as HTML-flavored content
+  // unless contentType is set explicitly. For JSON sources the values are plain
+  // text, so the engine must pass contentType: 'text/plain' to avoid the API
+  // mangling characters into '?' placeholders.
+  it('passes contentType=text/plain for JSON sources', async () => {
+    await writeJsonSource({ a: 'one', b: 'two' });
+    await initJson();
+
+    await executeCommand(translateCommand, []);
+
+    expect(mockTranslateBatchWithFallback).toHaveBeenCalledTimes(1);
+    const [, , , batchOptions] = mockTranslateBatchWithFallback.mock.calls[0]!;
+    expect((batchOptions as any).contentType).toBe('text/plain');
+  });
+
+  // When a JSON file mixes plain values with values that contain inline HTML
+  // markup, the engine must split them into two API calls — one with
+  // contentType=text/plain (so non-HTML text isn't mangled) and one with
+  // contentType=text/html (so the tags survive the round trip).
+  it('splits mixed plain + HTML values into two batch calls', async () => {
+    await writeJsonSource({
+      plain1: 'Hello world',
+      htmlA: 'Click <a href="/x">here</a>',
+      plain2: 'Goodbye',
+      htmlB: 'Be <b>bold</b>',
+    });
+    await initJson();
+
+    await executeCommand(translateCommand, []);
+
+    expect(mockTranslateBatchWithFallback).toHaveBeenCalledTimes(2);
+
+    const callsByType = new Map<string, string[]>();
+    for (const [textBlocks, , , options] of mockTranslateBatchWithFallback.mock.calls) {
+      const contentType = (options as any).contentType as string;
+      callsByType.set(
+        contentType,
+        textBlocks.map((b) => b.text)
+      );
+    }
+
+    expect(callsByType.get('text/plain')?.sort()).toEqual(['Goodbye', 'Hello world']);
+    expect(callsByType.get('text/html')?.sort()).toEqual([
+      'Be <b>bold</b>',
+      'Click <a href="/x">here</a>',
+    ]);
+
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    expect(itContent).toEqual({
+      plain1: '[it] Hello world',
+      htmlA: '[it] Click <a href="/x">here</a>',
+      plain2: '[it] Goodbye',
+      htmlB: '[it] Be <b>bold</b>',
+    });
+  });
 });

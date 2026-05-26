@@ -5,6 +5,7 @@ import { calculateChecksum, commitChecksum, ChecksumState } from '#utils/checksu
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
 import { normalizeEntities } from '#utils/entities.js';
+import { resolveContentType } from '#utils/contentType.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { TextBlock } from './translation.service.js';
@@ -85,6 +86,10 @@ export class TranslationEngine {
   // Automatically detects the file format based on the input path extension.
   private readonly parser: ParserFactory;
 
+  // Default Lara content type for this format. Overridden per value when
+  // the source string contains inline HTML markup.
+  private readonly defaultContentType: string;
+
   constructor(options: TranslationEngineOptions) {
     this.sourceLocale = options.sourceLocale;
     this.targetLocales = options.targetLocales;
@@ -120,6 +125,7 @@ export class TranslationEngine {
     this.translatorService = TranslationService.getInstance();
 
     this.parser = new ParserFactory(this.inputPath);
+    this.defaultContentType = this.parser.getContentType();
   }
 
   public async translate() {
@@ -257,19 +263,35 @@ export class TranslationEngine {
     targetLocale: string
   ): Promise<Map<string, string>> {
     const translations = new Map<string, string>();
+    // Tasks whose first translation came back containing the U+FFFD
+    // replacement character. Symptomatic of a UTF-8 streaming bug in
+    // @translated/lara (chunk.toString() per chunk loses bytes when a
+    // multi-byte character straddles a TCP chunk boundary). Retried below
+    // as solo calls, which produce tiny responses unlikely to span chunks.
+    const corruptedTasks: TranslateTask[] = [];
+
+    const recordResult = (task: TranslateTask, translatedText: string): void => {
+      const normalized = normalizeEntities(task.text, translatedText);
+      if (normalized.includes('�')) {
+        corruptedTasks.push(task);
+      } else {
+        translations.set(task.key, normalized);
+      }
+    };
 
     const soloPromises = classified.solo.map(async (task) => {
+      const contentType = resolveContentType(task.text, this.defaultContentType);
       const result = await this.translatorService.translate(
         [{ text: task.text, translatable: true }],
         this.sourceLocale,
         targetLocale,
-        this.buildTranslateOptions(task.instruction)
+        this.buildTranslateOptions(task.instruction, contentType)
       );
       const translated = result[0];
       if (!translated) {
         throw new Error(Messages.errors.emptyTranslationResult(task.text));
       }
-      translations.set(task.key, normalizeEntities(task.text, translated.text));
+      recordResult(task, translated.text);
     });
 
     const batchPromises: Promise<void>[] = [];
@@ -277,43 +299,122 @@ export class TranslationEngine {
     // projectInstruction / none) — isKeySpecific=false implies this. Read it
     // off the first task instead of re-resolving.
     const batchInstruction = classified.batch[0]?.instruction;
-    const batchOptions = this.buildTranslateOptions(batchInstruction);
 
-    for (let i = 0; i < classified.batch.length; i += this.batchSize) {
-      const chunk = classified.batch.slice(i, i + this.batchSize);
-      const textBlocks: TextBlock[] = chunk.map((task) => ({
-        text: task.text,
-        translatable: true,
-      }));
+    // Group all batch tasks by detected content type before chunking. A JSON
+    // file can mix plain values with values that contain inline HTML (e.g.
+    // `"Click <a href='/x'>here</a>"`); these two must be sent in separate
+    // API calls with the matching `contentType`, otherwise the plain pipeline
+    // strips tags or the HTML pipeline corrupts plain Cyrillic/Greek text.
+    // Grouping across all chunks (instead of within each chunk) minimises
+    // the number of API calls when one content type is sparse.
+    const groups = new Map<string, TranslateTask[]>();
+    for (const task of classified.batch) {
+      const contentType = resolveContentType(task.text, this.defaultContentType);
+      const bucket = groups.get(contentType);
+      if (bucket) {
+        bucket.push(task);
+      } else {
+        groups.set(contentType, [task]);
+      }
+    }
 
-      batchPromises.push(
-        (async () => {
-          const result = await this.translatorService.translateBatchWithFallback(
-            textBlocks,
-            this.sourceLocale,
-            targetLocale,
-            batchOptions
-          );
-          chunk.forEach((task, idx) => {
-            const translated = result[idx];
-            if (!translated) {
-              throw new Error(Messages.errors.emptyTranslationResult(task.text));
-            }
-            translations.set(task.key, normalizeEntities(task.text, translated.text));
-          });
-        })()
-      );
+    for (const [contentType, tasks] of groups) {
+      const groupOptions = this.buildTranslateOptions(batchInstruction, contentType);
+      for (let i = 0; i < tasks.length; i += this.batchSize) {
+        const chunk = tasks.slice(i, i + this.batchSize);
+        const textBlocks: TextBlock[] = chunk.map((task) => ({
+          text: task.text,
+          translatable: true,
+        }));
+
+        batchPromises.push(
+          (async () => {
+            const result = await this.translatorService.translateBatchWithFallback(
+              textBlocks,
+              this.sourceLocale,
+              targetLocale,
+              groupOptions
+            );
+            chunk.forEach((task, idx) => {
+              const translated = result[idx];
+              if (!translated) {
+                throw new Error(Messages.errors.emptyTranslationResult(task.text));
+              }
+              recordResult(task, translated.text);
+            });
+          })()
+        );
+      }
     }
 
     await Promise.all([...soloPromises, ...batchPromises]);
+
+    if (corruptedTasks.length > 0) {
+      await this.retryCorruptedTasks(corruptedTasks, targetLocale, translations);
+    }
+
     return translations;
   }
 
-  private buildTranslateOptions(instruction: string | undefined): TranslateOptions {
+  /**
+   * Re-translate each task as a solo call. Solo responses are small enough
+   * that they almost never span a TCP chunk boundary, so the U+FFFD bug
+   * does not fire on them. We retry up to MAX_RETRIES times silently; if
+   * every attempt still comes back with U+FFFD we surface a short, neutral
+   * error so the user knows to re-run without exposing SDK internals.
+   */
+  private async retryCorruptedTasks(
+    tasks: TranslateTask[],
+    targetLocale: string,
+    translations: Map<string, string>
+  ): Promise<void> {
+    const MAX_RETRIES = 3;
+    let anyStillCorrupted = false;
+
+    await Promise.all(
+      tasks.map(async (task) => {
+        const contentType = resolveContentType(task.text, this.defaultContentType);
+        const options = this.buildTranslateOptions(task.instruction, contentType);
+
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          const result = await this.translatorService.translate(
+            [{ text: task.text, translatable: true }],
+            this.sourceLocale,
+            targetLocale,
+            options
+          );
+          const translated = result[0];
+          if (!translated) {
+            throw new Error(Messages.errors.emptyTranslationResult(task.text));
+          }
+          const normalized = normalizeEntities(task.text, translated.text);
+          if (!normalized.includes('�')) {
+            translations.set(task.key, normalized);
+            return;
+          }
+        }
+
+        anyStillCorrupted = true;
+      })
+    );
+
+    if (anyStillCorrupted) {
+      throw new Error(Messages.errors.translationRetryFailed);
+    }
+  }
+
+  private buildTranslateOptions(
+    instruction: string | undefined,
+    contentType: string
+  ): TranslateOptions {
     return {
       instructions: instruction ? [instruction] : undefined,
       adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
       glossaries: this.glossaryIds.length > 0 ? this.glossaryIds : undefined,
+      // Setting contentType explicitly prevents Lara from auto-detecting
+      // TextBlock[] input as HTML-flavored content, which can otherwise
+      // corrupt plain text (e.g., replacing characters with `?`).
+      contentType,
       noTrace: this.noTrace || undefined,
     };
   }

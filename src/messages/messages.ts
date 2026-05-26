@@ -28,6 +28,7 @@ export const Messages = {
     noSupportedFileTypes: 'No supported file types configured',
     emptyTranslationResult: (value: string) =>
       `Translation service returned empty result for: ${value}`,
+    translationRetryFailed: 'Translation failed for some keys. Please retry.',
     maxRetriesExceeded: 'Maximum retry attempts exceeded. Please try again later.',
     envVarsNotSet: 'LARA_ACCESS_KEY_ID and LARA_ACCESS_KEY_SECRET must be set',
     fileAndTextMutuallyExclusive: '--file and --text cannot be used together',

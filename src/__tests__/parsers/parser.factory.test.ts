@@ -69,4 +69,23 @@ describe('ParserFactory', () => {
       expect(() => new ParserFactory('../file.po')).not.toThrow();
     });
   });
+
+  describe('getContentType', () => {
+    it('should return text/plain for plain-text formats', () => {
+      expect(new ParserFactory('/p/file.json').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.po').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.ts').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.vue').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.md').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.mdx').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.strings').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.stringsdict').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.xcstrings').getContentType()).toBe('text/plain');
+      expect(new ParserFactory('/p/file.txt').getContentType()).toBe('text/plain');
+    });
+
+    it('should return text/html for Android XML (inline HTML markup permitted)', () => {
+      expect(new ParserFactory('/p/file.xml').getContentType()).toBe('text/html');
+    });
+  });
 });
