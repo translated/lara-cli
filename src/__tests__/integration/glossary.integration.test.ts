@@ -182,6 +182,12 @@ describe('Glossary Command Integration Tests', () => {
       expect(config.glossaries).toEqual([]);
     });
 
+    it('deletes a glossary even without a lara.yaml present', async () => {
+      await executeCommand(glossaryCommand, ['delete', 'gls_1']);
+
+      expect(mockDeleteGlossary).toHaveBeenCalledWith('gls_1');
+    });
+
     it('errors when the id is missing in non-interactive mode', async () => {
       await expect(executeCommand(glossaryCommand, ['delete'])).rejects.toThrow();
       expect(mockDeleteGlossary).not.toHaveBeenCalled();
