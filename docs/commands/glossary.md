@@ -1,6 +1,6 @@
 # Glossary Command
 
-The `glossary` command lets you manage your Lara Glossaries directly from the CLI. You can list, create, and update Glossaries. Glossaries ensure consistent and accurate translations for domain-specific terminology.
+The `glossary` command lets you manage your Lara Glossaries directly from the CLI. You can list, create, update, and delete Glossaries, add and delete individual entries, and bulk-import CSV files. Glossaries ensure consistent and accurate translations for domain-specific terminology.
 
 ## Usage
 
@@ -8,7 +8,7 @@ The `glossary` command lets you manage your Lara Glossaries directly from the CL
 lara-cli glossary [subcommand] [options]
 ```
 
-Running `lara-cli glossary` **without a subcommand** opens an interactive menu where you can choose to list, create, or update a Glossary. When running in non-interactive mode (`-y`/`--non-interactive`), the bare command lists the available glossaries.
+Running `lara-cli glossary` **without a subcommand** opens an interactive menu where you can choose any action: list, create, update, or delete a Glossary, add or delete an entry, or import a CSV file. When running in non-interactive mode (`-y`/`--non-interactive`), the bare command lists the available glossaries.
 
 ## Subcommands
 

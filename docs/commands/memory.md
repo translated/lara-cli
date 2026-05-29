@@ -1,6 +1,6 @@
 # Memory Command
 
-The `memory` command lets you manage your Lara Translation Memories directly from the CLI. You can list, create, and update Translation Memories. Translation Memories enable Lara to adapt translations to your specific style and terminology.
+The `memory` command lets you manage your Lara Translation Memories directly from the CLI. You can list, create, update, and delete Translation Memories, add and delete individual translation units, and bulk-import TMX files. Translation Memories enable Lara to adapt translations to your specific style and terminology.
 
 ## Usage
 
@@ -8,7 +8,7 @@ The `memory` command lets you manage your Lara Translation Memories directly fro
 lara-cli memory [subcommand] [options]
 ```
 
-Running `lara-cli memory` **without a subcommand** opens an interactive menu where you can choose to list, create, or update a Translation Memory. When running in non-interactive mode (`-y`/`--non-interactive`), the bare command lists the available memories.
+Running `lara-cli memory` **without a subcommand** opens an interactive menu where you can choose any action: list, create, update, or delete a Translation Memory, add or delete a translation unit, or import a TMX file. When running in non-interactive mode (`-y`/`--non-interactive`), the bare command lists the available memories.
 
 ## Subcommands
 
