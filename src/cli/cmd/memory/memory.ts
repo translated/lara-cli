@@ -1,59 +1,140 @@
 import { Command } from 'commander';
-import Ora from 'ora';
-import { TranslationService } from '#modules/translation/translation.service.js';
-import { LARA_WEB_URL } from '#modules/common/common.const.js';
-import { handleLaraApiError } from '#utils/error.js';
-import { LaraApiError } from '@translated/lara';
-import { Messages } from '#messages/messages.js';
 
-export default new Command()
+import { isRunningInInteractiveMode } from '#utils/cli.js';
+import { ensureCredentials, runSafely } from '../common/command.js';
+import {
+  addTranslation,
+  createMemory,
+  deleteMemory,
+  deleteTranslation,
+  importTmx,
+  listMemories,
+  runMemoryMenu,
+  updateMemory,
+} from './memory.utils.js';
+
+const memoryCommand = new Command()
   .command('memory')
   .description('Manage translation memories')
   .helpOption('-h, --help', 'Show help')
-  .action(async () => {
-    if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
-      Ora({
-        text: Messages.errors.noApiCredentials,
-        color: 'red',
-      }).fail();
-      process.exit(1);
-    }
-    await handleMemory();
+  .action(async (_options: unknown, command: Command) => {
+    ensureCredentials();
+    await runSafely(() => runMemoryMenu(isRunningInInteractiveMode(command)));
   });
 
-async function handleMemory(): Promise<void> {
-  try {
-    await listMemories();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    Ora({ text: message, color: 'red' }).fail();
-    process.exit(1);
-  }
-}
+memoryCommand
+  .command('list')
+  .description('List available Translation Memories')
+  .helpOption('-h, --help', 'Show help')
+  .action(async () => {
+    ensureCredentials();
+    await runSafely(() => listMemories());
+  });
 
-async function listMemories(): Promise<void> {
-  const spinner = Ora().start(Messages.info.fetchingMemories);
-  try {
-    const translationService = TranslationService.getInstance();
-    const clientTranslationMemories = await translationService.getTranslationMemories();
+memoryCommand
+  .command('create [name]')
+  .description('Create a new Translation Memory')
+  .helpOption('-h, --help', 'Show help')
+  .action(async (name: string | undefined, _options: unknown, command: Command) => {
+    ensureCredentials();
+    await runSafely(() => createMemory(name, isRunningInInteractiveMode(command)));
+  });
 
-    if (clientTranslationMemories.length === 0) {
-      spinner.warn(Messages.warnings.noMemoriesLinked(LARA_WEB_URL));
-      return;
+memoryCommand
+  .command('update [id] [name]')
+  .description('Update the name of an existing Translation Memory')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      name: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() => updateMemory(id, name, isRunningInInteractiveMode(command)));
     }
+  );
 
-    spinner.succeed(Messages.success.foundMemories(clientTranslationMemories.length));
+memoryCommand
+  .command('delete [id]')
+  .description('Delete a Translation Memory')
+  .helpOption('-h, --help', 'Show help')
+  .action(async (id: string | undefined, _options: unknown, command: Command) => {
+    ensureCredentials();
+    await runSafely(() => deleteMemory(id, isRunningInInteractiveMode(command)));
+  });
 
-    for (const memory of clientTranslationMemories) {
-      console.log(Messages.ui.itemId(memory.id));
-      console.log(Messages.ui.itemName(memory.name) + '\n');
+memoryCommand
+  .command('add-translation [id] [source] [target] [sentence] [translation]')
+  .description('Add a translation unit to a Translation Memory')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      source: string | undefined,
+      target: string | undefined,
+      sentence: string | undefined,
+      translation: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() =>
+        addTranslation(
+          id,
+          source,
+          target,
+          sentence,
+          translation,
+          isRunningInInteractiveMode(command)
+        )
+      );
     }
-  } catch (error) {
-    if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.gettingMemories, spinner);
-      return;
-    }
+  );
 
-    throw error;
-  }
-}
+memoryCommand
+  .command('delete-translation [id] [source] [target] [sentence] [translation]')
+  .description('Delete a translation unit from a Translation Memory')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      source: string | undefined,
+      target: string | undefined,
+      sentence: string | undefined,
+      translation: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() =>
+        deleteTranslation(
+          id,
+          source,
+          target,
+          sentence,
+          translation,
+          isRunningInInteractiveMode(command)
+        )
+      );
+    }
+  );
+
+memoryCommand
+  .command('import-tmx [id] [file]')
+  .description('Import a TMX file into a Translation Memory')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      file: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() => importTmx(id, file, isRunningInInteractiveMode(command)));
+    }
+  );
+
+export default memoryCommand;

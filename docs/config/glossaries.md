@@ -44,9 +44,10 @@ glossaries:
 
 To use Glossaries:
 
-1. **Find available glossaries**: Run `lara-cli glossary` to list available glossaries
-2. **Add to configuration**: Add glossary IDs to the `glossaries` section of `lara.yaml`
-3. **Translate**: When you run `lara-cli translate`, these glossaries will be used automatically
+1. **Find available glossaries**: Run `lara-cli glossary list` to list available glossaries
+2. **Create a glossary**: Run `lara-cli glossary create "<name>"` to create one (you can choose to add its id to `lara.yaml` automatically)
+3. **Add to configuration**: Add glossary IDs to the `glossaries` section of `lara.yaml`
+4. **Translate**: When you run `lara-cli translate`, these glossaries will be used automatically
 
 ## Best Practices
 
@@ -55,8 +56,20 @@ To use Glossaries:
 - Use glossaries for product names, brand terminology, and technical terms
 - Use with [Translation Memories](./memories.md) and [instructions](./instructions.md) for best results
 
+## Managing Glossaries from the CLI
+
+- Run `lara-cli glossary list` to list available Glossaries
+- Run `lara-cli glossary create "<name>"` to create a new Glossary
+- Run `lara-cli glossary update <id> "<name>"` to rename an existing Glossary
+- Run `lara-cli glossary delete <id>` to delete a Glossary
+- Run `lara-cli glossary add-entry <id> <sourceLang> "<sourceTerm>" <targetLang> "<targetTerm>"` to add an entry
+- Run `lara-cli glossary delete-entry <id> <language> "<value>"` to remove an entry
+- Run `lara-cli glossary import-csv <id> <file>` to bulk-import a CSV file
+
+See the [Glossary Command](../commands/glossary.md) documentation for details.
+
 ## Finding Glossary IDs
 
-- Run `lara-cli glossary` to list available Glossaries
+- Run `lara-cli glossary list` to list available Glossaries
 - Check the Lara platform dashboard
 - Contact Lara support for assistance
