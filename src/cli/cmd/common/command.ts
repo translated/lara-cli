@@ -1,4 +1,5 @@
 import Ora from 'ora';
+import { ExitPromptError } from '@inquirer/core';
 
 import { Messages } from '#messages/messages.js';
 
@@ -21,12 +22,16 @@ export function ensureCredentials(): void {
 
 /**
  * Runs a command action, turning any uncaught error into a failed spinner and a
- * non-zero exit code.
+ * non-zero exit code. Inquirer prompt cancellations (Ctrl+C) are re-thrown so
+ * the top-level handler in index.ts can exit gracefully (code 0).
  */
 export async function runSafely(action: () => Promise<void>): Promise<void> {
   try {
     await action();
   } catch (error) {
+    if (error instanceof ExitPromptError) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : String(error);
     Ora({ text: message, color: 'red' }).fail();
     process.exit(1);

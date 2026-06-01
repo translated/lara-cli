@@ -232,8 +232,9 @@ export async function addTranslation(
 }
 
 /**
- * Deletes a translation unit from a Translation Memory. The translated text is
- * optional; source/target language and source text are required.
+ * Deletes a translation unit from a Translation Memory. All of source/target
+ * language, source text, and translated text are required — the API matches the
+ * unit on the source/translation pair.
  */
 export async function deleteTranslation(
   id: string | undefined,
