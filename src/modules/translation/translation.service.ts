@@ -1,5 +1,20 @@
-import { Credentials, TranslateOptions, Translator, Memory } from '@translated/lara';
+import fs from 'fs';
+import {
+  Credentials,
+  TranslateOptions,
+  Translator,
+  Memory,
+  MemoryImport,
+  GlossaryImport,
+  GlossaryFileFormat,
+} from '@translated/lara';
 import { Messages } from '#messages/messages.js';
+
+export type GlossaryTerm = { language: string; value: string };
+
+// The Glossary interface is defined by the SDK but not re-exported from the
+// package root, so derive it from the typed client method instead.
+type Glossary = Awaited<ReturnType<Translator['glossaries']['create']>>;
 
 export type TextBlock = {
   text: string;
@@ -115,7 +130,76 @@ export class TranslationService {
     return this.client.memories.list();
   }
 
-  public async getGlossaries() {
+  public async createMemory(name: string): Promise<Memory> {
+    return this.client.memories.create(name);
+  }
+
+  public async updateMemory(id: string, name: string): Promise<Memory> {
+    return this.client.memories.update(id, name);
+  }
+
+  public async deleteMemory(id: string): Promise<Memory> {
+    return this.client.memories.delete(id);
+  }
+
+  public async addMemoryTranslation(
+    id: string,
+    source: string,
+    target: string,
+    sentence: string,
+    translation: string
+  ): Promise<MemoryImport> {
+    return this.client.memories.addTranslation(id, source, target, sentence, translation);
+  }
+
+  public async deleteMemoryTranslation(
+    id: string,
+    source: string,
+    target: string,
+    sentence: string,
+    translation?: string
+  ): Promise<MemoryImport> {
+    return this.client.memories.deleteTranslation(id, source, target, sentence, translation);
+  }
+
+  public async importMemoryTmx(
+    id: string,
+    filePath: string,
+    gzip?: boolean
+  ): Promise<MemoryImport> {
+    return this.client.memories.importTmx(id, fs.createReadStream(filePath), gzip);
+  }
+
+  public async getGlossaries(): Promise<Glossary[]> {
     return this.client.glossaries.list();
+  }
+
+  public async createGlossary(name: string): Promise<Glossary> {
+    return this.client.glossaries.create(name);
+  }
+
+  public async updateGlossary(id: string, name: string): Promise<Glossary> {
+    return this.client.glossaries.update(id, name);
+  }
+
+  public async deleteGlossary(id: string): Promise<Glossary> {
+    return this.client.glossaries.delete(id);
+  }
+
+  public async addGlossaryEntry(id: string, terms: GlossaryTerm[]): Promise<GlossaryImport> {
+    return this.client.glossaries.addOrReplaceEntry(id, terms);
+  }
+
+  public async deleteGlossaryEntry(id: string, term: GlossaryTerm): Promise<GlossaryImport> {
+    return this.client.glossaries.deleteEntry(id, term);
+  }
+
+  public async importGlossaryCsv(
+    id: string,
+    filePath: string,
+    contentType: GlossaryFileFormat = 'csv/table-uni',
+    gzip?: boolean
+  ): Promise<GlossaryImport> {
+    return this.client.glossaries.importCsv(id, fs.createReadStream(filePath), contentType, gzip);
   }
 }

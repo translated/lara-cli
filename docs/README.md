@@ -29,8 +29,8 @@ Lara CLI provides several commands to manage your internationalization:
 
 - [Init Command](commands/init.md) - Initialize your project
 - [Translate Command](commands/translate.md) - Translate your files
-- [Memory Command](commands/memory.md) - List available Translation Memories
-- [Glossary Command](commands/glossary.md) - List available Glossaries
+- [Memory Command](commands/memory.md) - Manage Translation Memories (list, create, update, delete, add/delete translations, import TMX)
+- [Glossary Command](commands/glossary.md) - Manage Glossaries (list, create, update, delete, add/delete entries, import CSV)
 
 ## Configuration Reference
 

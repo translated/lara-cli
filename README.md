@@ -6,7 +6,7 @@ Lara Cli automates translation of your i18n files with a single command, preserv
 
 Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18n single-file components, Markdown and MDX files, Android XML string resource files, Xcode localization files (.strings, .stringsdict, .xcstrings), and plain text (.txt) files. See [Supported Formats](docs/config/formats.md) for details.
 
-[![Version](https://img.shields.io/badge/version-1.3.4-blue.svg)](https://github.com/translated/lara-cli)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/translated/lara-cli)
 
 </div>
 
@@ -217,8 +217,8 @@ For detailed documentation on using Lara CLI:
 
 - [Init Command](docs/commands/init.md) - Initialize your project
 - [Translate Command](docs/commands/translate.md) - Translate your files
-- [Memory Command](docs/commands/memory.md) - List available Translation Memories
-- [Glossary Command](docs/commands/glossary.md) - List available Glossaries
+- [Memory Command](docs/commands/memory.md) - List, create, update, delete Translation Memories; add/delete translations; import TMX
+- [Glossary Command](docs/commands/glossary.md) - List, create, update, delete Glossaries; add/delete entries; import CSV
 
 ### Configuration
 

@@ -33,6 +33,22 @@ export const mockTranslateBatchWithFallback = vi.fn(
   }
 );
 
+// Memory/glossary management mocks, exported so tests can assert on call args.
+export const mockGetTranslationMemories = vi.fn(async () => [] as { id: string; name: string }[]);
+export const mockCreateMemory = vi.fn(async (name: string) => ({ id: 'mem_generated', name }));
+export const mockUpdateMemory = vi.fn(async (id: string, name: string) => ({ id, name }));
+export const mockGetGlossaries = vi.fn(async () => [] as { id: string; name: string }[]);
+export const mockCreateGlossary = vi.fn(async (name: string) => ({ id: 'gls_generated', name }));
+export const mockUpdateGlossary = vi.fn(async (id: string, name: string) => ({ id, name }));
+export const mockDeleteMemory = vi.fn(async (id: string) => ({ id, name: 'deleted' }));
+export const mockAddMemoryTranslation = vi.fn(async () => ({ id: 'imp_generated' }));
+export const mockDeleteMemoryTranslation = vi.fn(async () => ({ id: 'imp_generated' }));
+export const mockImportMemoryTmx = vi.fn(async () => ({ id: 'imp_generated' }));
+export const mockDeleteGlossary = vi.fn(async (id: string) => ({ id, name: 'deleted' }));
+export const mockAddGlossaryEntry = vi.fn(async () => ({ id: 'imp_generated' }));
+export const mockDeleteGlossaryEntry = vi.fn(async () => ({ id: 'imp_generated' }));
+export const mockImportGlossaryCsv = vi.fn(async () => ({ id: 'imp_generated' }));
+
 // Mock translation service
 vi.mock('#modules/translation/translation.service.js', () => {
   return {
@@ -40,6 +56,20 @@ vi.mock('#modules/translation/translation.service.js', () => {
       getInstance: vi.fn(() => ({
         translate: mockTranslate,
         translateBatchWithFallback: mockTranslateBatchWithFallback,
+        getTranslationMemories: mockGetTranslationMemories,
+        createMemory: mockCreateMemory,
+        updateMemory: mockUpdateMemory,
+        deleteMemory: mockDeleteMemory,
+        addMemoryTranslation: mockAddMemoryTranslation,
+        deleteMemoryTranslation: mockDeleteMemoryTranslation,
+        importMemoryTmx: mockImportMemoryTmx,
+        getGlossaries: mockGetGlossaries,
+        createGlossary: mockCreateGlossary,
+        updateGlossary: mockUpdateGlossary,
+        deleteGlossary: mockDeleteGlossary,
+        addGlossaryEntry: mockAddGlossaryEntry,
+        deleteGlossaryEntry: mockDeleteGlossaryEntry,
+        importGlossaryCsv: mockImportGlossaryCsv,
       })),
     },
   };

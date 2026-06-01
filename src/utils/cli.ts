@@ -7,5 +7,8 @@ import { Command } from 'commander';
  * @returns True if the CLI is running in interactive mode, false otherwise.
  */
 export function isRunningInInteractiveMode(command: Command) {
-  return command.parent?.opts().nonInteractive === false;
+  // optsWithGlobals walks up the parent chain so this works both for direct
+  // children of the root program (init, translate) and for nested subcommands
+  // (e.g. `memory create`, `glossary update`).
+  return command.optsWithGlobals().nonInteractive === false;
 }
