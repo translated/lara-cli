@@ -1,59 +1,129 @@
 import { Command } from 'commander';
-import Ora from 'ora';
-import { TranslationService } from '#modules/translation/translation.service.js';
-import { LARA_WEB_URL } from '#modules/common/common.const.js';
-import { handleLaraApiError } from '#utils/error.js';
-import { LaraApiError } from '@translated/lara';
-import { Messages } from '#messages/messages.js';
 
-export default new Command()
+import { isRunningInInteractiveMode } from '#utils/cli.js';
+import { ensureCredentials, runSafely } from '../common/command.js';
+import {
+  addEntry,
+  createGlossary,
+  deleteEntry,
+  deleteGlossary,
+  importCsv,
+  listGlossaries,
+  runGlossaryMenu,
+  updateGlossary,
+} from './glossary.utils.js';
+
+const glossaryCommand = new Command()
   .command('glossary')
   .description('Manage glossaries')
   .helpOption('-h, --help', 'Show help')
-  .action(async () => {
-    if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
-      Ora({
-        text: Messages.errors.noApiCredentials,
-        color: 'red',
-      }).fail();
-      process.exit(1);
-    }
-    await handleGlossary();
+  .action(async (_options: unknown, command: Command) => {
+    ensureCredentials();
+    await runSafely(() => runGlossaryMenu(isRunningInInteractiveMode(command)));
   });
 
-async function handleGlossary(): Promise<void> {
-  try {
-    await listGlossaries();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    Ora({ text: message, color: 'red' }).fail();
-    process.exit(1);
-  }
-}
+glossaryCommand
+  .command('list')
+  .description('List available Glossaries')
+  .helpOption('-h, --help', 'Show help')
+  .action(async () => {
+    ensureCredentials();
+    await runSafely(() => listGlossaries());
+  });
 
-async function listGlossaries(): Promise<void> {
-  const spinner = Ora().start(Messages.info.fetchingGlossaries);
-  try {
-    const translationService = TranslationService.getInstance();
-    const clientGlossaries = await translationService.getGlossaries();
+glossaryCommand
+  .command('create [name]')
+  .description('Create a new Glossary')
+  .helpOption('-h, --help', 'Show help')
+  .action(async (name: string | undefined, _options: unknown, command: Command) => {
+    ensureCredentials();
+    await runSafely(() => createGlossary(name, isRunningInInteractiveMode(command)));
+  });
 
-    if (clientGlossaries.length === 0) {
-      spinner.warn(Messages.warnings.noGlossariesLinked(LARA_WEB_URL));
-      return;
+glossaryCommand
+  .command('update [id] [name]')
+  .description('Update the name of an existing Glossary')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      name: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() => updateGlossary(id, name, isRunningInInteractiveMode(command)));
     }
+  );
 
-    spinner.succeed(Messages.success.foundGlossaries(clientGlossaries.length));
+glossaryCommand
+  .command('delete [id]')
+  .description('Delete a Glossary')
+  .helpOption('-h, --help', 'Show help')
+  .action(async (id: string | undefined, _options: unknown, command: Command) => {
+    ensureCredentials();
+    await runSafely(() => deleteGlossary(id, isRunningInInteractiveMode(command)));
+  });
 
-    for (const glossary of clientGlossaries) {
-      console.log(Messages.ui.itemId(glossary.id));
-      console.log(Messages.ui.itemName(glossary.name) + '\n');
+glossaryCommand
+  .command('add-entry [id] [sourceLang] [sourceTerm] [targetLang] [targetTerm]')
+  .description('Add a source→target entry to a Glossary')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      sourceLang: string | undefined,
+      sourceTerm: string | undefined,
+      targetLang: string | undefined,
+      targetTerm: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() =>
+        addEntry(
+          id,
+          sourceLang,
+          sourceTerm,
+          targetLang,
+          targetTerm,
+          isRunningInInteractiveMode(command)
+        )
+      );
     }
-  } catch (error) {
-    if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.gettingGlossaries, spinner);
-      return;
-    }
+  );
 
-    throw error;
-  }
-}
+glossaryCommand
+  .command('delete-entry [id] [language] [value]')
+  .description('Delete an entry from a Glossary')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      language: string | undefined,
+      value: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() => deleteEntry(id, language, value, isRunningInInteractiveMode(command)));
+    }
+  );
+
+glossaryCommand
+  .command('import-csv [id] [file]')
+  .description('Import a CSV file into a Glossary')
+  .helpOption('-h, --help', 'Show help')
+  .action(
+    async (
+      id: string | undefined,
+      file: string | undefined,
+      _options: unknown,
+      command: Command
+    ) => {
+      ensureCredentials();
+      await runSafely(() => importCsv(id, file, isRunningInInteractiveMode(command)));
+    }
+  );
+
+export default glossaryCommand;
