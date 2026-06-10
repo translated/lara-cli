@@ -17,8 +17,10 @@ const {
   glossariesAddOrReplaceEntryMock,
   glossariesDeleteEntryMock,
   glossariesImportCsvMock,
+  setExtraHeaderMock,
 } = vi.hoisted(() => ({
   translateMock: vi.fn(),
+  setExtraHeaderMock: vi.fn(),
   memoriesListMock: vi.fn(),
   memoriesCreateMock: vi.fn(),
   memoriesUpdateMock: vi.fn(),
@@ -37,6 +39,9 @@ const {
 
 vi.mock('@translated/lara', () => {
   class Translator {
+    // Mirrors the SDK's internal LaraClient that applyLaraClientHeaders reaches
+    // through to set X-Lara-Client* on every request.
+    client = { setExtraHeader: setExtraHeaderMock };
     translate = translateMock;
     memories = {
       list: memoriesListMock,
@@ -62,6 +67,28 @@ vi.mock('@translated/lara', () => {
 });
 
 const { TranslationService } = await import('#modules/translation/translation.service.js');
+const { getPackageVersion } = await import('#utils/version.js');
+
+describe('TranslationService construction', () => {
+  beforeEach(() => {
+    process.env.LARA_ACCESS_KEY_ID = 'test-key-id';
+    process.env.LARA_ACCESS_KEY_SECRET = 'test-key-secret';
+    (TranslationService as any).instance = null;
+    setExtraHeaderMock.mockReset();
+  });
+
+  afterEach(() => {
+    (TranslationService as any).instance = null;
+  });
+
+  it('sets the X-Lara-Client identification headers on the SDK client', () => {
+    TranslationService.getInstance();
+
+    expect(setExtraHeaderMock).toHaveBeenCalledWith('X-Lara-Client', 'CLI');
+    expect(setExtraHeaderMock).toHaveBeenCalledWith('X-Lara-Client-Version', getPackageVersion());
+    expect(setExtraHeaderMock).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe('TranslationService.translateBatchWithFallback', () => {
   let service: ReturnType<typeof TranslationService.getInstance>;

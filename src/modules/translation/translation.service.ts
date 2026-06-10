@@ -9,6 +9,7 @@ import {
   GlossaryFileFormat,
 } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
+import { applyLaraClientHeaders } from '#utils/laraHeaders.js';
 
 export type GlossaryTerm = { language: string; value: string };
 
@@ -35,6 +36,7 @@ export class TranslationService {
     }
 
     this.client = new Translator(new Credentials(keyId, keySecret));
+    applyLaraClientHeaders(this.client);
   }
 
   public static getInstance(): TranslationService {
