@@ -2,6 +2,7 @@ import Ora from 'ora';
 import { ExitPromptError } from '@inquirer/core';
 
 import { Messages } from '#messages/messages.js';
+import { getErrorMessage } from '#utils/error.js';
 
 /**
  * Checks whether the Lara API credentials are present in the environment.
@@ -32,7 +33,7 @@ export async function runSafely(action: () => Promise<void>): Promise<void> {
     if (error instanceof ExitPromptError) {
       throw error;
     }
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     Ora({ text: message, color: 'red' }).fail();
     process.exit(1);
   }

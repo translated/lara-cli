@@ -2,6 +2,7 @@ import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { VueParserOptionsType } from './parser.types.js';
 import { deepMerge, markNumericKeyObjects, restoreNumericKeys } from '#utils/parser.js';
+import { getErrorMessage } from '#utils/error.js';
 
 /**
  * Vue Single File Component parser that extracts and manages i18n blocks.
@@ -126,7 +127,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     try {
       return JSON.parse(i18nContent);
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
+      const detail = getErrorMessage(error);
       throw new Error(`Invalid JSON in Vue <i18n> block: ${detail}`);
     }
   }
