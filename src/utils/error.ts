@@ -16,6 +16,11 @@ export function handleLaraApiError(error: LaraApiError, context: string, spinner
     displayErrorAndExit(Messages.errors.apiAuthFailed(context), spinner);
   }
 
+  // Plan exhausted (no characters left) / forbidden - early return
+  if (error.statusCode === 402 || error.statusCode === 403) {
+    displayErrorAndExit(Messages.errors.apiQuotaExceeded(context, error.message || ''), spinner);
+  }
+
   // Server error - early return
   if (error.statusCode >= 500) {
     displayErrorAndExit(Messages.errors.serviceUnavailable(context, error.statusCode), spinner);

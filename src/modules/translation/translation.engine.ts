@@ -1,6 +1,6 @@
 import picomatch, { Matcher } from 'picomatch';
 
-import { TranslationService } from './translation.service.js';
+import { TranslationService, isFatalApiError } from './translation.service.js';
 import { calculateChecksum, commitChecksum, ChecksumState } from '#utils/checksum.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
@@ -338,7 +338,11 @@ export class TranslationEngine {
           throw new Error(Messages.errors.emptyTranslationResult(task.text));
         }
         recordResult(task, translated.text);
-      } catch {
+      } catch (error) {
+        // Account-level failures (auth/quota) abort the whole run with a clear message.
+        if (isFatalApiError(error)) {
+          throw error;
+        }
         // Keep the source text for this item and report it later.
         translations.set(task.key, task.text);
         failedTasks.push(task);

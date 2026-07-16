@@ -1,6 +1,7 @@
 import fs from 'fs';
 import {
   Credentials,
+  LaraApiError,
   TranslateOptions,
   Translator,
   Memory,
@@ -17,6 +18,17 @@ export type GlossaryTerm = { language: string; value: string };
 // forever (the SDK has no default timeout). A slow-but-healthy request finishes
 // well within this; a stalled one fails fast so retries/fallback can proceed.
 const REQUEST_TIMEOUT_MS = 30_000;
+
+// Account-level failures that affect EVERY request: bad credentials (401),
+// payment required / plan exhausted (402), and quota / forbidden (403). These
+// must not be retried or swallowed into the per-item fallback — they abort the
+// run with a clear message instead of silently keeping every string as source.
+export function isFatalApiError(error: unknown): error is LaraApiError {
+  return (
+    error instanceof LaraApiError &&
+    (error.statusCode === 401 || error.statusCode === 402 || error.statusCode === 403)
+  );
+}
 
 // The Glossary interface is defined by the SDK but not re-exported from the
 // package root, so derive it from the typed client method instead.
@@ -79,6 +91,11 @@ export class TranslationService {
         );
         return response.translation;
       } catch (error) {
+        // Retrying an auth/quota failure is pointless — surface it immediately.
+        if (isFatalApiError(error)) {
+          throw error;
+        }
+
         attempt++;
 
         if (attempt >= maxRetries) {
@@ -116,6 +133,11 @@ export class TranslationService {
         return result;
       }
     } catch (error) {
+      // Account-level failures abort the whole run with a clear message; do not
+      // fall back to per-item (every item would fail the same way).
+      if (isFatalApiError(error)) {
+        throw error;
+      }
       batchError = error;
     }
 
@@ -146,6 +168,9 @@ export class TranslationService {
         results.push(translated);
         consecutiveFailures = 0;
       } catch (error) {
+        if (isFatalApiError(error)) {
+          throw error;
+        }
         firstItemError ??= error;
         results.push({ ...block, translationFailed: true });
         consecutiveFailures++;

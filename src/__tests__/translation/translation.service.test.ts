@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
+import { LaraApiError } from '@translated/lara';
 
 const {
   translateMock,
@@ -63,7 +64,16 @@ vi.mock('@translated/lara', () => {
     };
   }
   class Credentials {}
-  return { Translator, Credentials };
+  class LaraApiError extends Error {
+    statusCode: number;
+    type: string;
+    constructor(statusCode: number, type: string, message: string) {
+      super(message);
+      this.statusCode = statusCode;
+      this.type = type;
+    }
+  }
+  return { Translator, Credentials, LaraApiError };
 });
 
 const { TranslationService } = await import('#modules/translation/translation.service.js');
@@ -202,6 +212,21 @@ describe('TranslationService.translateBatchWithFallback', () => {
 
     translateSpy.mockRestore();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('re-throws a fatal account error (quota/403) instead of keeping source', async () => {
+    const fatal = new LaraApiError(403, 'Forbidden', 'quota exceeded');
+    const translateSpy = vi.spyOn(service, 'translate').mockRejectedValue(fatal);
+
+    // Must NOT fall back to per-item / keep-source: the whole run should abort.
+    await expect(
+      service.translateBatchWithFallback(blocks('a', 'b'), 'en', 'it', {} as any)
+    ).rejects.toBe(fatal);
+
+    // Only the batch call is made; no per-item fallback.
+    expect(translateSpy).toHaveBeenCalledTimes(1);
+
+    translateSpy.mockRestore();
   });
 });
 

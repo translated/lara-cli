@@ -135,6 +135,10 @@ If a file cannot be parsed (e.g. invalid JSON in a Vue `<i18n>` block, a `.ts`/`
 
 If the translation service cannot translate a single item (for example a bare URL), that one item does **not** abort the whole file. Its original text is kept, every other key is still translated and written, the kept items are listed in the output, and the run exits non-zero. Re-run with `--force` to retry the kept items.
 
+### Plan / Quota Exhausted
+
+If your Lara plan has no translation characters left (or the API key is not allowed to translate), the CLI stops immediately with a clear message telling you to top up your plan or check your usage, rather than retrying or silently leaving files untranslated.
+
 ### When to Use Force Mode
 
 Use `--force` when you need to:
