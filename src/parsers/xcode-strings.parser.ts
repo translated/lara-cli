@@ -1,5 +1,6 @@
 import type { Parser } from '../interface/parser.js';
 import type { XcodeStringsParserOptionsType } from './parser.types.js';
+import { weaveOrphans } from '../utils/parser.js';
 
 const KV_PATTERN = /^"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)"\s*;/;
 const HEX_4_PATTERN = /^[0-9a-fA-F]{4}$/;
@@ -203,37 +204,50 @@ export class XcodeStringsParser implements Parser<
     // Build a set of keys from data for quick lookup
     const dataKeys = new Set(Object.keys(data));
 
+    // Weave in "orphan" entries: present in the target file but absent from the
+    // source, kept by the engine (so present in `data`). They are rendered from
+    // their real target entry (comment + value) at their original position. Target
+    // keys absent from `data` are source-deleted and are excluded by `dataKeys`.
+    const sourceKeys = new Set(originalEntries.map((e) => e.key));
+    const targetStr = options.targetContent?.toString() ?? '';
+    const targetEntries = targetStr.trim() ? this.parseEntries(targetStr) : [];
+    const entries = weaveOrphans(
+      originalEntries,
+      targetEntries,
+      (e) => e.key,
+      sourceKeys,
+      dataKeys
+    );
+
     // Build output preserving original order, comments, and blank line separators
     const lines: string[] = [];
     let isFirst = true;
 
-    for (const entry of originalEntries) {
-      if (!dataKeys.has(entry.key)) {
-        continue;
-      }
-
+    const emit = (entry: StringsEntry): void => {
       if (entry.leadingBlank && !isFirst) {
         lines.push('');
       }
-
       if (entry.comment) {
         lines.push(entry.comment);
       }
-
-      const value = data[entry.key];
       const escapedKey = this.escapeValue(entry.key);
-      const escapedValue = this.escapeValue(String(value ?? ''));
+      const escapedValue = this.escapeValue(String(data[entry.key] ?? ''));
       lines.push(`"${escapedKey}" = "${escapedValue}";`);
-
       dataKeys.delete(entry.key);
       isFirst = false;
+    };
+
+    // Source-deleted entries (in the source file but not in `data`) are skipped.
+    for (const entry of entries) {
+      if (dataKeys.has(entry.key)) {
+        emit(entry);
+      }
     }
 
-    // Append any new keys that weren't in the original
+    // Append any remaining new keys that weren't in the original or target
     for (const key of dataKeys) {
-      const value = data[key];
       const escapedKey = this.escapeValue(key);
-      const escapedValue = this.escapeValue(String(value ?? ''));
+      const escapedValue = this.escapeValue(String(data[key] ?? ''));
       lines.push(`"${escapedKey}" = "${escapedValue}";`);
     }
 

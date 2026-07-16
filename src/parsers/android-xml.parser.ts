@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { Parser } from '../interface/parser.js';
 import type { AndroidXmlParserOptionsType } from './parser.types.js';
+import { rootKey, weaveOrphans } from '../utils/parser.js';
 
 /**
  * Represents a parsed Android XML string resource.
@@ -406,50 +407,68 @@ export class AndroidXmlParser implements Parser<
       }
     }
 
-    // Sort resources by order
+    // Build resource entries from the source structure (originalContent), ordered
+    // by their original document position.
     type ResourceEntry =
-      | { type: 'string'; resource: AndroidXmlString; order: number }
-      | { type: 'plurals'; resource: AndroidXmlPlurals; order: number }
-      | { type: 'string-array'; resource: AndroidXmlStringArray; order: number };
-    const resourceEntries: ResourceEntry[] = [];
+      | { type: 'string'; resource: AndroidXmlString }
+      | { type: 'plurals'; resource: AndroidXmlPlurals }
+      | { type: 'string-array'; resource: AndroidXmlStringArray };
 
-    if (resources.string) {
-      const strings = Array.isArray(resources.string) ? resources.string : [resources.string];
-      for (const str of strings) {
-        const name = str['@_name'];
-        if (name) {
-          const order = this.orderMap.get(`string:${name}`) ?? Number.MAX_SAFE_INTEGER;
-          resourceEntries.push({ type: 'string', resource: str, order });
-        }
+    const buildEntries = (
+      res: AndroidXmlResources,
+      orderMap: Map<string, number>
+    ): ResourceEntry[] => {
+      const collected: Array<{ entry: ResourceEntry; order: number }> = [];
+      const add = (name: string | undefined, entry: ResourceEntry, tag: string): void => {
+        if (!name) return;
+        collected.push({ entry, order: orderMap.get(`${tag}:${name}`) ?? Number.MAX_SAFE_INTEGER });
+      };
+      if (res.string) {
+        const arr = Array.isArray(res.string) ? res.string : [res.string];
+        for (const s of arr) add(s['@_name'], { type: 'string', resource: s }, 'string');
+      }
+      if (res.plurals) {
+        const arr = Array.isArray(res.plurals) ? res.plurals : [res.plurals];
+        for (const p of arr) add(p['@_name'], { type: 'plurals', resource: p }, 'plurals');
+      }
+      if (res['string-array']) {
+        const arr = Array.isArray(res['string-array'])
+          ? res['string-array']
+          : [res['string-array']];
+        for (const sa of arr)
+          add(sa['@_name'], { type: 'string-array', resource: sa }, 'string-array');
+      }
+      return collected.sort((a, b) => a.order - b.order).map((c) => c.entry);
+    };
+
+    const nameOf = (e: ResourceEntry): string => String(e.resource['@_name']);
+    let resourceEntries = buildEntries(resources, this.orderMap);
+
+    // Graft "orphan" resources: present in the target file but absent from the
+    // source. Insert each at its original target position, anchored to the nearest
+    // preceding source resource so it keeps its original neighbour. A target
+    // resource absent from `data` is a source-deleted key and must NOT be grafted.
+    const targetStr = options.targetContent?.toString() ?? '';
+    if (targetStr.trim()) {
+      let targetParsed: unknown;
+      try {
+        targetParsed = this.parser.parse(targetStr);
+      } catch {
+        targetParsed = null;
+      }
+      if (this.isAndroidXmlParsed(targetParsed) && targetParsed.resources) {
+        const sourceNames = new Set(resourceEntries.map(nameOf));
+        const dataNames = new Set(Object.keys(data).map(rootKey));
+        const targetEntries = buildEntries(targetParsed.resources, this.buildOrderMap(targetStr));
+        resourceEntries = weaveOrphans(
+          resourceEntries,
+          targetEntries,
+          nameOf,
+          sourceNames,
+          dataNames
+        );
       }
     }
-
-    if (resources.plurals) {
-      const plurals = Array.isArray(resources.plurals) ? resources.plurals : [resources.plurals];
-      for (const plural of plurals) {
-        const name = plural['@_name'];
-        if (name) {
-          const order = this.orderMap.get(`plurals:${name}`) ?? Number.MAX_SAFE_INTEGER;
-          resourceEntries.push({ type: 'plurals', resource: plural, order });
-        }
-      }
-    }
-
-    if (resources['string-array']) {
-      const stringArrays = Array.isArray(resources['string-array'])
-        ? resources['string-array']
-        : [resources['string-array']];
-      for (const stringArray of stringArrays) {
-        const name = stringArray['@_name'];
-        if (name) {
-          const order = this.orderMap.get(`string-array:${name}`) ?? Number.MAX_SAFE_INTEGER;
-          resourceEntries.push({ type: 'string-array', resource: stringArray, order });
-        }
-      }
-    }
-
-    // Sort by order
-    resourceEntries.sort((a, b) => a.order - b.order);
 
     // Manually build XML to preserve interleaved order
     const indent = '    ';

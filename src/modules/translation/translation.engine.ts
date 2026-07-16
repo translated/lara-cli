@@ -5,6 +5,7 @@ import { calculateChecksum, commitChecksum, ChecksumState } from '#utils/checksu
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
 import { normalizeEntities } from '#utils/entities.js';
+import { weaveOrphans } from '#utils/parser.js';
 import { resolveContentType } from '#utils/contentType.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
@@ -190,6 +191,10 @@ export class TranslationEngine {
           // use targetContent to preserve translations from previous iterations.
           // For separate files, use sourceContent to ensure output structure matches source.
           originalContent: sourcePath === targetPath ? targetContent : sourceContent,
+          // The existing target file, so merge-based parsers can graft back keys
+          // that live only in the target ("orphan" keys, absent from source) at
+          // their original position. Empty when the target does not exist yet.
+          targetContent: isTargetEmpty ? '' : targetContent,
         })
       );
       progressWithOra.tick(1);
@@ -255,7 +260,19 @@ export class TranslationEngine {
       ordered.push([key, { kind: 'translate' }]);
     }
 
-    return { ordered, solo, batch };
+    // Preserve "orphan" keys: keys present in the target file but not in the
+    // source (so absent from the changelog). They are kept verbatim at their
+    // original target position, anchored to the nearest preceding shared key.
+    // Note: source-deleted keys DO appear in the changelog (state 'deleted'),
+    // so they are correctly excluded here and still get removed.
+    const targetEntries: Array<[string, OutputSlot]> = Object.keys(target).map((key) => [
+      key,
+      { kind: 'keep', value: target[key] },
+    ]);
+    const changelogKeys = new Set(Object.keys(changelog));
+    const woven = weaveOrphans(ordered, targetEntries, (entry) => entry[0], changelogKeys);
+
+    return { ordered: woven, solo, batch };
   }
 
   private async executeTasks(

@@ -121,6 +121,12 @@ Lara CLI uses checksums to determine what content needs translation:
 
 When you modify source locale files, the tool automatically detects changes and translates only the updated content. This saves time and API costs by avoiding unnecessary retranslations.
 
+### Keys Only Present in a Target File
+
+Keys that exist in a target locale file but not in the source (for example, translations added manually or entries specific to one locale) are **preserved** and kept at their original position. They are never overwritten or removed by translation. A key is only removed from a target when it was previously translated from the source and is then deleted from the source file.
+
+> Notes: for Gettext PO, orphan messages are preserved but their exact interleaving with source messages is approximate. For Xcode `.stringsdict`, an orphan plural entry keeps its full original structure.
+
 ### When to Use Force Mode
 
 Use `--force` when you need to:

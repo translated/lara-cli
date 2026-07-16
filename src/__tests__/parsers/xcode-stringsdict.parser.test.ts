@@ -774,4 +774,72 @@ describe('XcodeStringsdictParser', () => {
       expect(parser.getContentType()).toBe('text/plain');
     });
   });
+
+  describe('serialize - orphan keys (targetContent)', () => {
+    const pluralEntry = (key: string, one: string, other: string) => `    <key>${key}</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>${one}</string>
+            <key>other</key>
+            <string>${other}</string>
+        </dict>
+    </dict>`;
+    const plist = (body: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+${body}
+</dict>
+</plist>`;
+
+    it('grafts an orphan plural entry from the target with its real structure', () => {
+      const originalContent = plist(pluralEntry('item_count', '%d item', '%d items'));
+      const targetContent = plist(pluralEntry('only_it_count', 'solo %d', 'solo %d'));
+      const data = {
+        'item_count/one': '[it] %d item',
+        'item_count/other': '[it] %d items',
+        'only_it_count/one': 'solo %d',
+        'only_it_count/other': 'solo %d',
+      };
+
+      const result = parser
+        .serialize(data, {
+          originalContent,
+          targetContent,
+        } as XcodeStringsdictParserOptionsType)
+        .toString();
+
+      expect(result).toContain('<key>only_it_count</key>');
+      expect(result).toContain('solo %d');
+      expect(result).toContain('<key>item_count</key>');
+      expect(result).toContain('[it] %d item');
+    });
+
+    it('does NOT graft a target entry that is absent from data (source-deleted)', () => {
+      const originalContent = plist(pluralEntry('item_count', '%d item', '%d items'));
+      const targetContent = plist(pluralEntry('gone_count', 'via %d', 'via %d'));
+      const data = {
+        'item_count/one': '[it] %d item',
+        'item_count/other': '[it] %d items',
+      };
+
+      const result = parser
+        .serialize(data, {
+          originalContent,
+          targetContent,
+        } as XcodeStringsdictParserOptionsType)
+        .toString();
+
+      expect(result).toContain('<key>item_count</key>');
+      expect(result).not.toContain('gone_count');
+    });
+  });
 });

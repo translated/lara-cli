@@ -428,4 +428,47 @@ describe('XcodeStringsParser', () => {
       expect(parser.getContentType()).toBe('text/plain');
     });
   });
+
+  describe('serialize - orphan keys (targetContent)', () => {
+    it('grafts an orphan key (present in target, absent from source) at its position', () => {
+      const originalContent = `"one" = "One";
+"two" = "Two";
+`;
+      const targetContent = `"one" = "[it] One";
+"only_it" = "Solo italiano";
+"two" = "[it] Two";
+`;
+      const data = { one: '[it] One', two: '[it] Two', only_it: 'Solo italiano' };
+
+      const result = parser
+        .serialize(data, {
+          originalContent,
+          targetContent,
+        } as XcodeStringsParserOptionsType)
+        .toString();
+
+      expect(result).toContain('"only_it" = "Solo italiano";');
+      expect(result.indexOf('"one"')).toBeLessThan(result.indexOf('only_it'));
+      expect(result.indexOf('only_it')).toBeLessThan(result.indexOf('"two"'));
+    });
+
+    it('does NOT graft a target key that is absent from data (source-deleted)', () => {
+      const originalContent = `"one" = "One";
+`;
+      const targetContent = `"one" = "[it] One";
+"gone" = "[it] Gone";
+`;
+      const data = { one: '[it] One' };
+
+      const result = parser
+        .serialize(data, {
+          originalContent,
+          targetContent,
+        } as XcodeStringsParserOptionsType)
+        .toString();
+
+      expect(result).toContain('[it] One');
+      expect(result).not.toContain('gone');
+    });
+  });
 });

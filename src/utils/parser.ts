@@ -4,6 +4,61 @@
 export const PLURAL_FORMS = new Set(['zero', 'one', 'two', 'few', 'many', 'other']);
 
 /**
+ * Weaves "orphan" entries (present in the target but absent from the source) back
+ * into a source-ordered list at their original target position.
+ *
+ * `base` is the source-ordered output. `target` is the target file's entries in
+ * their original order. Each target entry whose key is NOT an `anchor` (i.e. not
+ * shared with the source) — and that passes the optional `kept` filter — is an
+ * orphan; it is re-inserted right after the nearest preceding shared entry
+ * (`anchors`), or at the front if none precedes it. Source-order for shared
+ * entries is preserved. Returns `base` unchanged when there are no orphans.
+ *
+ * Used by the translation engine and the merge-based parsers, which all reconcile
+ * source vs. target the same way but over different element types.
+ */
+export function weaveOrphans<T>(
+  base: T[],
+  target: T[],
+  keyOf: (item: T) => string,
+  anchors: Set<string>,
+  kept?: Set<string>
+): T[] {
+  const byAnchor = new Map<string | null, T[]>();
+  let anchor: string | null = null;
+  for (const item of target) {
+    const key = keyOf(item);
+    if (anchors.has(key)) {
+      anchor = key;
+      continue;
+    }
+    if (kept && !kept.has(key)) continue;
+    const bucket = byAnchor.get(anchor) ?? [];
+    bucket.push(item);
+    byAnchor.set(anchor, bucket);
+  }
+
+  if (byAnchor.size === 0) return base;
+
+  const woven: T[] = [...(byAnchor.get(null) ?? [])];
+  for (const item of base) {
+    woven.push(item);
+    const orphans = byAnchor.get(keyOf(item));
+    if (orphans) woven.push(...orphans);
+  }
+  return woven;
+}
+
+/**
+ * Returns the root-entry name of a flattened key, i.e. the part before the first
+ * `/` separator (`item_count/one` -> `item_count`, `title` -> `title`).
+ */
+export function rootKey(key: string): string {
+  const slash = key.indexOf('/');
+  return slash >= 0 ? key.substring(0, slash) : key;
+}
+
+/**
  * Escapes XML special characters for use in both attributes and text content.
  */
 export function escapeXml(value: string): string {

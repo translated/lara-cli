@@ -1083,4 +1083,55 @@ describe('AndroidXmlParser', () => {
       expect(parser.getContentType()).toBe('text/html');
     });
   });
+
+  describe('serialize - orphan keys (targetContent)', () => {
+    it('grafts an orphan resource (present in target, absent from source) at its position', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="one">One</string>
+    <string name="two">Two</string>
+</resources>`;
+      const targetContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="one">[it] One</string>
+    <string name="only_it">Solo italiano</string>
+    <string name="two">[it] Two</string>
+</resources>`;
+      const data = { one: '[it] One', two: '[it] Two', only_it: 'Solo italiano' };
+
+      const result = parser
+        .serialize(data, {
+          originalContent,
+          targetContent,
+        } as AndroidXmlParserOptionsType)
+        .toString();
+
+      expect(result).toContain('<string name="only_it">Solo italiano</string>');
+      expect(result.indexOf('name="one"')).toBeLessThan(result.indexOf('only_it'));
+      expect(result.indexOf('only_it')).toBeLessThan(result.indexOf('name="two"'));
+    });
+
+    it('does NOT graft a target key that is absent from data (source-deleted)', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="one">One</string>
+</resources>`;
+      const targetContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="one">[it] One</string>
+    <string name="gone">[it] Gone</string>
+</resources>`;
+      const data = { one: '[it] One' };
+
+      const result = parser
+        .serialize(data, {
+          originalContent,
+          targetContent,
+        } as AndroidXmlParserOptionsType)
+        .toString();
+
+      expect(result).toContain('[it] One');
+      expect(result).not.toContain('gone');
+    });
+  });
 });

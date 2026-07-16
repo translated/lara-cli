@@ -9,6 +9,10 @@ export interface PoKey {
 type BaseContentParserOptionsType = {
   originalContent: string | Buffer;
   targetLocale: string;
+  // The existing target file content. Used by merge-based parsers to preserve
+  // "orphan" keys (present in the target but absent from the source). Empty/undefined
+  // when the target does not exist yet.
+  targetContent?: string | Buffer;
 };
 
 export type PoParserOptionsType = {
