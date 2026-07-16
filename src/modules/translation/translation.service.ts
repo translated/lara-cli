@@ -11,6 +11,7 @@ import {
 } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
 import { applyLaraClientHeaders } from '#utils/laraHeaders.js';
+import { isQuotaError } from '#utils/error.js';
 
 export type GlossaryTerm = { language: string; value: string };
 
@@ -20,14 +21,19 @@ export type GlossaryTerm = { language: string; value: string };
 const REQUEST_TIMEOUT_MS = 30_000;
 
 // Account-level failures that affect EVERY request: bad credentials (401),
-// payment required / plan exhausted (402), and quota / forbidden (403). These
-// must not be retried or swallowed into the per-item fallback — they abort the
-// run with a clear message instead of silently keeping every string as source.
-export function isFatalApiError(error: unknown): error is LaraApiError {
-  return (
+// payment required (402), forbidden (403), and "plan out of characters" (quota,
+// which the API sends as a normal error whose message mentions "quota", not a
+// dedicated status code). These must not be retried or swallowed into the
+// per-item fallback — they abort the run with a clear message instead of
+// silently keeping every string as source.
+export function isFatalApiError(error: unknown): boolean {
+  if (
     error instanceof LaraApiError &&
     (error.statusCode === 401 || error.statusCode === 402 || error.statusCode === 403)
-  );
+  ) {
+    return true;
+  }
+  return isQuotaError(error);
 }
 
 // The Glossary interface is defined by the SDK but not re-exported from the
@@ -126,7 +132,6 @@ export class TranslationService {
       return [];
     }
 
-    let batchError: unknown;
     try {
       const result = await this.translate(textBlocks, sourceLocale, targetLocale, options);
       if (result.length === textBlocks.length && result.every((block) => block !== undefined)) {
@@ -138,7 +143,7 @@ export class TranslationService {
       if (isFatalApiError(error)) {
         throw error;
       }
-      batchError = error;
+      // Otherwise fall through to per-item translation below.
     }
 
     // Per-item fallback. A single block that cannot be translated (e.g. a bare
@@ -151,7 +156,6 @@ export class TranslationService {
     // the source text for the rest.
     const MAX_CONSECUTIVE_FAILURES = 3;
     let consecutiveFailures = 0;
-    let firstItemError: unknown;
     const results: TextBlock[] = [];
 
     for (const block of textBlocks) {
@@ -171,17 +175,9 @@ export class TranslationService {
         if (isFatalApiError(error)) {
           throw error;
         }
-        firstItemError ??= error;
         results.push({ ...block, translationFailed: true });
         consecutiveFailures++;
       }
-    }
-
-    // Surface the real API error once so the failures above are not silent.
-    if (results.some((block) => block.translationFailed)) {
-      const reason = firstItemError ?? batchError;
-      const detail = reason instanceof Error ? reason.message : String(reason);
-      console.error(`Translation API error (affected items kept as source): ${detail}`);
     }
 
     return results;

@@ -3,6 +3,17 @@ import { Ora } from 'ora';
 import { Messages } from '#messages/messages.js';
 
 /**
+ * True when an error is the Lara "plan out of characters / quota exceeded" error.
+ * Matched on the message/type because the API does not use a dedicated status
+ * code for it (it arrives as a normal API error whose message mentions "quota").
+ */
+export function isQuotaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const type = error instanceof LaraApiError ? error.type : '';
+  return /\bquota\b/i.test(`${message} ${type}`);
+}
+
+/**
  * Handles Lara API errors by displaying appropriate error messages and exiting the process.
  * Uses early returns (guard clauses) for optimal performance and readability.
  *
@@ -17,7 +28,7 @@ export function handleLaraApiError(error: LaraApiError, context: string, spinner
   }
 
   // Plan exhausted (no characters left) / forbidden - early return
-  if (error.statusCode === 402 || error.statusCode === 403) {
+  if (error.statusCode === 402 || error.statusCode === 403 || isQuotaError(error)) {
     displayErrorAndExit(Messages.errors.apiQuotaExceeded(context, error.message || ''), spinner);
   }
 

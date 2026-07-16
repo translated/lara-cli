@@ -15,7 +15,7 @@ import { TranslationService, TextBlock } from '#modules/translation/translation.
 import { searchLocalePathsByPattern, ensureDirectoryExists, getFileType } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
 import picomatch from 'picomatch';
-import { handleLaraApiError } from '#utils/error.js';
+import { handleLaraApiError, isQuotaError } from '#utils/error.js';
 import { LaraApiError, TranslateOptions as LaraTranslateOptions } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { Messages } from '#messages/messages.js';
@@ -381,6 +381,17 @@ async function handleFileType(
           hasErrors = true;
         }
         continue;
+      }
+
+      // Plan out of characters delivered as a non-LaraApiError: still show the
+      // clean, single-line quota message and stop.
+      if (isQuotaError(error)) {
+        const quotaMessage = Messages.errors.apiQuotaExceeded(
+          Messages.errors.errorTranslatingFile(inputPath),
+          error instanceof Error ? error.message : String(error)
+        );
+        progressWithOra.stop(quotaMessage, 'fail');
+        process.exit(1);
       }
 
       const message = error instanceof Error ? error.message : String(error);

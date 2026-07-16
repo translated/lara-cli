@@ -228,6 +228,20 @@ describe('TranslationService.translateBatchWithFallback', () => {
 
     translateSpy.mockRestore();
   });
+
+  it('re-throws a quota error detected by message even when the status code is not 4xx-fatal', async () => {
+    // The plan-exhausted error arrives with a generic status code but a message
+    // that mentions "quota" — it must still abort, not fall back to keep-source.
+    const quota = new LaraApiError(400, 'BadRequest', 'You have exceeded your "quota"');
+    const translateSpy = vi.spyOn(service, 'translate').mockRejectedValue(quota);
+
+    await expect(
+      service.translateBatchWithFallback(blocks('a', 'b'), 'en', 'it', {} as any)
+    ).rejects.toBe(quota);
+    expect(translateSpy).toHaveBeenCalledTimes(1);
+
+    translateSpy.mockRestore();
+  });
 });
 
 describe('TranslationService memory & glossary management', () => {
