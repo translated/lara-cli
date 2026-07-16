@@ -121,6 +121,24 @@ Lara CLI uses checksums to determine what content needs translation:
 
 When you modify source locale files, the tool automatically detects changes and translates only the updated content. This saves time and API costs by avoiding unnecessary retranslations.
 
+### Keys Only Present in a Target File
+
+Keys that exist in a target locale file but not in the source (for example, translations added manually or entries specific to one locale) are **preserved** and kept at their original position. They are never overwritten or removed by translation. A key is only removed from a target when it was previously translated from the source and is then deleted from the source file.
+
+> Notes: for Gettext PO, orphan messages are preserved but their exact interleaving with source messages is approximate. For Xcode `.stringsdict`, an orphan plural entry keeps its full original structure.
+
+### Malformed Files
+
+If a file cannot be parsed (e.g. invalid JSON in a Vue `<i18n>` block, a `.ts`/`.xcstrings` file with a syntax error, or a malformed `.po`), the CLI reports the error and **leaves that file completely unchanged**, then continues with the other files and exits non-zero. It never overwrites or empties a file it could not parse.
+
+### Untranslatable Items
+
+If the translation service cannot translate a single item (for example a bare URL), that one item does **not** abort the whole file. Its original text is kept, every other key is still translated and written, the kept items are listed in the output, and the run exits non-zero. Re-run with `--force` to retry the kept items.
+
+### Plan / Quota Exhausted
+
+If your Lara plan has no translation characters left (or the API key is not allowed to translate), the CLI stops immediately with a clear message telling you to top up your plan or check your usage, rather than retrying or silently leaving files untranslated.
+
 ### When to Use Force Mode
 
 Use `--force` when you need to:

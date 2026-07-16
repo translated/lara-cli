@@ -1,6 +1,7 @@
 import * as gettextParser from 'gettext-parser';
 import type { Parser } from '../interface/parser.js';
 import type { PoKey, PoParserOptionsType } from './parser.types.js';
+import { getErrorMessage } from '../utils/error.js';
 
 /**
  * PO (Portable Object) parser for handling gettext translation files.
@@ -89,8 +90,11 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
     try {
       parsed = gettextParser.po.parse(content);
     } catch (error) {
-      console.error('Failed to parse PO file content', error);
-      return {};
+      // Surface the error instead of returning empty: serialize() rebuilds the PO
+      // purely from `data`, so an empty result would overwrite the file with a
+      // headers-only stub. Throwing lets the engine skip the file and leave it intact.
+      const detail = getErrorMessage(error);
+      throw new Error(`Invalid PO file: ${detail}`);
     }
 
     // Preserve existing headers if parsed headers are empty or undefined

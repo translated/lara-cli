@@ -186,10 +186,8 @@ describe('XcodeXcstringsParser', () => {
       expect(result).toEqual({});
     });
 
-    it('should return empty object for invalid JSON', () => {
-      const result = parser.parse('not valid json {{{');
-
-      expect(result).toEqual({});
+    it('should throw on invalid JSON (so the file is left intact)', () => {
+      expect(() => parser.parse('not valid json {{{')).toThrow(/Invalid JSON in .xcstrings file/);
     });
 
     it('should handle Buffer input', () => {

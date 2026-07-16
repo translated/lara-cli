@@ -2,6 +2,7 @@ import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { VueParserOptionsType } from './parser.types.js';
 import { deepMerge, markNumericKeyObjects, restoreNumericKeys } from '#utils/parser.js';
+import { getErrorMessage } from '#utils/error.js';
 
 /**
  * Vue Single File Component parser that extracts and manages i18n blocks.
@@ -33,13 +34,7 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       return {};
     }
 
-    let messagesObj: Record<string, unknown>;
-    try {
-      messagesObj = JSON.parse(i18nContent);
-    } catch (error) {
-      console.error('Failed to parse i18n JSON content in Vue file', error);
-      return {};
-    }
+    const messagesObj = VueParser.parseI18nJson(i18nContent);
 
     const marked = markNumericKeyObjects(messagesObj);
     const flattened = flat(marked, { delimiter: this.delimiter }) as Record<string, unknown>;
@@ -69,17 +64,9 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     }
     const strContent = originalContent.toString();
     const i18nContent = VueParser.extractI18nBlock(strContent);
-    let messagesObj: Record<string, unknown> = {};
-
-    if (i18nContent) {
-      try {
-        messagesObj = JSON.parse(i18nContent);
-      } catch (error) {
-        console.error('Failed to parse i18n JSON content in Vue file', error);
-        // Fall back to an empty messages object to mirror parse() behavior
-        messagesObj = {};
-      }
-    }
+    let messagesObj: Record<string, unknown> = i18nContent
+      ? VueParser.parseI18nJson(i18nContent)
+      : {};
 
     // If options.locale is set, prefix keys back
     let dataToMerge = data;
@@ -128,6 +115,21 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
    */
   static hasI18nTag(content: string): boolean {
     return VueParser.extractI18nBlock(content) !== null;
+  }
+
+  /**
+   * Parses the JSON of an <i18n> block, throwing on malformed content. Never
+   * return `{}` on a parse error: an empty result would make serialize() rewrite
+   * the block as `{}`, destroying the user's translations. Throwing lets the
+   * engine skip the file and leave it intact.
+   */
+  private static parseI18nJson(i18nContent: string): Record<string, unknown> {
+    try {
+      return JSON.parse(i18nContent);
+    } catch (error) {
+      const detail = getErrorMessage(error);
+      throw new Error(`Invalid JSON in Vue <i18n> block: ${detail}`);
+    }
   }
 
   /**

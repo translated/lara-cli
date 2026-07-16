@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { Parser } from '../interface/parser.js';
 import type { XcodeStringsdictParserOptionsType } from './parser.types.js';
-import { PLURAL_FORMS, escapeXml } from '../utils/parser.js';
+import { PLURAL_FORMS, escapeXml, rootKey, weaveOrphans } from '../utils/parser.js';
 
 const METADATA_KEYS = new Set([
   'NSStringLocalizedFormatKey',
@@ -239,25 +239,47 @@ export class XcodeStringsdictParser implements Parser<
 
     const strContent = originalContent.toString();
     const baseContent = strContent.trim().length === 0 ? this.getFallback() : strContent;
+    const targetStr = options.targetContent?.toString() ?? '';
 
-    return this.rebuildPlist(baseContent, data);
+    return this.rebuildPlist(baseContent, data, targetStr);
   }
 
   /**
    * Rebuilds the plist XML, updating only the translatable plural form values.
+   *
+   * `targetContent` (when provided) is the existing target file, used to preserve
+   * "orphan" entries that live only in the target and not the source. Orphans are
+   * rendered from their real target structure at their original position.
    */
-  private rebuildPlist(originalContent: string, data: Record<string, unknown>): string {
+  private rebuildPlist(
+    originalContent: string,
+    data: Record<string, unknown>,
+    targetContent = ''
+  ): string {
     const dataMap = new Map(Object.entries(data));
 
     // Precompute the set of root entry keys present in data for O(1) lookup
     const dataEntryKeys = new Set<string>();
     for (const key of dataMap.keys()) {
-      const slashIndex = key.indexOf('/');
-      dataEntryKeys.add(slashIndex >= 0 ? key.substring(0, slashIndex) : key);
+      dataEntryKeys.add(rootKey(key));
     }
 
     const rootEntries = this.parseRootEntries(originalContent);
     if (!rootEntries) return originalContent;
+    const baseEntryKeys = new Set(rootEntries.map(([k]) => k));
+
+    // Weave in "orphan" entries: present in the target file but absent from the
+    // source, kept by the engine (so present in `data`). They are rendered from
+    // their real target structure at their original position. Target entries
+    // absent from `data` are source-deleted keys and are excluded by `dataEntryKeys`.
+    const targetEntries = targetContent.trim() ? (this.parseRootEntries(targetContent) ?? []) : [];
+    const entries = weaveOrphans(
+      rootEntries,
+      targetEntries,
+      ([entryKey]) => entryKey,
+      baseEntryKeys,
+      dataEntryKeys
+    );
 
     const indent = '    ';
     const lines: string[] = [];
@@ -268,68 +290,84 @@ export class XcodeStringsdictParser implements Parser<
     lines.push('<plist version="1.0">');
     lines.push('<dict>');
 
-    for (const [entryKey, entryValue] of rootEntries) {
-      if (!dataEntryKeys.has(entryKey)) continue;
-
-      lines.push(`${indent}<key>${escapeXml(entryKey)}</key>`);
-
-      const entryDictArray = this.getDictArray(entryValue);
-      if (!entryDictArray) continue;
-
-      const entryDictEntries = this.extractDictEntries(entryDictArray);
-
-      lines.push(`${indent}<dict>`);
-
-      // Extract plural vars once and cache for reuse
-      const pluralVars = this.extractPluralVars(entryDictEntries);
-      const isSingleVariable = pluralVars.length === 1;
-      const pluralVarEntriesMap = new Map(pluralVars);
-
-      for (const [key, value] of entryDictEntries) {
-        if (key === 'NSStringLocalizedFormatKey') {
-          lines.push(`${indent}${indent}<key>NSStringLocalizedFormatKey</key>`);
-          lines.push(`${indent}${indent}<string>${escapeXml(this.getStringValue(value))}</string>`);
-          continue;
-        }
-
-        const cachedVarEntries = pluralVarEntriesMap.get(key);
-        if (!cachedVarEntries) continue;
-
-        lines.push(`${indent}${indent}<key>${escapeXml(key)}</key>`);
-        lines.push(`${indent}${indent}<dict>`);
-
-        for (const [formKey, formValue] of cachedVarEntries) {
-          lines.push(`${indent}${indent}${indent}<key>${escapeXml(formKey)}</key>`);
-
-          if (METADATA_KEYS.has(formKey)) {
-            lines.push(
-              `${indent}${indent}${indent}<string>${escapeXml(this.getStringValue(formValue))}</string>`
-            );
-          } else if (PLURAL_FORMS.has(formKey)) {
-            const flatKey = isSingleVariable
-              ? `${entryKey}/${formKey}`
-              : `${entryKey}/${key}/${formKey}`;
-            const translatedValue = dataMap.has(flatKey)
-              ? String(dataMap.get(flatKey) ?? '')
-              : this.getStringValue(formValue);
-            lines.push(`${indent}${indent}${indent}<string>${escapeXml(translatedValue)}</string>`);
-          } else {
-            lines.push(
-              `${indent}${indent}${indent}<string>${escapeXml(this.getStringValue(formValue))}</string>`
-            );
-          }
-        }
-
-        lines.push(`${indent}${indent}</dict>`);
+    // Source-deleted entries (in the source file but not in `data`) are skipped.
+    for (const [entryKey, entryValue] of entries) {
+      if (dataEntryKeys.has(entryKey)) {
+        this.renderEntry(lines, indent, entryKey, entryValue, dataMap);
       }
-
-      lines.push(`${indent}</dict>`);
     }
 
     lines.push('</dict>');
     lines.push('</plist>');
 
     return lines.join('\n') + '\n';
+  }
+
+  /**
+   * Renders a single root entry (its plural dict) into the output lines, taking
+   * translated plural-form values from `dataMap` and everything else (structure,
+   * variable names, format keys) verbatim from the entry's parsed value.
+   */
+  private renderEntry(
+    lines: string[],
+    indent: string,
+    entryKey: string,
+    entryValue: unknown,
+    dataMap: Map<string, unknown>
+  ): void {
+    lines.push(`${indent}<key>${escapeXml(entryKey)}</key>`);
+
+    const entryDictArray = this.getDictArray(entryValue);
+    if (!entryDictArray) return;
+
+    const entryDictEntries = this.extractDictEntries(entryDictArray);
+
+    lines.push(`${indent}<dict>`);
+
+    // Extract plural vars once and cache for reuse
+    const pluralVars = this.extractPluralVars(entryDictEntries);
+    const isSingleVariable = pluralVars.length === 1;
+    const pluralVarEntriesMap = new Map(pluralVars);
+
+    for (const [key, value] of entryDictEntries) {
+      if (key === 'NSStringLocalizedFormatKey') {
+        lines.push(`${indent}${indent}<key>NSStringLocalizedFormatKey</key>`);
+        lines.push(`${indent}${indent}<string>${escapeXml(this.getStringValue(value))}</string>`);
+        continue;
+      }
+
+      const cachedVarEntries = pluralVarEntriesMap.get(key);
+      if (!cachedVarEntries) continue;
+
+      lines.push(`${indent}${indent}<key>${escapeXml(key)}</key>`);
+      lines.push(`${indent}${indent}<dict>`);
+
+      for (const [formKey, formValue] of cachedVarEntries) {
+        lines.push(`${indent}${indent}${indent}<key>${escapeXml(formKey)}</key>`);
+
+        if (METADATA_KEYS.has(formKey)) {
+          lines.push(
+            `${indent}${indent}${indent}<string>${escapeXml(this.getStringValue(formValue))}</string>`
+          );
+        } else if (PLURAL_FORMS.has(formKey)) {
+          const flatKey = isSingleVariable
+            ? `${entryKey}/${formKey}`
+            : `${entryKey}/${key}/${formKey}`;
+          const translatedValue = dataMap.has(flatKey)
+            ? String(dataMap.get(flatKey) ?? '')
+            : this.getStringValue(formValue);
+          lines.push(`${indent}${indent}${indent}<string>${escapeXml(translatedValue)}</string>`);
+        } else {
+          lines.push(
+            `${indent}${indent}${indent}<string>${escapeXml(this.getStringValue(formValue))}</string>`
+          );
+        }
+      }
+
+      lines.push(`${indent}${indent}</dict>`);
+    }
+
+    lines.push(`${indent}</dict>`);
   }
 
   /**

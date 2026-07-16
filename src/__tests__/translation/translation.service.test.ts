@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
+import { LaraApiError } from '@translated/lara';
 
 const {
   translateMock,
@@ -63,7 +64,16 @@ vi.mock('@translated/lara', () => {
     };
   }
   class Credentials {}
-  return { Translator, Credentials };
+  class LaraApiError extends Error {
+    statusCode: number;
+    type: string;
+    constructor(statusCode: number, type: string, message: string) {
+      super(message);
+      this.statusCode = statusCode;
+      this.type = type;
+    }
+  }
+  return { Translator, Credentials, LaraApiError };
 });
 
 const { TranslationService } = await import('#modules/translation/translation.service.js');
@@ -147,23 +157,88 @@ describe('TranslationService.translateBatchWithFallback', () => {
     expect(translateMock).toHaveBeenCalledTimes(3);
   });
 
-  it('throws AggregateError carrying both errors when fallback also fails', async () => {
+  it('keeps the source text and marks the block when batch and per-item both fail', async () => {
     // Spy at the service level to skip the retry/backoff loop.
     const translateSpy = vi
       .spyOn(service, 'translate')
       .mockRejectedValueOnce(new Error('batch failure'))
       .mockRejectedValueOnce(new Error('per-item failure'));
 
-    const error = await service
-      .translateBatchWithFallback(blocks('a'), 'en', 'it', {} as any)
-      .catch((e: unknown) => e);
+    // One bad item must NOT abort: it returns the source text, flagged as failed.
+    const result = await service.translateBatchWithFallback(blocks('a'), 'en', 'it', {} as any);
 
-    expect(error).toBeInstanceOf(AggregateError);
-    const aggregate = error as AggregateError;
-    expect(aggregate.message).toContain('per-item fallback failed for: a');
-    expect(aggregate.errors).toHaveLength(2);
-    expect((aggregate.errors[0] as Error).message).toBe('batch failure');
-    expect((aggregate.errors[1] as Error).message).toBe('per-item failure');
+    expect(result).toHaveLength(1);
+    expect(result[0]?.text).toBe('a');
+    expect(result[0]?.translationFailed).toBe(true);
+
+    translateSpy.mockRestore();
+  });
+
+  it('keeps only the failing item as source and still translates the rest', async () => {
+    translateMock
+      .mockResolvedValueOnce(response('[it] only-a')) // batch returns 1 for 2 inputs -> fallback
+      .mockResolvedValueOnce(response('[it] a')) // per-item 'a' ok
+      .mockResolvedValueOnce({ translation: [] }); // per-item 'b' empty -> failed
+
+    const result = await service.translateBatchWithFallback(
+      blocks('a', 'b'),
+      'en',
+      'it',
+      {} as any
+    );
+
+    expect(result.map((r) => r.text)).toEqual(['[it] a', 'b']);
+    expect(result[0]?.translationFailed).toBeUndefined();
+    expect(result[1]?.translationFailed).toBe(true);
+  });
+
+  it('stops calling after consecutive per-item failures instead of grinding the whole batch', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Batch (1 call) + every per-item call reject.
+    const translateSpy = vi.spyOn(service, 'translate').mockRejectedValue(new Error('API down'));
+
+    const result = await service.translateBatchWithFallback(
+      blocks('a', 'b', 'c', 'd', 'e', 'f'),
+      'en',
+      'it',
+      {} as any
+    );
+
+    // All six kept as source and marked failed.
+    expect(result.map((r) => r.text)).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(result.every((r) => r.translationFailed)).toBe(true);
+    // 1 batch + 3 per-item attempts, then the circuit breaker stops calling.
+    expect(translateSpy).toHaveBeenCalledTimes(4);
+
+    translateSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('re-throws a fatal account error (quota/403) instead of keeping source', async () => {
+    const fatal = new LaraApiError(403, 'Forbidden', 'quota exceeded');
+    const translateSpy = vi.spyOn(service, 'translate').mockRejectedValue(fatal);
+
+    // Must NOT fall back to per-item / keep-source: the whole run should abort.
+    await expect(
+      service.translateBatchWithFallback(blocks('a', 'b'), 'en', 'it', {} as any)
+    ).rejects.toBe(fatal);
+
+    // Only the batch call is made; no per-item fallback.
+    expect(translateSpy).toHaveBeenCalledTimes(1);
+
+    translateSpy.mockRestore();
+  });
+
+  it('re-throws a quota error detected by message even when the status code is not 4xx-fatal', async () => {
+    // The plan-exhausted error arrives with a generic status code but a message
+    // that mentions "quota" — it must still abort, not fall back to keep-source.
+    const quota = new LaraApiError(400, 'BadRequest', 'You have exceeded your "quota"');
+    const translateSpy = vi.spyOn(service, 'translate').mockRejectedValue(quota);
+
+    await expect(
+      service.translateBatchWithFallback(blocks('a', 'b'), 'en', 'it', {} as any)
+    ).rejects.toBe(quota);
+    expect(translateSpy).toHaveBeenCalledTimes(1);
 
     translateSpy.mockRestore();
   });

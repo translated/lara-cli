@@ -1,10 +1,11 @@
 import picomatch, { Matcher } from 'picomatch';
 
-import { TranslationService } from './translation.service.js';
+import { TranslationService, isFatalApiError } from './translation.service.js';
 import { calculateChecksum, commitChecksum, ChecksumState } from '#utils/checksum.js';
 import { buildLocalePath, ensureDirectoryExists, readSafe } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
 import { normalizeEntities } from '#utils/entities.js';
+import { weaveOrphans } from '#utils/parser.js';
 import { resolveContentType } from '#utils/contentType.js';
 import { writeFile } from 'fs/promises';
 import { progressWithOra } from '#utils/progressWithOra.js';
@@ -140,6 +141,10 @@ export class TranslationEngine {
     // Read source content to use as structure template when target is empty
     const sourceContent = await readSafe(sourcePath, '');
 
+    // Items that could not be translated (source text kept). Reported to the user
+    // after every locale is written; the run then exits non-zero.
+    const failures: Array<{ locale: string; text: string }> = [];
+
     for (const targetLocale of this.targetLocales) {
       progressWithOra.setText(
         Messages.info.translatingFileProgress(inputPath, targetLocale, keysCount)
@@ -160,7 +165,11 @@ export class TranslationEngine {
       const target = this.parser.parse(targetContent, { targetLocale });
 
       const classified = this.classifyEntries(changelog, target);
-      const translations = await this.executeTasks(classified, targetLocale);
+      const { translations, failedTasks } = await this.executeTasks(classified, targetLocale);
+
+      for (const task of failedTasks) {
+        failures.push({ locale: targetLocale, text: task.text });
+      }
 
       const entries: Array<[string, unknown]> = [];
       for (const [key, slot] of classified.ordered) {
@@ -190,6 +199,10 @@ export class TranslationEngine {
           // use targetContent to preserve translations from previous iterations.
           // For separate files, use sourceContent to ensure output structure matches source.
           originalContent: sourcePath === targetPath ? targetContent : sourceContent,
+          // The existing target file, so merge-based parsers can graft back keys
+          // that live only in the target ("orphan" keys, absent from source) at
+          // their original position. Empty when the target does not exist yet.
+          targetContent: isTargetEmpty ? '' : targetContent,
         })
       );
       progressWithOra.tick(1);
@@ -200,6 +213,13 @@ export class TranslationEngine {
     // the source as changed and retries.
     if (hasChanges) {
       commitChecksum(sourcePath, changelog);
+    }
+
+    // Every file has been written (originals kept for failed items). Report the
+    // failures and fail the run so the exit code is non-zero, without discarding
+    // the work already done.
+    if (failures.length > 0) {
+      throw new Error(Messages.errors.itemsTranslationFailed(failures));
     }
   }
 
@@ -255,13 +275,25 @@ export class TranslationEngine {
       ordered.push([key, { kind: 'translate' }]);
     }
 
-    return { ordered, solo, batch };
+    // Preserve "orphan" keys: keys present in the target file but not in the
+    // source (so absent from the changelog). They are kept verbatim at their
+    // original target position, anchored to the nearest preceding shared key.
+    // Note: source-deleted keys DO appear in the changelog (state 'deleted'),
+    // so they are correctly excluded here and still get removed.
+    const targetEntries: Array<[string, OutputSlot]> = Object.keys(target).map((key) => [
+      key,
+      { kind: 'keep', value: target[key] },
+    ]);
+    const changelogKeys = new Set(Object.keys(changelog));
+    const woven = weaveOrphans(ordered, targetEntries, (entry) => entry[0], changelogKeys);
+
+    return { ordered: woven, solo, batch };
   }
 
   private async executeTasks(
     classified: ClassifiedEntries,
     targetLocale: string
-  ): Promise<Map<string, string>> {
+  ): Promise<{ translations: Map<string, string>; failedTasks: TranslateTask[] }> {
     const translations = new Map<string, string>();
     // Tasks whose first translation came back containing the U+FFFD
     // replacement character. Symptomatic of a UTF-8 streaming bug in
@@ -269,6 +301,11 @@ export class TranslationEngine {
     // multi-byte character straddles a TCP chunk boundary). Retried below
     // as solo calls, which produce tiny responses unlikely to span chunks.
     const corruptedTasks: TranslateTask[] = [];
+
+    // Tasks that could not be translated at all (API failed for that item). Their
+    // source text is kept and they are reported to the user, but they never abort
+    // the rest of the file.
+    const failedTasks: TranslateTask[] = [];
 
     const recordResult = (task: TranslateTask, translatedText: string): void => {
       const normalized = normalizeEntities(task.text, translatedText);
@@ -281,17 +318,27 @@ export class TranslationEngine {
 
     const soloPromises = classified.solo.map(async (task) => {
       const contentType = resolveContentType(task.text, this.defaultContentType);
-      const result = await this.translatorService.translate(
-        [{ text: task.text, translatable: true }],
-        this.sourceLocale,
-        targetLocale,
-        this.buildTranslateOptions(task.instruction, contentType)
-      );
-      const translated = result[0];
-      if (!translated) {
-        throw new Error(Messages.errors.emptyTranslationResult(task.text));
+      try {
+        const result = await this.translatorService.translate(
+          [{ text: task.text, translatable: true }],
+          this.sourceLocale,
+          targetLocale,
+          this.buildTranslateOptions(task.instruction, contentType)
+        );
+        const translated = result[0];
+        if (!translated) {
+          throw new Error(Messages.errors.emptyTranslationResult(task.text));
+        }
+        recordResult(task, translated.text);
+      } catch (error) {
+        // Account-level failures (auth/quota) abort the whole run with a clear message.
+        if (isFatalApiError(error)) {
+          throw error;
+        }
+        // Keep the source text for this item and report it later.
+        translations.set(task.key, task.text);
+        failedTasks.push(task);
       }
-      recordResult(task, translated.text);
     });
 
     const batchPromises: Promise<void>[] = [];
@@ -337,8 +384,11 @@ export class TranslationEngine {
             );
             chunk.forEach((task, idx) => {
               const translated = result[idx];
-              if (!translated) {
-                throw new Error(Messages.errors.emptyTranslationResult(task.text));
+              if (!translated || translated.translationFailed) {
+                // The item could not be translated: keep its source text and report it.
+                translations.set(task.key, task.text);
+                failedTasks.push(task);
+                return;
               }
               recordResult(task, translated.text);
             });
@@ -353,7 +403,7 @@ export class TranslationEngine {
       await this.retryCorruptedTasks(corruptedTasks, targetLocale, translations);
     }
 
-    return translations;
+    return { translations, failedTasks };
   }
 
   /**

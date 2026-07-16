@@ -463,21 +463,20 @@ export default messages;`
     expect(content).toEqual('const messages = {}');
   });
 
-  it('should handle invalid json syntax', async () => {
+  it('leaves the file untouched when the TS source has invalid syntax', async () => {
     // Spy on console.error
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await mkdir(path.join(testDir, 'src'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'src', 'i18n.ts'),
-      `const messages = {
+    const filePath = path.join(testDir, 'src', 'i18n.ts');
+    const original = `const messages = {
     en: {
       invalid element,
       goodbye: 'Goodbye'
     },
   };
-  export default messages;`
-    );
+  export default messages;`;
+    await writeFile(filePath, original);
 
     await executeCommand(initCommand, [
       '--non-interactive',
@@ -491,14 +490,11 @@ export default messages;`
 
     (ConfigProvider as any).instance = null;
 
-    // Translate
-    await executeCommand(translateCommand, []);
+    // Translate reports the error and exits non-zero (signals failure)...
+    await expect(executeCommand(translateCommand, [])).rejects.toThrow();
 
-    // Verify error and console output
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to parse messages object in TS file'),
-      expect.any(String)
-    );
+    // ...and must leave the malformed file exactly as it was, never wiping it.
+    expect(await readFile(filePath, 'utf-8')).toBe(original);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });

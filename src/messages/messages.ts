@@ -15,6 +15,10 @@ export const Messages = {
       `${context}: Authentication failed. Your API credentials are invalid or expired. Run 'lara-cli init --reset-credentials' to update them.`,
     serviceUnavailable: (context: string, statusCode: number) =>
       `${context}: Service unavailable (${statusCode}). Please try again later.`,
+    apiQuotaExceeded: (context: string, message: string) =>
+      `${context}: Your Lara plan has no translation characters left, or this API key is not allowed to translate. ` +
+      `Top up your plan or check your usage at https://laratranslate.com, then run 'lara-cli translate' again.` +
+      (message ? `\nDetails: ${message}` : ''),
     translationFailed: (context: string, message: string) =>
       `${context}: Translation failed: ${message || 'Unknown error'}`,
     translatingFile: (filePath: string, message: string) =>
@@ -28,6 +32,16 @@ export const Messages = {
     noSupportedFileTypes: 'No supported file types configured',
     emptyTranslationResult: (value: string) =>
       `Translation service returned empty result for: ${value}`,
+    itemsTranslationFailed: (items: Array<{ locale: string; text: string }>) => {
+      const MAX = 20;
+      const shown = items.slice(0, MAX).map((i) => `  • [${i.locale}] ${i.text}`);
+      const extra = items.length > MAX ? `\n  … and ${items.length - MAX} more` : '';
+      return (
+        `Kept the original text for ${items.length} item(s) that could not be translated:\n` +
+        shown.join('\n') +
+        extra
+      );
+    },
     translationRetryFailed: 'Translation failed for some keys. Please retry.',
     maxRetriesExceeded: 'Maximum retry attempts exceeded. Please try again later.',
     envVarsNotSet: 'LARA_ACCESS_KEY_ID and LARA_ACCESS_KEY_SECRET must be set',

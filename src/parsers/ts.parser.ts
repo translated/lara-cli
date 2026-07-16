@@ -2,6 +2,7 @@ import { flatten as flat, unflatten as unflat } from 'flat';
 import type { Parser } from '../interface/parser.js';
 import type { TsParserOptionsType } from './parser.types.js';
 import { deepMerge, markNumericKeyObjects, restoreNumericKeys } from '#utils/parser.js';
+import { getErrorMessage } from '#utils/error.js';
 import { parse } from '@babel/parser';
 import traverseModule from '@babel/traverse';
 import * as t from '@babel/types';
@@ -117,9 +118,11 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
 
       return messagesObject;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Failed to parse messages object in TS file', errorMessage);
-      return null;
+      // Surface the parse error instead of returning null: a null result would make
+      // parse() yield {} and serialize() overwrite the `messages` object with `{}`,
+      // destroying the user's translations. Throwing lets the engine skip the file.
+      const errorMessage = getErrorMessage(error);
+      throw new Error(`Failed to parse TypeScript i18n file: ${errorMessage}`);
     }
   }
 

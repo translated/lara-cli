@@ -976,4 +976,32 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     // Non-included key should be preserved
     expect(contentAfter.strings.hello.localizations.it.stringUnit.value).toBe('[it] Hello World');
   });
+
+  it('leaves the file untouched when the JSON is invalid', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const filePath = path.join(testDir, 'Localizable.xcstrings');
+    const original = '{ "sourceLanguage": "en", "strings": { invalid json';
+    await writeFile(filePath, original);
+
+    await executeCommand(initCommand, [
+      '--non-interactive',
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--paths',
+      'Localizable.xcstrings',
+    ]);
+
+    (ConfigProvider as any).instance = null;
+
+    // Reports the error and exits non-zero...
+    await expect(executeCommand(translateCommand, [])).rejects.toThrow();
+
+    // ...and leaves the malformed file exactly as it was.
+    expect(await readFile(filePath, 'utf-8')).toBe(original);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
 });
