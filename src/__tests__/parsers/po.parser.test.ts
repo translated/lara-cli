@@ -213,6 +213,16 @@ describe('PoParser', () => {
       expect(result).toEqual({});
     });
 
+    it('should throw on a malformed PO file (so the file is left intact)', () => {
+      const content = `
+        {invalid json}
+
+        msgstr "Hello"
+      `;
+
+      expect(() => parser.parse(content)).toThrow(/Invalid PO file/);
+    });
+
     it('should preserve headers and charset', () => {
       const content = `
         msgid ""

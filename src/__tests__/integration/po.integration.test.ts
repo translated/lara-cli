@@ -372,20 +372,19 @@ msgstr "Cancel"
     expect(newContent).toContain('msgstr ""');
   });
 
-  it('should handle invalid PO file', async () => {
+  it('leaves the file untouched when the PO file is invalid', async () => {
     // Spy on console.error
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    // Set up PO repository structure
+    // Set up PO repository structure with a malformed file
     await mkdir(path.join(testDir, 'locales', 'en'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'locales', 'en', 'messages.po'),
-      `
+    const filePath = path.join(testDir, 'locales', 'en', 'messages.po');
+    const original = `
       {invalid json}
 
       msgstr "Hello"
-    `
-    );
+    `;
+    await writeFile(filePath, original);
 
     // Initialize
     await executeCommand(initCommand, [
@@ -400,14 +399,11 @@ msgstr "Cancel"
 
     (ConfigProvider as any).instance = null;
 
-    // Translate - expect it to complete gracefully despite invalid PO file
-    await executeCommand(translateCommand, []);
+    // Translate reports the error and exits non-zero (signals failure)...
+    await expect(executeCommand(translateCommand, [])).rejects.toThrow();
 
-    // Verify error is logged but translation completes gracefully
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to parse PO file content',
-      expect.any(Error)
-    );
+    // ...and must leave the malformed file exactly as it was.
+    expect(await readFile(filePath, 'utf-8')).toBe(original);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });

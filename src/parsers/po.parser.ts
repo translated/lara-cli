@@ -89,8 +89,11 @@ export class PoParser implements Parser<Record<string, unknown>, PoParserOptions
     try {
       parsed = gettextParser.po.parse(content);
     } catch (error) {
-      console.error('Failed to parse PO file content', error);
-      return {};
+      // Surface the error instead of returning empty: serialize() rebuilds the PO
+      // purely from `data`, so an empty result would overwrite the file with a
+      // headers-only stub. Throwing lets the engine skip the file and leave it intact.
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid PO file: ${detail}`);
     }
 
     // Preserve existing headers if parsed headers are empty or undefined

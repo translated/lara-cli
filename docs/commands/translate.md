@@ -129,7 +129,7 @@ Keys that exist in a target locale file but not in the source (for example, tran
 
 ### Malformed Files
 
-If a file cannot be parsed (e.g. invalid JSON in a Vue `<i18n>` block, a `.ts`/`.xcstrings` file with a syntax error), the CLI reports the error and **leaves that file completely unchanged**, then continues with the other files and exits non-zero. It never overwrites or empties a file it could not parse.
+If a file cannot be parsed (e.g. invalid JSON in a Vue `<i18n>` block, a `.ts`/`.xcstrings` file with a syntax error, or a malformed `.po`), the CLI reports the error and **leaves that file completely unchanged**, then continues with the other files and exits non-zero. It never overwrites or empties a file it could not parse.
 
 ### When to Use Force Mode
 
