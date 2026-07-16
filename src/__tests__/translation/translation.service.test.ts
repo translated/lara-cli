@@ -181,6 +181,28 @@ describe('TranslationService.translateBatchWithFallback', () => {
     expect(result[0]?.translationFailed).toBeUndefined();
     expect(result[1]?.translationFailed).toBe(true);
   });
+
+  it('stops calling after consecutive per-item failures instead of grinding the whole batch', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Batch (1 call) + every per-item call reject.
+    const translateSpy = vi.spyOn(service, 'translate').mockRejectedValue(new Error('API down'));
+
+    const result = await service.translateBatchWithFallback(
+      blocks('a', 'b', 'c', 'd', 'e', 'f'),
+      'en',
+      'it',
+      {} as any
+    );
+
+    // All six kept as source and marked failed.
+    expect(result.map((r) => r.text)).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(result.every((r) => r.translationFailed)).toBe(true);
+    // 1 batch + 3 per-item attempts, then the circuit breaker stops calling.
+    expect(translateSpy).toHaveBeenCalledTimes(4);
+
+    translateSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
 });
 
 describe('TranslationService memory & glossary management', () => {

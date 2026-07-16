@@ -13,6 +13,11 @@ import { applyLaraClientHeaders } from '#utils/laraHeaders.js';
 
 export type GlossaryTerm = { language: string; value: string };
 
+// Hard cap on every API request. Without it a hung connection freezes the CLI
+// forever (the SDK has no default timeout). A slow-but-healthy request finishes
+// well within this; a stalled one fails fast so retries/fallback can proceed.
+const REQUEST_TIMEOUT_MS = 30_000;
+
 // The Glossary interface is defined by the SDK but not re-exported from the
 // package root, so derive it from the typed client method instead.
 type Glossary = Awaited<ReturnType<Translator['glossaries']['create']>>;
@@ -39,7 +44,11 @@ export class TranslationService {
       throw new Error(Messages.errors.envVarsNotSet);
     }
 
-    this.client = new Translator(new Credentials(keyId, keySecret));
+    this.client = new Translator(new Credentials(keyId, keySecret), {
+      // Maps to the node client's hard request timeout (req.destroy), which is
+      // the client-side socket timeout that actually prevents a frozen CLI.
+      connectionTimeoutMs: REQUEST_TIMEOUT_MS,
+    });
     applyLaraClientHeaders(this.client);
   }
 
@@ -100,20 +109,34 @@ export class TranslationService {
       return [];
     }
 
+    let batchError: unknown;
     try {
       const result = await this.translate(textBlocks, sourceLocale, targetLocale, options);
       if (result.length === textBlocks.length && result.every((block) => block !== undefined)) {
         return result;
       }
-    } catch {
-      // fall through to per-item translation below
+    } catch (error) {
+      batchError = error;
     }
 
     // Per-item fallback. A single block that cannot be translated (e.g. a bare
     // URL the API returns empty for) must NOT abort the batch: keep its source
     // text and mark it so the caller can preserve the original and report it.
+    //
+    // But when the API is down / every request times out, translating each of
+    // the (up to batchSize) blocks one by one would take minutes and look like a
+    // hang. So stop calling after a short run of consecutive failures and keep
+    // the source text for the rest.
+    const MAX_CONSECUTIVE_FAILURES = 3;
+    let consecutiveFailures = 0;
+    let firstItemError: unknown;
     const results: TextBlock[] = [];
+
     for (const block of textBlocks) {
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        results.push({ ...block, translationFailed: true });
+        continue;
+      }
       try {
         const single = await this.translate([block], sourceLocale, targetLocale, options);
         const translated = single[0];
@@ -121,10 +144,21 @@ export class TranslationService {
           throw new Error(Messages.errors.emptyTranslationResult(block.text));
         }
         results.push(translated);
-      } catch {
+        consecutiveFailures = 0;
+      } catch (error) {
+        firstItemError ??= error;
         results.push({ ...block, translationFailed: true });
+        consecutiveFailures++;
       }
     }
+
+    // Surface the real API error once so the failures above are not silent.
+    if (results.some((block) => block.translationFailed)) {
+      const reason = firstItemError ?? batchError;
+      const detail = reason instanceof Error ? reason.message : String(reason);
+      console.error(`Translation API error (affected items kept as source): ${detail}`);
+    }
+
     return results;
   }
 
