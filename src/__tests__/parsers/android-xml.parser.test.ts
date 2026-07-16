@@ -1133,5 +1133,31 @@ describe('AndroidXmlParser', () => {
       expect(result).toContain('[it] One');
       expect(result).not.toContain('gone');
     });
+
+    it('preserves a target-only non-translatable resource (absent from data by design)', () => {
+      const originalContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="one">One</string>
+</resources>`;
+      const targetContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="one">[it] One</string>
+    <string name="fixed" translatable="false">DO_NOT_TRANSLATE</string>
+</resources>`;
+      // `fixed` is translatable="false", so parse() skips it and it never appears
+      // in data — but as a target-only orphan it must still be kept.
+      const data = { one: '[it] One' };
+
+      const result = parser
+        .serialize(data, {
+          originalContent,
+          targetContent,
+        } as AndroidXmlParserOptionsType)
+        .toString();
+
+      expect(result).toContain(
+        '<string name="fixed" translatable="false">DO_NOT_TRANSLATE</string>'
+      );
+    });
   });
 });

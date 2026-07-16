@@ -142,10 +142,8 @@ export class TranslationEngine {
     const sourceContent = await readSafe(sourcePath, '');
 
     // Items that could not be translated (source text kept). Reported to the user
-    // after every locale is written; their keys are excluded from the lock so a
-    // later run retries them.
+    // after every locale is written; the run then exits non-zero.
     const failures: Array<{ locale: string; text: string }> = [];
-    const failedKeys = new Set<string>();
 
     for (const targetLocale of this.targetLocales) {
       progressWithOra.setText(
@@ -171,7 +169,6 @@ export class TranslationEngine {
 
       for (const task of failedTasks) {
         failures.push({ locale: targetLocale, text: task.text });
-        failedKeys.add(task.key);
       }
 
       const entries: Array<[string, unknown]> = [];
@@ -213,14 +210,9 @@ export class TranslationEngine {
 
     // Persist source hashes only after every target locale has been written.
     // If any target above throws, we skip this step so the next run still sees
-    // the source as changed and retries. Keys that failed to translate are
-    // excluded so a later run retries just those.
+    // the source as changed and retries.
     if (hasChanges) {
-      const committable =
-        failedKeys.size === 0
-          ? changelog
-          : Object.fromEntries(Object.entries(changelog).filter(([key]) => !failedKeys.has(key)));
-      commitChecksum(sourcePath, committable);
+      commitChecksum(sourcePath, changelog);
     }
 
     // Every file has been written (originals kept for failed items). Report the

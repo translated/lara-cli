@@ -446,8 +446,10 @@ export class AndroidXmlParser implements Parser<
 
     // Graft "orphan" resources: present in the target file but absent from the
     // source. Insert each at its original target position, anchored to the nearest
-    // preceding source resource so it keeps its original neighbour. A target
-    // resource absent from `data` is a source-deleted key and must NOT be grafted.
+    // preceding source resource so it keeps its original neighbour. A translatable
+    // target resource absent from `data` is a source-deleted key and must NOT be
+    // grafted; a non-translatable one (translatable="false") is a legitimate orphan
+    // that parse() skips, so it never appears in `data` and must still be kept.
     const targetStr = options.targetContent?.toString() ?? '';
     if (targetStr.trim()) {
       let targetParsed: unknown;
@@ -458,15 +460,17 @@ export class AndroidXmlParser implements Parser<
       }
       if (this.isAndroidXmlParsed(targetParsed) && targetParsed.resources) {
         const sourceNames = new Set(resourceEntries.map(nameOf));
-        const dataNames = new Set(Object.keys(data).map(rootKey));
         const targetEntries = buildEntries(targetParsed.resources, this.buildOrderMap(targetStr));
-        resourceEntries = weaveOrphans(
-          resourceEntries,
-          targetEntries,
-          nameOf,
-          sourceNames,
-          dataNames
-        );
+        const keep = new Set(Object.keys(data).map(rootKey));
+        for (const entry of targetEntries) {
+          if (
+            (entry.type === 'string' || entry.type === 'string-array') &&
+            entry.resource['@_translatable'] === 'false'
+          ) {
+            keep.add(nameOf(entry));
+          }
+        }
+        resourceEntries = weaveOrphans(resourceEntries, targetEntries, nameOf, sourceNames, keep);
       }
     }
 
