@@ -147,25 +147,39 @@ describe('TranslationService.translateBatchWithFallback', () => {
     expect(translateMock).toHaveBeenCalledTimes(3);
   });
 
-  it('throws AggregateError carrying both errors when fallback also fails', async () => {
+  it('keeps the source text and marks the block when batch and per-item both fail', async () => {
     // Spy at the service level to skip the retry/backoff loop.
     const translateSpy = vi
       .spyOn(service, 'translate')
       .mockRejectedValueOnce(new Error('batch failure'))
       .mockRejectedValueOnce(new Error('per-item failure'));
 
-    const error = await service
-      .translateBatchWithFallback(blocks('a'), 'en', 'it', {} as any)
-      .catch((e: unknown) => e);
+    // One bad item must NOT abort: it returns the source text, flagged as failed.
+    const result = await service.translateBatchWithFallback(blocks('a'), 'en', 'it', {} as any);
 
-    expect(error).toBeInstanceOf(AggregateError);
-    const aggregate = error as AggregateError;
-    expect(aggregate.message).toContain('per-item fallback failed for: a');
-    expect(aggregate.errors).toHaveLength(2);
-    expect((aggregate.errors[0] as Error).message).toBe('batch failure');
-    expect((aggregate.errors[1] as Error).message).toBe('per-item failure');
+    expect(result).toHaveLength(1);
+    expect(result[0]?.text).toBe('a');
+    expect(result[0]?.translationFailed).toBe(true);
 
     translateSpy.mockRestore();
+  });
+
+  it('keeps only the failing item as source and still translates the rest', async () => {
+    translateMock
+      .mockResolvedValueOnce(response('[it] only-a')) // batch returns 1 for 2 inputs -> fallback
+      .mockResolvedValueOnce(response('[it] a')) // per-item 'a' ok
+      .mockResolvedValueOnce({ translation: [] }); // per-item 'b' empty -> failed
+
+    const result = await service.translateBatchWithFallback(
+      blocks('a', 'b'),
+      'en',
+      'it',
+      {} as any
+    );
+
+    expect(result.map((r) => r.text)).toEqual(['[it] a', 'b']);
+    expect(result[0]?.translationFailed).toBeUndefined();
+    expect(result[1]?.translationFailed).toBe(true);
   });
 });
 

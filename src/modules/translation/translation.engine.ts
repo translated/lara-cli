@@ -141,6 +141,12 @@ export class TranslationEngine {
     // Read source content to use as structure template when target is empty
     const sourceContent = await readSafe(sourcePath, '');
 
+    // Items that could not be translated (source text kept). Reported to the user
+    // after every locale is written; their keys are excluded from the lock so a
+    // later run retries them.
+    const failures: Array<{ locale: string; text: string }> = [];
+    const failedKeys = new Set<string>();
+
     for (const targetLocale of this.targetLocales) {
       progressWithOra.setText(
         Messages.info.translatingFileProgress(inputPath, targetLocale, keysCount)
@@ -161,7 +167,12 @@ export class TranslationEngine {
       const target = this.parser.parse(targetContent, { targetLocale });
 
       const classified = this.classifyEntries(changelog, target);
-      const translations = await this.executeTasks(classified, targetLocale);
+      const { translations, failedTasks } = await this.executeTasks(classified, targetLocale);
+
+      for (const task of failedTasks) {
+        failures.push({ locale: targetLocale, text: task.text });
+        failedKeys.add(task.key);
+      }
 
       const entries: Array<[string, unknown]> = [];
       for (const [key, slot] of classified.ordered) {
@@ -202,9 +213,21 @@ export class TranslationEngine {
 
     // Persist source hashes only after every target locale has been written.
     // If any target above throws, we skip this step so the next run still sees
-    // the source as changed and retries.
+    // the source as changed and retries. Keys that failed to translate are
+    // excluded so a later run retries just those.
     if (hasChanges) {
-      commitChecksum(sourcePath, changelog);
+      const committable =
+        failedKeys.size === 0
+          ? changelog
+          : Object.fromEntries(Object.entries(changelog).filter(([key]) => !failedKeys.has(key)));
+      commitChecksum(sourcePath, committable);
+    }
+
+    // Every file has been written (originals kept for failed items). Report the
+    // failures and fail the run so the exit code is non-zero, without discarding
+    // the work already done.
+    if (failures.length > 0) {
+      throw new Error(Messages.errors.itemsTranslationFailed(failures));
     }
   }
 
@@ -278,7 +301,7 @@ export class TranslationEngine {
   private async executeTasks(
     classified: ClassifiedEntries,
     targetLocale: string
-  ): Promise<Map<string, string>> {
+  ): Promise<{ translations: Map<string, string>; failedTasks: TranslateTask[] }> {
     const translations = new Map<string, string>();
     // Tasks whose first translation came back containing the U+FFFD
     // replacement character. Symptomatic of a UTF-8 streaming bug in
@@ -286,6 +309,11 @@ export class TranslationEngine {
     // multi-byte character straddles a TCP chunk boundary). Retried below
     // as solo calls, which produce tiny responses unlikely to span chunks.
     const corruptedTasks: TranslateTask[] = [];
+
+    // Tasks that could not be translated at all (API failed for that item). Their
+    // source text is kept and they are reported to the user, but they never abort
+    // the rest of the file.
+    const failedTasks: TranslateTask[] = [];
 
     const recordResult = (task: TranslateTask, translatedText: string): void => {
       const normalized = normalizeEntities(task.text, translatedText);
@@ -298,17 +326,23 @@ export class TranslationEngine {
 
     const soloPromises = classified.solo.map(async (task) => {
       const contentType = resolveContentType(task.text, this.defaultContentType);
-      const result = await this.translatorService.translate(
-        [{ text: task.text, translatable: true }],
-        this.sourceLocale,
-        targetLocale,
-        this.buildTranslateOptions(task.instruction, contentType)
-      );
-      const translated = result[0];
-      if (!translated) {
-        throw new Error(Messages.errors.emptyTranslationResult(task.text));
+      try {
+        const result = await this.translatorService.translate(
+          [{ text: task.text, translatable: true }],
+          this.sourceLocale,
+          targetLocale,
+          this.buildTranslateOptions(task.instruction, contentType)
+        );
+        const translated = result[0];
+        if (!translated) {
+          throw new Error(Messages.errors.emptyTranslationResult(task.text));
+        }
+        recordResult(task, translated.text);
+      } catch {
+        // Keep the source text for this item and report it later.
+        translations.set(task.key, task.text);
+        failedTasks.push(task);
       }
-      recordResult(task, translated.text);
     });
 
     const batchPromises: Promise<void>[] = [];
@@ -354,8 +388,11 @@ export class TranslationEngine {
             );
             chunk.forEach((task, idx) => {
               const translated = result[idx];
-              if (!translated) {
-                throw new Error(Messages.errors.emptyTranslationResult(task.text));
+              if (!translated || translated.translationFailed) {
+                // The item could not be translated: keep its source text and report it.
+                translations.set(task.key, task.text);
+                failedTasks.push(task);
+                return;
               }
               recordResult(task, translated.text);
             });
@@ -370,7 +407,7 @@ export class TranslationEngine {
       await this.retryCorruptedTasks(corruptedTasks, targetLocale, translations);
     }
 
-    return translations;
+    return { translations, failedTasks };
   }
 
   /**

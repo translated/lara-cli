@@ -20,6 +20,10 @@ type Glossary = Awaited<ReturnType<Translator['glossaries']['create']>>;
 export type TextBlock = {
   text: string;
   translatable: boolean;
+  // Set by translateBatchWithFallback when a block could not be translated (batch
+  // and per-item both failed). The block keeps its source text; the caller keeps
+  // the original value and reports it instead of aborting the whole file.
+  translationFailed?: boolean;
 };
 
 export class TranslationService {
@@ -96,19 +100,18 @@ export class TranslationService {
       return [];
     }
 
-    let batchError: unknown;
     try {
       const result = await this.translate(textBlocks, sourceLocale, targetLocale, options);
       if (result.length === textBlocks.length && result.every((block) => block !== undefined)) {
         return result;
       }
-      batchError = new Error(
-        `Batch returned ${result.length} translations for ${textBlocks.length} inputs`
-      );
-    } catch (error) {
-      batchError = error;
+    } catch {
+      // fall through to per-item translation below
     }
 
+    // Per-item fallback. A single block that cannot be translated (e.g. a bare
+    // URL the API returns empty for) must NOT abort the batch: keep its source
+    // text and mark it so the caller can preserve the original and report it.
     const results: TextBlock[] = [];
     for (const block of textBlocks) {
       try {
@@ -118,11 +121,8 @@ export class TranslationService {
           throw new Error(Messages.errors.emptyTranslationResult(block.text));
         }
         results.push(translated);
-      } catch (fallbackError) {
-        throw new AggregateError(
-          [batchError, fallbackError],
-          `Batch translation failed and per-item fallback failed for: ${block.text}`
-        );
+      } catch {
+        results.push({ ...block, translationFailed: true });
       }
     }
     return results;

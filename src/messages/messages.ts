@@ -28,6 +28,16 @@ export const Messages = {
     noSupportedFileTypes: 'No supported file types configured',
     emptyTranslationResult: (value: string) =>
       `Translation service returned empty result for: ${value}`,
+    itemsTranslationFailed: (items: Array<{ locale: string; text: string }>) => {
+      const MAX = 20;
+      const shown = items.slice(0, MAX).map((i) => `  • [${i.locale}] ${i.text}`);
+      const extra = items.length > MAX ? `\n  … and ${items.length - MAX} more` : '';
+      return (
+        `Kept the original text for ${items.length} item(s) that could not be translated:\n` +
+        shown.join('\n') +
+        extra
+      );
+    },
     translationRetryFailed: 'Translation failed for some keys. Please retry.',
     maxRetriesExceeded: 'Maximum retry attempts exceeded. Please try again later.',
     envVarsNotSet: 'LARA_ACCESS_KEY_ID and LARA_ACCESS_KEY_SECRET must be set',

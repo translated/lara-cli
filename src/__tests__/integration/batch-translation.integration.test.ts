@@ -312,4 +312,39 @@ describe('Batch translation', () => {
       htmlB: '[it] Be <b>bold</b>',
     });
   });
+
+  // A single item the API cannot translate must NOT abort the whole file: its
+  // source text is kept, the rest is written, the item is reported, and the run
+  // exits non-zero.
+  it('keeps the source text for an untranslatable item and reports it', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await writeJsonSource({ good: 'hello', bad: 'https://wordpress.org/' });
+    await initJson();
+
+    // Simulate the API failing on the URL: batch+per-item exhausted, source kept.
+    mockTranslateBatchWithFallback.mockImplementationOnce(async (blocks: any[]) =>
+      blocks.map((b) =>
+        b.text === 'https://wordpress.org/'
+          ? { text: b.text, translatable: true, translationFailed: true }
+          : { text: `[it] ${b.text}`, translatable: true }
+      )
+    );
+
+    // Reports the failure and exits non-zero...
+    await expect(executeCommand(translateCommand, [])).rejects.toThrow();
+
+    // ...but the file is written: good key translated, bad key kept as source.
+    const itContent = JSON.parse(
+      await readFile(path.join(testDir, 'i18n', 'locales', 'it.json'), 'utf-8')
+    );
+    expect(itContent.good).toBe('[it] hello');
+    expect(itContent.bad).toBe('https://wordpress.org/');
+
+    // The failing item is named in the reported error.
+    const logged = consoleErrorSpy.mock.calls.flat().join('\n');
+    expect(logged).toContain('https://wordpress.org/');
+
+    consoleErrorSpy.mockRestore();
+  });
 });
