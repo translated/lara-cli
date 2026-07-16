@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { VueParser } from '../../parsers/vue.parser.js';
 import type { VueParserOptionsType } from '../../parsers/parser.types.js';
 
@@ -152,17 +152,10 @@ describe('VueParser', () => {
       expect(result).toEqual({});
     });
 
-    it('should return empty object for invalid JSON in i18n block', () => {
+    it('should throw on invalid JSON in i18n block (so the file is left intact)', () => {
       const content = '<template></template>\n<i18n>\n{invalid json}\n</i18n>';
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      const result = parser.parse(content);
-
-      expect(result).toEqual({});
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(() => parser.parse(content)).toThrow(/Invalid JSON in Vue <i18n> block/);
     });
 
     it('should handle special characters in keys', () => {

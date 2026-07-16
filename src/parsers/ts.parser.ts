@@ -117,9 +117,11 @@ export class TsParser implements Parser<Record<string, unknown>, TsParserOptions
 
       return messagesObject;
     } catch (error) {
+      // Surface the parse error instead of returning null: a null result would make
+      // parse() yield {} and serialize() overwrite the `messages` object with `{}`,
+      // destroying the user's translations. Throwing lets the engine skip the file.
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Failed to parse messages object in TS file', errorMessage);
-      return null;
+      throw new Error(`Failed to parse TypeScript i18n file: ${errorMessage}`);
     }
   }
 

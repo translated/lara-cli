@@ -440,16 +440,15 @@ describe('Vue Repository Integration Tests', () => {
 `);
   });
 
-  it('should handle invalid json syntax in i18n block', async () => {
+  it('leaves the file untouched when the i18n block has invalid JSON', async () => {
     // Spy on console.error
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    // Set up Vue repository structure
+    // Set up Vue repository structure with a malformed <i18n> block
     await mkdir(path.join(testDir, 'src', 'components'), { recursive: true });
-    await writeFile(
-      path.join(testDir, 'src', 'components', 'HelloWorld.vue'),
-      '<i18n>{invalid json}</i18n>'
-    );
+    const filePath = path.join(testDir, 'src', 'components', 'HelloWorld.vue');
+    const original = '<i18n>{invalid json}</i18n>';
+    await writeFile(filePath, original);
 
     // Initialize
     await executeCommand(initCommand, [
@@ -464,14 +463,11 @@ describe('Vue Repository Integration Tests', () => {
 
     (ConfigProvider as any).instance = null;
 
-    // Translate
-    await executeCommand(translateCommand, []);
+    // Translate reports the error and exits non-zero (signals failure)...
+    await expect(executeCommand(translateCommand, [])).rejects.toThrow();
 
-    // Verify error is logged but translation completes gracefully
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to parse i18n JSON content in Vue file',
-      expect.any(Error)
-    );
+    // ...and must leave the malformed file exactly as it was, never wiping the block.
+    expect(await readFile(filePath, 'utf-8')).toBe(original);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });

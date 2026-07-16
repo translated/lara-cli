@@ -37,8 +37,11 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
     try {
       messagesObj = JSON.parse(i18nContent);
     } catch (error) {
-      console.error('Failed to parse i18n JSON content in Vue file', error);
-      return {};
+      // Surface the error instead of returning empty: an empty result would make
+      // serialize() overwrite the <i18n> block with `{}`, destroying the user's
+      // translations. Throwing lets the engine skip the file and leave it intact.
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid JSON in Vue <i18n> block: ${detail}`);
     }
 
     const marked = markNumericKeyObjects(messagesObj);
@@ -75,9 +78,9 @@ export class VueParser implements Parser<Record<string, unknown>, VueParserOptio
       try {
         messagesObj = JSON.parse(i18nContent);
       } catch (error) {
-        console.error('Failed to parse i18n JSON content in Vue file', error);
-        // Fall back to an empty messages object to mirror parse() behavior
-        messagesObj = {};
+        // Never rewrite a malformed <i18n> block: throwing leaves the file intact.
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`Invalid JSON in Vue <i18n> block: ${detail}`);
       }
     }
 

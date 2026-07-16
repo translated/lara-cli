@@ -107,8 +107,10 @@ export class XcodeXcstringsParser implements Parser<
     try {
       xcstrings = JSON.parse(strContent) as XcstringsFile;
     } catch (error) {
-      console.error('Failed to parse .xcstrings content', error);
-      return {};
+      // Surface the error instead of returning empty, so the engine skips the file
+      // and leaves it intact rather than silently reporting success on a broken file.
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid JSON in .xcstrings file: ${detail}`);
     }
 
     if (!xcstrings.strings || typeof xcstrings.strings !== 'object') {

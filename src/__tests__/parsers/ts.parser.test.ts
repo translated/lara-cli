@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { TsParser } from '../../parsers/ts.parser.js';
 import type { TsParserOptionsType } from '../../parsers/parser.types.js';
 import { NUMERIC_KEY_MARKER } from '#utils/parser.js';
@@ -168,16 +168,10 @@ describe('TsParser', () => {
       });
     });
 
-    it('should return empty object for invalid TypeScript', () => {
+    it('should throw on invalid TypeScript (so the file is left intact)', () => {
       const content = 'invalid typescript code {';
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      const result = parser.parse(content);
-
-      expect(result).toEqual({});
-
-      consoleSpy.mockRestore();
+      expect(() => parser.parse(content)).toThrow(/Failed to parse TypeScript i18n file/);
     });
 
     it('should filter by targetLocale when provided', () => {
