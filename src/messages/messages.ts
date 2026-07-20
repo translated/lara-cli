@@ -51,6 +51,7 @@ export const Messages = {
     targetRequiredForDirect: '--target is required when using --file or --text',
     forceNotAllowedWithDirect: '--force cannot be used with --file or --text',
     pathsNotAllowedWithDirect: '--paths cannot be used with --file or --text',
+    orphanKeysNotAllowedWithDirect: '--orphan-keys cannot be used with --file or --text',
     outputOnlyWithFile: '--output can only be used with --file',
     sourceEqualsTarget: '--source and --target cannot be the same locale',
     emptyText: '--text cannot be empty',

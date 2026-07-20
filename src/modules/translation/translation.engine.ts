@@ -13,6 +13,7 @@ import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
 import { ParserFactory } from '../../parsers/parser.factory.js';
+import { OrphanKeysMode } from '#modules/config/config.types.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -37,6 +38,8 @@ export type TranslationEngineOptions = {
   noTrace: boolean;
 
   batchSize: number;
+
+  orphanKeys: OrphanKeysMode;
 };
 
 type OutputSlot = { kind: 'omit' } | { kind: 'keep'; value: unknown } | { kind: 'translate' };
@@ -81,6 +84,8 @@ export class TranslationEngine {
 
   private readonly batchSize: number;
 
+  private readonly orphanKeys: OrphanKeysMode;
+
   private readonly translatorService: TranslationService;
 
   // Parser instance used to parse and serialize translation files.
@@ -122,6 +127,8 @@ export class TranslationEngine {
     this.noTrace = options.noTrace;
 
     this.batchSize = options.batchSize;
+
+    this.orphanKeys = options.orphanKeys;
 
     this.translatorService = TranslationService.getInstance();
 
@@ -280,6 +287,16 @@ export class TranslationEngine {
     // original target position, anchored to the nearest preceding shared key.
     // Note: source-deleted keys DO appear in the changelog (state 'deleted'),
     // so they are correctly excluded here and still get removed.
+    //
+    // Stopping here is the whole of `orphanKeys: delete`: the merge-based
+    // parsers filter their own graft on the keys we emit, so they follow suit.
+    // Android's `translatable="false"` resources survive regardless —
+    // android-xml.parser.ts keeps them unconditionally because parse() skips
+    // them, making them non-translatable entries rather than orphans.
+    if (this.orphanKeys === 'delete') {
+      return { ordered, solo, batch };
+    }
+
     const targetEntries: Array<[string, OutputSlot]> = Object.keys(target).map((key) => [
       key,
       { kind: 'keep', value: target[key] },

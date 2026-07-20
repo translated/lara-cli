@@ -12,6 +12,14 @@ import { getFileType, isRelative } from '#utils/path.js';
 
 export const DEFAULT_BATCH_SIZE = 50;
 
+/**
+ * How to handle "orphan" keys: keys present in a target locale file but absent
+ * from the source. Kept by default, so translators can add target-only entries
+ * without them being wiped on the next run.
+ */
+export const ORPHAN_KEYS_MODES = ['keep', 'delete'] as const;
+export const DEFAULT_ORPHAN_KEYS = 'keep';
+
 const LOCALE_FILENAME_PATTERN = new RegExp(
   `[^/]*\\[locale\\][^/]*\\.(${SEARCHABLE_EXTENSIONS.join('|')})$`
 );
@@ -88,8 +96,11 @@ const Config = z
     translation: z
       .object({
         batchSize: z.number().int().positive().default(DEFAULT_BATCH_SIZE),
+        orphanKeys: z.enum(ORPHAN_KEYS_MODES).default(DEFAULT_ORPHAN_KEYS),
       })
-      .default({ batchSize: DEFAULT_BATCH_SIZE }),
+      // `{}` and not a literal repeating both values: each field already carries
+      // its own default, so this cannot fall out of sync with them.
+      .prefault({}),
 
     files: z.partialRecord(
       SupportedFileTypesEnum,
@@ -154,4 +165,6 @@ const Config = z
 
 type ConfigType = z.infer<typeof Config>;
 
-export { IncludeFilePath as FilePath, KeyPath, Config, type ConfigType };
+type OrphanKeysMode = (typeof ORPHAN_KEYS_MODES)[number];
+
+export { IncludeFilePath as FilePath, KeyPath, Config, type ConfigType, type OrphanKeysMode };
