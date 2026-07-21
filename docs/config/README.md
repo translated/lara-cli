@@ -22,6 +22,9 @@ memories:
 glossaries:
   - gls_xyz789
 noTrace: false
+translation:
+  batchSize: 50
+  orphanKeys: keep
 files:
   json:
     include:
@@ -39,7 +42,7 @@ Lara CLI supports multiple file formats. See [Supported Formats](./formats.md) f
 
 The configuration is divided into several sections:
 
-- **[Configuration Schema](./structure.md)** - Schema structure and organization of the configuration file
+- **[Configuration Schema](./structure.md)** - Schema structure and organization of the configuration file, including [translation batching](./structure.md#translation-batching) and [orphan key handling](./structure.md#orphan-keys)
 - **[Supported Formats](./formats.md)** - List of supported file formats
 - **[Locales](./locales.md)** - Source and target language configuration
 - **[Files](./files.md)** - File paths and exclusion patterns

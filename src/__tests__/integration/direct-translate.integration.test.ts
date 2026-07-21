@@ -181,6 +181,23 @@ describe('Direct Translation Integration Tests', () => {
         ])
       ).rejects.toThrow();
     });
+
+    it('should error when --orphan-keys is used with --text', async () => {
+      // Orphan handling only applies to the config-driven flow, which builds a
+      // TranslationEngine; direct mode never touches existing target files.
+      await expect(
+        executeCommand(translateCommand, [
+          '--text',
+          'Hello',
+          '--source',
+          'en',
+          '--target',
+          'fr',
+          '--orphan-keys',
+          'delete',
+        ])
+      ).rejects.toThrow();
+    });
   });
 
   describe('file mode - txt files', () => {

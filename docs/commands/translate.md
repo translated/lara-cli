@@ -16,6 +16,7 @@ lara-cli translate [options]
 | `-p, --paths <paths>` | Comma-separated list of specific file paths to translate (overrides config) |
 | `-f, --force` | Force retranslation of all content, even if unchanged |
 | `--no-trace` | Prevent server-side storage of translated content |
+| `--orphan-keys <mode>` | `keep` or `delete`. What to do with keys that exist only in target files. Overrides `translation.orphanKeys` in `lara.yaml` for this run. Cannot be combined with `--file` or `--text` |
 | `-h, --help` | Display help information |
 
 ## Examples
@@ -123,7 +124,20 @@ When you modify source locale files, the tool automatically detects changes and 
 
 ### Keys Only Present in a Target File
 
-Keys that exist in a target locale file but not in the source (for example, translations added manually or entries specific to one locale) are **preserved** and kept at their original position. They are never overwritten or removed by translation. A key is only removed from a target when it was previously translated from the source and is then deleted from the source file.
+Keys that exist in a target locale file but not in the source (for example, translations added manually or entries specific to one locale) are called **orphan keys**. By default they are **preserved** and kept at their original position — never overwritten or removed by translation. A key is only removed from a target when it was previously translated from the source and is then deleted from the source file.
+
+You can change this with `translation.orphanKeys` in `lara.yaml`, or per run with the `--orphan-keys` flag:
+
+```yaml
+translation:
+  orphanKeys: delete    # keep (default) | delete
+```
+
+```bash
+lara-cli translate --orphan-keys delete
+```
+
+With `delete`, orphan keys are removed so each target file mirrors the source exactly. Keys deleted from the source are still removed in both modes, and non-translatable entries (Android `translatable="false"`, `.xcstrings` `shouldTranslate: false`) are never deleted. See [Orphan Keys](../config/structure.md#orphan-keys) for the full behaviour.
 
 > Notes: for Gettext PO, orphan messages are preserved but their exact interleaving with source messages is approximate. For Xcode `.stringsdict`, an orphan plural entry keeps its full original structure.
 

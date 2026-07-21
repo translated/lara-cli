@@ -9,7 +9,7 @@ import {
 } from '#modules/common/common.const.js';
 import { LocalesEnum } from '#modules/common/common.types.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
-import { ConfigType } from '#modules/config/config.types.js';
+import { ConfigType, ORPHAN_KEYS_MODES, OrphanKeysMode } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
 import { TranslationService, TextBlock } from '#modules/translation/translation.service.js';
 import { searchLocalePathsByPattern, ensureDirectoryExists, getFileType } from '#utils/path.js';
@@ -35,6 +35,8 @@ type TranslateOptions = {
   output?: string;
   translationMemories?: string[];
   glossaries?: string[];
+  // Undefined means "use the config file value".
+  orphanKeys?: OrphanKeysMode;
 };
 
 type TranslateMode = 'text' | 'file' | 'config';
@@ -104,6 +106,12 @@ export default new Command()
     ).argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
   )
   .addOption(new Option('--no-trace', 'Prevent server-side storage of translated content'))
+  .addOption(
+    new Option(
+      '--orphan-keys <mode>',
+      'How to handle keys that exist only in target files: keep or delete them. Overrides the config file. Cannot be used with --file or --text.'
+    ).choices([...ORPHAN_KEYS_MODES])
+  )
   .action(async (options: TranslateOptions) => {
     try {
       const mode = validateAndDetectMode(options);
@@ -201,6 +209,10 @@ function validateAndDetectMode(options: TranslateOptions): TranslateMode {
 
   if (options.paths && options.paths.length > 0) {
     throw new Error(Messages.errors.pathsNotAllowedWithDirect);
+  }
+
+  if (options.orphanKeys) {
+    throw new Error(Messages.errors.orphanKeysNotAllowedWithDirect);
   }
 
   if (options.output && !options.file) {
@@ -364,6 +376,9 @@ async function handleFileType(
       glossaryIds: config.glossaries,
       noTrace: !options.trace || config.noTrace,
       batchSize: config.translation.batchSize,
+      // `??`, not `||`: the flag is absent (undefined) or a valid mode, and an
+      // explicit --orphan-keys keep must win over a config set to delete.
+      orphanKeys: options.orphanKeys ?? config.translation.orphanKeys,
     });
 
     try {
