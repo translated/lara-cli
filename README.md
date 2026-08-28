@@ -17,6 +17,7 @@ Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18
 - [Local Development Setup](#local-development-setup)
 - [Technology Stack](#technology-stack)
 - [Supported Locales](#supported-locales)
+- [Usage Metrics](#usage-metrics)
 - [Documentation](#documentation)
 
 ## Installation
@@ -208,6 +209,40 @@ The codebase follows a modular architecture with clear separation of concerns, m
 Lara CLI supports translations using different locale codes, following two main standards:
 
 See the [full list of supported locales](docs/config/locales.md#supported-locales).
+
+## Usage Metrics
+
+Lara CLI reports usage metrics so we can see where people get stuck between installing it and
+translating something.
+
+**What is sent**, once per command that reaches the Lara API:
+
+- the event type: `auth_success` or `auth_fail` when your key is accepted or rejected,
+  `call_success` or `call_error` when a translation finishes
+- your **Lara account id** (`acc_...`), as it already appears on your account. It is read from the
+  token the CLI receives when it authenticates — your access key id and your access key secret are
+  never sent, and never leave your machine
+- the CLI version, a random per-run session id, a per-event id, and a timestamp
+- how long the run took, how many characters were translated, what was translated (`text` or
+  `document`) and which entry point you used (`text`, `file` or `config`)
+- the source and target language, when the command translates into a single one
+- for failures, an error category such as `auth_401` or `rate_limit_429`
+
+**What is never sent**: your source or translated text, file names or paths, your configuration,
+your credentials, or anything else that identifies you or your project.
+
+Events are appended to a local file and sent in one batch — when the command finishes, and again
+at the start of the next one if anything was left over. If the metrics backend is slow or
+unreachable the CLI behaves exactly as it does today: the send is bounded to two seconds and
+whatever could not be delivered simply waits for the next run.
+
+**To turn it off**, set the environment variable:
+
+```bash
+LARA_TELEMETRY_DISABLED=1
+```
+
+With that set, nothing is recorded and no file is written.
 
 ## Documentation
 

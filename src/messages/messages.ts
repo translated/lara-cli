@@ -5,6 +5,7 @@ export const Messages = {
     noLocalesFoundHint:
       'Please ensure your project contains locale files (e.g., src/i18n/[locale].json or src/i18n/[locale]/...)',
     sourceLocaleInTarget: 'Source locale cannot be included in the target locales',
+    someFilesFailed: 'Some files could not be translated',
     noTargetLocales:
       'No target locales specified. Please add target locales in config or use -t option.',
     configNotFound: 'Config file not found. Please run `lara-cli init` to create a config file.',
@@ -187,6 +188,8 @@ export const Messages = {
   },
 
   warnings: {
+    credentialsNotVerified: (reason: string): string =>
+      `Could not verify your API credentials (${reason}). The configuration has been saved anyway.`,
     noApiCredentials: `No API credentials found on machine. Without API credentials, Lara CLI will not be able to translate your files. You can insert them anytime later by modifying your system environment variables or your .env file. You can find more info at https://support.laratranslate.com/en/about-lara`,
     noMemoriesLinked: (url: string) =>
       `No Translation Memories linked. Visit ${url} to learn more.`,

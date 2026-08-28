@@ -18,6 +18,9 @@ import {
 import { Messages } from '#messages/messages.js';
 import { setCredentials, resolveProjectInstruction } from './init.utils.js';
 import { getFileType } from '#utils/path.js';
+import { TranslationService } from '#modules/translation/translation.service.js';
+import { getErrorMessage } from '#utils/error.js';
+import { runSafely } from '../common/command.js';
 
 export default new Command()
   .command('init')
@@ -94,16 +97,36 @@ export default new Command()
   )
   .addOption(new Option('--no-trace', 'Prevent server-side storage of translated content'))
   .action(async (options: InitOptions, command: Command) => {
-    const config = isRunningInInteractiveMode(command)
-      ? await handleInteractiveMode(options)
-      : handleNonInteractiveMode(options);
+    await runSafely(async () => {
+      const config = isRunningInInteractiveMode(command)
+        ? await handleInteractiveMode(options)
+        : handleNonInteractiveMode(options);
 
-    const spinner = Ora({ text: Messages.info.creatingConfig, color: 'yellow' }).start();
+      await checkCredentials();
 
-    ConfigProvider.getInstance().saveConfig(config);
+      const spinner = Ora({ text: Messages.info.creatingConfig, color: 'yellow' }).start();
 
-    spinner.succeed(Messages.success.configCreated);
+      ConfigProvider.getInstance().saveConfig(config);
+
+      spinner.succeed(Messages.success.configCreated);
+    });
   });
+
+/**
+ * Turns the key the user just entered into a real yes/no answer, and reports it.
+ * Never blocks: `init` writes the config either way, so the command still works
+ * offline or behind a proxy that is momentarily down.
+ */
+async function checkCredentials(): Promise<void> {
+  try {
+    await TranslationService.getInstance().validateCredentials();
+  } catch (error) {
+    Ora({
+      text: Messages.warnings.credentialsNotVerified(getErrorMessage(error)),
+      color: 'yellow',
+    }).warn();
+  }
+}
 
 /**
  * Groups paths by file extension and returns a files object for the config
