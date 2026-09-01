@@ -21,9 +21,11 @@ import {
   FLUSH_TIMEOUT_MS,
   INGEST_PATH,
   INSTALLATION_FILE,
+  MAX_EVENT_AGE_MS,
   MAX_QUEUE,
   MAX_UINT32,
   METRICS_CHANNEL,
+  PRE_AUTH_EVENT_TYPES,
   QUEUE_FILE,
   TOKEN_COOLDOWN_FILE,
   TOKEN_MARGIN_MS,
@@ -260,7 +262,11 @@ export function queueEvent(event: Record<string, unknown>): void {
       return;
     }
     const accountId = currentAccountId();
-    if (!accountId) {
+    // `auth_fail` is the one event that matters most when there is no account
+    // id to attach: a key Lara rejected the first time it was used. The backend
+    // accepts it, and `install`, without one. Everything else is dropped —
+    // an event missing a required field would 400 the whole batch it rides in.
+    if (!accountId && !PRE_AUTH_EVENT_TYPES.includes(String(event.eventType))) {
       return;
     }
     const file = stateFile(QUEUE_FILE);
@@ -273,7 +279,8 @@ export function queueEvent(event: Record<string, unknown>): void {
       ...event,
       eventId: randomUUID(),
       channel: METRICS_CHANNEL,
-      accountId,
+      // Omit means omit: an invented or empty id would be a fake account.
+      ...(accountId ? { accountId } : {}),
       channelVersion: getPackageVersion(),
       sessionId: SESSION_ID,
       timestamp: new Date().toISOString(),
@@ -418,7 +425,15 @@ export async function flushQueue(): Promise<void> {
       if (kept.length < lines.length) {
         writeFileSync(file, `${kept.join('\n')}\n`);
       }
-      events = kept.map((line) => JSON.parse(line) as unknown);
+      // An event past the backend's 30-day bound is rejected together with the
+      // whole batch, so one stale line would cost every fresh event with it.
+      const cutoff = Date.now() - MAX_EVENT_AGE_MS;
+      events = kept
+        .map((line) => JSON.parse(line) as { timestamp?: unknown })
+        .filter(
+          (event) =>
+            typeof event.timestamp !== 'string' || Date.parse(event.timestamp) >= cutoff
+        );
     } catch {
       // A corrupted queue can never be accepted: drop it rather than retry forever.
       unlinkSync(file);
@@ -426,6 +441,9 @@ export async function flushQueue(): Promise<void> {
     }
 
     if (events.length === 0) {
+      // Everything on disk aged past what the backend accepts: nothing to send,
+      // and nothing worth re-reading next run either.
+      writeFileSync(file, '');
       return;
     }
 
@@ -443,6 +461,13 @@ export async function flushQueue(): Promise<void> {
     if (response?.status === 401) {
       cachedToken = null;
       response = await send();
+    }
+
+    // A 429 comes with a Retry-After and the contract says to honour it. The
+    // cooldown gates the token exchange, and no token means no flush — which is
+    // exactly the wait, carried to the next process the same way.
+    if (response?.status === 429) {
+      rememberTokenCooldown(response);
     }
 
     // Drop only what will never be accepted: a batch the backend refuses on

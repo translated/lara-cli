@@ -4,6 +4,15 @@
  */
 export const METRICS_CHANNEL = 'cli';
 
+/**
+ * The only event types the backend accepts without an `accountId`: they can
+ * happen before the client ever holds one. For this CLI that is `auth_fail` on
+ * a key Lara rejects the first time it is used — the funnel step that says the
+ * user never got set up. `install` is in the backend's list too, but a package
+ * download is not something the CLI can report, so it never sends one.
+ */
+export const PRE_AUTH_EVENT_TYPES = ['install', 'auth_fail'];
+
 // TODO(before release): replace the placeholders below with the production
 // values, or (preferred) keep them as-is and let CI substitute them — see
 // scripts/bake-metrics-key.mjs and the "Bake metrics key" step in
@@ -41,6 +50,14 @@ export const TOKEN_MARGIN_MS = 60_000;
 
 /** A machine offline for a month must not grow the queue forever. */
 export const MAX_QUEUE = 1_000;
+
+/**
+ * The backend rejects a timestamp more than 30 days old, and it rejects the
+ * batch it sits in as a whole — so one event left over from a long-offline
+ * machine would take every fresh event with it. Dropped a day early, so an
+ * event cannot age past the bound between being read and being received.
+ */
+export const MAX_EVENT_AGE_MS = 29 * 24 * 60 * 60 * 1_000;
 
 /**
  * Total budget for a flush — both requests share it, and the flush runs on the

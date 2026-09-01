@@ -362,6 +362,39 @@ check(
   );
 }
 
+// --- a first-ever key Lara refuses: auth_fail with no account id -------------
+{
+  const before = received.flatMap((r) => r.body.events).length;
+  const virginDir = mkdtempSync(join(tmpdir(), 'lara-e2e-virgin-'));
+  laraRejects = true;
+  const rejected = await run(OK, {
+    LARA_STATE_DIR: virginDir,
+    // A key this machine has never seen: there is no cached account id to fall
+    // back on, which is the whole point of the scenario.
+    LARA_ACCESS_KEY_ID: 'e2e-never-seen-key-id',
+  });
+  laraRejects = false;
+
+  check('first-ever rejected key: the command fails', rejected.code !== 0, `code=${rejected.code}`);
+  const fresh = received.flatMap((r) => r.body.events).slice(before);
+  const authFail = fresh.find((e) => e.eventType === 'auth_fail');
+  check(
+    'first-ever rejected key: auth_fail still reported',
+    authFail?.errorType === 'auth_401',
+    fresh.map((e) => `${e.eventType}/${e.errorType ?? ''}`).join(',')
+  );
+  check(
+    'first-ever rejected key: accountId omitted, not faked',
+    authFail !== undefined && !('accountId' in authFail),
+    JSON.stringify(authFail ?? null)
+  );
+  check(
+    'first-ever rejected key: no call event without an account id',
+    !fresh.some((e) => e.eventType === 'call_error' || e.eventType === 'call_success'),
+    fresh.map((e) => e.eventType).join(',')
+  );
+}
+
 // --- init keeps working when Lara cannot be reached at all -------------------
 {
   const offlineProject = mkdtempSync(join(tmpdir(), 'lara-e2e-offline-'));

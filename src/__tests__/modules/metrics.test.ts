@@ -333,6 +333,17 @@ describe('queueEvent', () => {
     expect(queuedEvents()[0]!.timestamp).not.toBe('1999-01-01T00:00:00.000Z');
   });
 
+  it('queues auth_fail without an accountId: the backend takes it, and it is the one that matters', async () => {
+    const metrics = await loadMetrics(null);
+
+    metrics.queueEvent({ eventType: 'auth_fail', errorType: 'auth_401' });
+
+    const [event] = queuedEvents();
+    expect(event).toMatchObject({ eventType: 'auth_fail', channel: 'cli' });
+    // Omit means omit — never an empty string or a stand-in id.
+    expect(event).not.toHaveProperty('accountId');
+  });
+
   it('falls back to a temp directory when the preferred one cannot be created', async () => {
     const locked = join(stateDir, 'locked');
     writeFileSync(join(stateDir, 'sentinel'), '');
@@ -528,6 +539,39 @@ describe('flushQueue', () => {
     const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
     expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({ eventType: 'call_success', channel: 'cli' });
+    expect(queuedEvents()).toEqual([]);
+  });
+
+  it('drops an event past the backend age bound instead of losing the batch with it', async () => {
+    const metrics = await loadMetrics();
+    const { ingestCalls } = mockBackend();
+    const stale = new Date(Date.now() - 40 * 24 * 60 * 60 * 1_000).toISOString();
+    writeFileSync(
+      queuePath(),
+      `${JSON.stringify({ eventType: 'call_success', channel: 'cli', accountId: ACCOUNT_ID, timestamp: stale })}\n`
+    );
+
+    metrics.queueEvent({ eventType: 'auth_success' });
+    await metrics.flushQueue();
+
+    const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ eventType: 'auth_success' });
+    expect(queuedEvents()).toEqual([]);
+  });
+
+  it('clears a queue that holds nothing but expired events', async () => {
+    const metrics = await loadMetrics();
+    const { ingestCalls } = mockBackend();
+    const stale = new Date(Date.now() - 40 * 24 * 60 * 60 * 1_000).toISOString();
+    writeFileSync(
+      queuePath(),
+      `${JSON.stringify({ eventType: 'call_success', channel: 'cli', accountId: ACCOUNT_ID, timestamp: stale })}\n`
+    );
+
+    await metrics.flushQueue();
+
+    expect(ingestCalls).toHaveLength(0);
     expect(queuedEvents()).toEqual([]);
   });
 
