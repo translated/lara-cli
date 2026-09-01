@@ -215,7 +215,9 @@ See the [full list of supported locales](docs/config/locales.md#supported-locale
 Lara CLI reports usage metrics so we can see where people get stuck between installing it and
 translating something.
 
-**What is sent**, once per command that reaches the Lara API:
+**What is sent** — a translation command always closes with one `call_success` or `call_error`,
+even when it fails before reaching Lara; a command that only authenticates (`init`, `memory`,
+`glossary`) reports the result of your key and nothing else:
 
 - the event type: `auth_success` or `auth_fail` when your key is accepted or rejected,
   `call_success` or `call_error` when a translation finishes
@@ -231,10 +233,10 @@ translating something.
 **What is never sent**: your source or translated text, file names or paths, your configuration,
 your credentials, or anything else that identifies you or your project.
 
-Events are appended to a local file and sent in one batch — when the command finishes, and again
-at the start of the next one if anything was left over. If the metrics backend is slow or
-unreachable the CLI behaves exactly as it does today: the send is bounded to two seconds and
-whatever could not be delivered simply waits for the next run.
+Events are appended to a local file and sent in one batch when the command finishes; anything left
+over rides along with the next command's send. If the metrics backend is slow or unreachable the
+CLI behaves exactly as it does today: the send is bounded to two seconds and whatever could not be
+delivered simply waits for the next run.
 
 **To turn it off**, set the environment variable:
 

@@ -66,6 +66,8 @@ async function listen(server) {
 const laraCalls = [];
 /** Flipped by the auth_fail scenario to make Lara reject the credentials. */
 let laraRejects = false;
+/** Status the translate endpoint answers with, past the auth check. 0 = translate. */
+let laraTranslateStatus = 0;
 const lara = createServer(async (req, res) => {
   const body = await readBody(req);
   laraCalls.push({ url: req.url, method: req.method });
@@ -83,6 +85,11 @@ const lara = createServer(async (req, res) => {
     return json(res, 200, []);
   }
   if (req.url === '/translate') {
+    if (laraTranslateStatus) {
+      return json(res, laraTranslateStatus, {
+        error: { type: 'PaymentRequired', message: 'payment required' },
+      });
+    }
     const parsed = JSON.parse(body);
     const blocks = (parsed.q ?? []).map((block) => ({
       text: block.translatable === false ? block.text : `[it] ${block.text}`,
@@ -392,6 +399,27 @@ check(
     'first-ever rejected key: no call event without an account id',
     !fresh.some((e) => e.eventType === 'call_error' || e.eventType === 'call_success'),
     fresh.map((e) => e.eventType).join(',')
+  );
+}
+
+// --- a key that is fine but out of credit -----------------------------------
+{
+  const before = received.flatMap((r) => r.body.events).length;
+  laraTranslateStatus = 402;
+  const broke = await run(OK);
+  laraTranslateStatus = 0;
+
+  check('out of credit: the command fails', broke.code !== 0, `code=${broke.code}`);
+  const fresh = received.flatMap((r) => r.body.events).slice(before);
+  check(
+    'out of credit: Lara answered past its auth check, so auth_success is reported',
+    fresh.some((e) => e.eventType === 'auth_success'),
+    fresh.map((e) => e.eventType).join(',')
+  );
+  check(
+    'out of credit: the failure lands as call_error / payment_402',
+    fresh.some((e) => e.eventType === 'call_error' && e.errorType === 'payment_402'),
+    fresh.map((e) => `${e.eventType}/${e.errorType ?? ''}`).join(',')
   );
 }
 

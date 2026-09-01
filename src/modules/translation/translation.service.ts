@@ -96,8 +96,16 @@ export class TranslationService {
       metrics.recordAuthResult(true);
       return result;
     } catch (error) {
-      if (error instanceof LaraApiError && (error.statusCode === 401 || error.statusCode === 403)) {
-        metrics.recordAuthResult(false, error);
+      if (error instanceof LaraApiError) {
+        if (error.statusCode === 401 || error.statusCode === 403) {
+          metrics.recordAuthResult(false, error);
+        } else if (error.statusCode < 500) {
+          // A 400, 402 or 429 is Lara answering past its auth check: the key was
+          // accepted, and the funnel would otherwise lose a user who got in fine
+          // and then ran out of credit. A 5xx says nothing either way, so it
+          // reports nothing.
+          metrics.recordAuthResult(true);
+        }
       }
       throw error;
     }

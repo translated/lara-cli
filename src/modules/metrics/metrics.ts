@@ -37,8 +37,9 @@ import {
  *
  * The rule that governs every line of this file: nothing here may slow down or
  * break the CLI. Events are appended synchronously to a queue file and sent in
- * a single bounded batch — at the start of a command, and once more on the way
- * out. Every exported function swallows its own errors; a missing key, an
+ * a single bounded batch on the way out of the command; whatever could not be
+ * delivered rides along with the next command's send — there is no flush on the
+ * way in. Every exported function swallows its own errors; a missing key, an
  * unreachable backend or a read-only disk all degrade to "no telemetry", never
  * to a failed translation.
  *
@@ -248,7 +249,6 @@ export function currentAccountId(): string | null {
   return null;
 }
 
-/** True when events can actually be attributed and sent. */
 /**
  * Never blocks, never touches the network, never throws. Every guard telemetry
  * has lives here: this is the only door onto the queue, so nothing upstream has
