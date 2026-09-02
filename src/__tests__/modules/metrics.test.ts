@@ -610,6 +610,26 @@ describe('flushQueue', () => {
     expect(queuedEvents()).toEqual([]);
   });
 
+  it.each([
+    ['no timestamp at all', {}],
+    ['a timestamp that is not a date', { timestamp: 'yesterday' }],
+    ['a clock running far ahead', { timestamp: new Date(Date.now() + 7_200_000).toISOString() }],
+  ])('drops a line the backend would reject: %s', async (_label, broken) => {
+    const metrics = await loadMetrics();
+    const { ingestCalls } = mockBackend();
+    writeFileSync(
+      queuePath(),
+      `${JSON.stringify({ eventType: 'call_success', channel: 'cli', accountId: ACCOUNT_ID, ...broken })}\n`
+    );
+
+    metrics.queueEvent({ eventType: 'auth_success' });
+    await metrics.flushQueue();
+
+    const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ eventType: 'auth_success' });
+  });
+
   it('clears a queue that holds nothing but expired events', async () => {
     const metrics = await loadMetrics();
     const { ingestCalls } = mockBackend();
@@ -665,7 +685,9 @@ describe('flushQueue', () => {
 
     const lines: string[] = [];
     for (let index = 0; index < 1_200; index++) {
-      lines.push(JSON.stringify({ eventType: 'call_success', index }));
+      lines.push(
+        JSON.stringify({ eventType: 'call_success', index, timestamp: new Date().toISOString() })
+      );
     }
     writeFileSync(queuePath(), `${lines.join('\n')}\n`);
 
@@ -940,7 +962,10 @@ describe('instrumentCommand', () => {
   it('ships what an earlier run left behind along with its own events', async () => {
     const metrics = await loadMetrics();
     const { ingestCalls } = mockBackend();
-    writeFileSync(queuePath(), `${JSON.stringify({ eventType: 'call_error', stale: true })}\n`);
+    writeFileSync(
+      queuePath(),
+      `${JSON.stringify({ eventType: 'call_error', stale: true, timestamp: new Date().toISOString() })}\n`
+    );
 
     metrics.instrument('translation');
     metrics.setContext({ mode: 'text' });

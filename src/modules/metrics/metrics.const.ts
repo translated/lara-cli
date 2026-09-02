@@ -51,6 +51,14 @@ export const MAX_QUEUE = 1_000;
 export const MAX_EVENT_AGE_MS = 29 * 24 * 60 * 60 * 1_000;
 
 /**
+ * The other end of the same rule: the backend rejects a timestamp more than an
+ * hour in the future, and a machine whose clock runs ahead would otherwise
+ * queue events that poison every batch they ride in. Half the bound, so the
+ * flight time cannot push a borderline event past it.
+ */
+export const MAX_EVENT_FUTURE_MS = 30 * 60 * 1_000;
+
+/**
  * Total budget for a flush — both requests share it, and the flush runs on the
  * user's path. A backend that does not answer within this costs nothing but the
  * events staying queued for the next run.

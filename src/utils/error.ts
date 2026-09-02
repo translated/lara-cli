@@ -35,18 +35,21 @@ export function isQuotaError(error: unknown): boolean {
  * Uses early returns (guard clauses) for optimal performance and readability.
  *
  * Fatal errors (401, 402/403, quota, 5xx) are reported and then raised as a
- * HandledExitError; everything else is reported and returns, letting the caller
- * carry on with the remaining files.
+ * HandledExitError; everything else is reported and returns the message that
+ * was shown, letting the caller carry on with the remaining files — or unwind
+ * with the same words the user just read, instead of a second wording of its
+ * own.
  *
  * @param error - The LaraApiError to handle
  * @param context - Context information (e.g., file path being translated)
+ * @returns The message displayed to the user
  * @throws HandledExitError when the error is fatal
  */
 export function handleLaraApiError(
   error: LaraApiError,
   context: string,
   spinner: OraSpinner
-): void {
+): string {
   // Authentication error - early return
   if (error.statusCode === 401) {
     displayErrorAndExit(Messages.errors.apiAuthFailed(context), spinner, error);
@@ -71,7 +74,7 @@ export function handleLaraApiError(
   }
 
   // Default error handling - all other cases
-  displayError(Messages.errors.translationFailed(context, error.message || ''), spinner);
+  return displayError(Messages.errors.translationFailed(context, error.message || ''), spinner);
 }
 
 /**
@@ -88,7 +91,8 @@ function displayErrorAndExit(message: string, spinner: OraSpinner, cause?: unkno
   throw new HandledExitError(message, cause);
 }
 
-function displayError(message: string, spinner: OraSpinner): void {
+function displayError(message: string, spinner: OraSpinner): string {
   spinner.fail(message);
+  return message;
 }
 

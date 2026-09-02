@@ -166,13 +166,16 @@ async function runTranslate(options: TranslateOptions): Promise<void> {
     hasErrors = hasErrors || (await handleFileType(fileType, options, config));
   }
 
+  // Before either exit: the closing flush can take up to two seconds, and a
+  // progress bar still animating over it leaves the terminal mid-redraw.
+  progressWithOra.stop();
+
   if (hasErrors) {
     // Every failure has already been reported per file.
     throw new HandledExitError(Messages.errors.someFilesFailed);
   }
 
   const totalTargetLocales = getTargetLocales(options, config).length;
-  progressWithOra.stop();
 
   displaySummaryBox({
     title: Messages.summary.title,

@@ -23,6 +23,7 @@ import {
   INGEST_PATH,
   INSTALLATION_FILE,
   MAX_EVENT_AGE_MS,
+  MAX_EVENT_FUTURE_MS,
   MAX_QUEUE,
   MAX_UINT32,
   METRICS_CHANNEL,
@@ -449,15 +450,20 @@ export async function flushQueue(): Promise<void> {
       if (kept.length < lines.length) {
         writeFileSync(file, `${kept.join('\n')}\n`);
       }
-      // An event past the backend's 30-day bound is rejected together with the
-      // whole batch, so one stale line would cost every fresh event with it.
-      const cutoff = Date.now() - MAX_EVENT_AGE_MS;
+      // A timestamp the backend rejects takes the whole batch down with it, so
+      // one stale line would cost every fresh event beside it. Anything that is
+      // not a date we can read goes too: queueEvent always stamps one, so a line
+      // without it is a hand-edited or older-schema leftover, and keeping it
+      // would trade a batch of good events for a guess.
+      const now = Date.now();
       events = kept
         .map((line) => JSON.parse(line) as { timestamp?: unknown })
-        .filter(
-          (event) =>
-            typeof event.timestamp !== 'string' || Date.parse(event.timestamp) >= cutoff
-        );
+        .filter((event) => {
+          const at =
+            typeof event.timestamp === 'string' ? Date.parse(event.timestamp) : Number.NaN;
+          // NaN fails both comparisons, which is the point.
+          return at >= now - MAX_EVENT_AGE_MS && at <= now + MAX_EVENT_FUTURE_MS;
+        });
     } catch {
       // A corrupted queue can never be accepted: drop it rather than retry forever.
       unlinkSync(file);
