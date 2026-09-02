@@ -57,6 +57,7 @@ export type MetricsErrorType =
   | 'quota_exceeded'
   | 'rate_limit_429'
   | 'timeout'
+  | 'parse_error'
   | 'server_5xx'
   | 'validation_error'
   | 'unknown';
@@ -71,6 +72,8 @@ export type RunContext = {
   targetLang?: string;
   elements?: number;
   locales?: number;
+  /** Config-level file types touched by the run, e.g. `['json', 'po']`. */
+  fileTypes?: string[];
 };
 
 /** The SDK's internal client, reached defensively — see trackLaraClient. */
@@ -551,6 +554,12 @@ function classify(error: unknown): MetricsErrorType {
   if (name === 'AbortError' || name === 'TimeoutError') {
     return 'timeout';
   }
+  // The user's own file is malformed — a different product problem from our API
+  // failing, and the one the funnel could not tell apart before. The name is
+  // what carries it: SyntaxError from JSON, YAMLParseError, XMLParseError.
+  if (/syntax|parse/i.test(name)) {
+    return 'parse_error';
+  }
   if (/\btimed?\s?out\b|\btimeout\b|ETIMEDOUT/i.test(getErrorMessage(error))) {
     return 'timeout';
   }
@@ -635,13 +644,22 @@ export function recordAuthResult(ok: boolean, error?: unknown): void {
  * reached for, in this CLI's own vocabulary.
  */
 function buildMetadata(exitCode: number): Record<string, unknown> {
-  const { mode, sourceLang, targetLang, ...rest } = context;
+  const { mode, sourceLang, targetLang, fileTypes, ...rest } = context;
 
   const metadata: Record<string, unknown> = {
     ...rest,
     feature: mode === 'text' ? 'text' : 'document',
     exitCode,
   };
+
+  // One sorted, de-duplicated scalar rather than an array: a config run touches
+  // several formats at once, and `json,po` groups in a dashboard while a list
+  // does not. Both call sites pass what the config already calls a file type,
+  // so the vocabulary stays closed — never a path, never a file name.
+  const formats = [...new Set(fileTypes ?? [])].sort();
+  if (formats.length > 0) {
+    metadata.fileTypes = formats.join(',');
+  }
 
   if (mode) {
     metadata.surface = mode;

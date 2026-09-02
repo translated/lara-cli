@@ -291,11 +291,12 @@ check('each run has its own sessionId', sessions.size === 3, `${sessions.size} s
 
 const success = events.find((e) => e.eventType === 'call_success');
 check(
-  'call_success carries feature, surface and the language pair',
+  'call_success carries feature, surface, the language pair and the file type',
   success?.metadata?.feature === 'document' &&
     success?.metadata?.surface === 'file' &&
     success?.metadata?.sourceLang === 'en' &&
-    success?.metadata?.targetLang === 'it',
+    success?.metadata?.targetLang === 'it' &&
+    success?.metadata?.fileTypes === 'json',
   JSON.stringify(success?.metadata)
 );
 check(
@@ -411,6 +412,31 @@ check(
     'first-ever rejected key: no call event without an account id',
     !fresh.some((e) => e.eventType === 'call_error' || e.eventType === 'call_success'),
     fresh.map((e) => e.eventType).join(',')
+  );
+}
+
+// --- a file the user broke: not our failure, and the funnel must say so ------
+{
+  const before = received.flatMap((r) => r.body.events).length;
+  writeFileSync(join(project, 'broken.json'), '{"greeting": "hello",,}\n');
+  const broken = await run([
+    'translate',
+    '--file',
+    'broken.json',
+    '-s',
+    'en',
+    '-t',
+    'it',
+    '-o',
+    'broken-it.json',
+  ]);
+
+  check('malformed file: the command fails', broken.code !== 0, `code=${broken.code}`);
+  const fresh = received.flatMap((r) => r.body.events).slice(before);
+  check(
+    'malformed file: call_error classified as parse_error, not unknown',
+    fresh.some((e) => e.eventType === 'call_error' && e.errorType === 'parse_error'),
+    fresh.map((e) => `${e.eventType}/${e.errorType ?? ''}`).join(',')
   );
 }
 

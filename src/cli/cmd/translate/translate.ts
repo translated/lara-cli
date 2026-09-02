@@ -155,6 +155,8 @@ async function runTranslate(options: TranslateOptions): Promise<void> {
   metrics.setContext({
     elements: totalElements,
     locales: getTargetLocales(options, config).length,
+    // The keys of `files` are the config's own file types, a closed enum.
+    fileTypes: Object.keys(config.files),
   });
 
   progressWithOra.start({ message: Messages.info.translatingFiles, total: totalElements });
@@ -292,6 +294,9 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
       Messages.errors.unsupportedFileType(fileType, SEARCHABLE_EXTENSIONS.join(', '))
     );
   }
+  // Only past the check: an unsupported extension is whatever the user named
+  // their file, and that is not something to report.
+  metrics.setContext({ fileTypes: [fileType] });
 
   let content: string;
   try {
@@ -422,6 +427,11 @@ async function handleFileType(
         progressWithOra.stop(quotaMessage, 'fail');
         throw new HandledExitError(quotaMessage, error);
       }
+
+      // The command carries on with the other files and finally unwinds with a
+      // generic "some files failed", which classifies as nothing. Record the
+      // real error here or the funnel never learns what actually broke.
+      metrics.recordError(error);
 
       const message = getErrorMessage(error);
       const errorMessage = Messages.errors.translatingFile(inputPath, message);

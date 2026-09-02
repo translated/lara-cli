@@ -196,7 +196,7 @@ export const Messages = {
     noGlossariesLinked: (url: string) => `No Glossaries linked. Visit ${url} to learn more.`,
     // Shown once per machine, the first time telemetry stores anything. The
     // README is not where consent can live: the user has to be told here.
-    telemetryNotice: `Lara CLI reports usage metrics about the integration itself, linked to your Lara account id — never your text, your files, your paths or your configuration. Turn it off with LARA_TELEMETRY_DISABLED=1 (DO_NOT_TRACK=1 works too). Details: https://github.com/translated/lara-cli#usage-metrics`,
+    telemetryNotice: `Lara CLI reports usage metrics about the integration itself, never your text, your files, your paths or your configuration. Turn it off with LARA_TELEMETRY_DISABLED=1 (DO_NOT_TRACK=1 works too). Details: https://github.com/translated/lara-cli#usage-metrics`,
   },
 
   ui: {

@@ -213,33 +213,19 @@ See the [full list of supported locales](docs/config/locales.md#supported-locale
 ## Usage Metrics
 
 Lara CLI reports usage metrics so we can see where people get stuck between installing it and
-translating something.
-
-**What is sent** — a translation command always closes with one `call_success` or `call_error`,
-even when it fails before reaching Lara; a command that only authenticates (`init`, `memory`,
-`glossary`) reports the result of your key and nothing else:
-
-- the event type: `auth_success` or `auth_fail` when your key is accepted or rejected,
-  `call_success` or `call_error` when a translation finishes
-- your **Lara account id** (`acc_...`), as it already appears on your account. It is read from the
-  token the CLI receives when it authenticates — your access key id and your access key secret are
-  never sent, and never leave your machine
-- the CLI version, a random per-run session id, a per-event id, and a timestamp
-- how long the run took, how many characters were translated, what was translated (`text` or
-  `document`) and which entry point you used (`text`, `file` or `config`)
-- the source and target language, when the command translates into a single one
-- for failures, an error category such as `auth_401` or `rate_limit_429`
+translating something. What it records is whether setup and translation succeeded, with timings,
+volumes, the CLI version and your Lara account id — the same one shown on your account.
 
 **What is never sent**: your source or translated text, file names or paths, your configuration,
-your credentials, or anything else that identifies you or your project.
+or your credentials.
 
 Events are appended to a local file and sent in one batch when the command finishes; anything left
 over rides along with the next command's send. If the metrics backend is slow or unreachable the
 CLI behaves exactly as it does today: the send is bounded to two seconds and whatever could not be
 delivered simply waits for the next run.
 
-The first run that records anything prints a one-line notice on `stderr` saying all of this, once
-per machine — the README is not somewhere consent can hide.
+The first run that records anything prints a one-line notice on `stderr` saying so, once per
+machine.
 
 **To turn it off**, set either environment variable:
 

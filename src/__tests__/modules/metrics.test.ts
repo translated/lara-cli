@@ -717,6 +717,38 @@ describe('errorTypeFor', () => {
     expect(metrics.errorTypeFor(new Error('Your plan quota is exhausted'))).toBe('quota_exceeded');
   });
 
+  it('recognises a malformed file, whatever parser raised it', async () => {
+    const metrics = await loadMetrics();
+    const yaml = new Error('bad indentation');
+    yaml.name = 'YAMLParseError';
+
+    // What a broken i18n JSON actually throws.
+    let json: unknown;
+    try {
+      JSON.parse('{"a": 1,,}');
+    } catch (error) {
+      json = error;
+    }
+
+    expect(metrics.errorTypeFor(json)).toBe('parse_error');
+    expect(metrics.errorTypeFor(yaml)).toBe('parse_error');
+  });
+
+  it('keeps the parse error a later, vaguer failure would have buried', async () => {
+    const metrics = await loadMetrics();
+    metrics.instrument('translation');
+
+    metrics.recordError(new SyntaxError('Expected \',\' or \'}\' after property value in JSON'));
+    // What the command finally unwinds with once the other files are done.
+    metrics.recordError(new Error('Some files could not be translated'));
+    metrics.finishCommand(1);
+
+    expect(queuedEvents()[0]).toMatchObject({
+      eventType: 'call_error',
+      errorType: 'parse_error',
+    });
+  });
+
   it('recognises timeouts by name and by message', async () => {
     const metrics = await loadMetrics();
     const aborted = new Error('aborted');
@@ -835,6 +867,24 @@ describe('finishCommand', () => {
     expect(metadata).not.toHaveProperty('targetLang');
     // `mode` is reported as `surface`; it must not also leak as a bare key.
     expect(metadata).not.toHaveProperty('mode');
+  });
+
+  it('reports the file types as one sorted, de-duplicated value', async () => {
+    const metrics = await loadMetrics();
+    metrics.instrument('translation');
+    metrics.setContext({ mode: 'config', fileTypes: ['po', 'json', 'po'] });
+    metrics.finishCommand(0);
+
+    expect(queuedEvents()[0]!.metadata).toMatchObject({ fileTypes: 'json,po' });
+  });
+
+  it('leaves fileTypes out entirely when nothing was read from a file', async () => {
+    const metrics = await loadMetrics();
+    metrics.instrument('translation');
+    metrics.setContext({ mode: 'text' });
+    metrics.finishCommand(0);
+
+    expect(queuedEvents()[0]!.metadata).not.toHaveProperty('fileTypes');
   });
 
   it('reports the characters recorded during the run', async () => {
