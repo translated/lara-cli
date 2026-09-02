@@ -1,7 +1,7 @@
 {
   "name": "@translated/lara-cli",
   "type": "module",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "CLI tool for automated i18n file translation using Lara Translate",
   "repository": {
     "type": "git",
@@ -70,7 +70,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "verify:metrics": "pnpm run build && node scripts/verify-metrics-e2e.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

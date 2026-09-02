@@ -106,6 +106,11 @@ export async function setCredentials(): Promise<void> {
 
   writeFileSync(envPath, envContent);
 
+  // dotenv already ran at start-up, so the file alone is not enough: anything
+  // constructed later in this same process reads process.env, not .env.
+  process.env.LARA_ACCESS_KEY_ID = apiKey;
+  process.env.LARA_ACCESS_KEY_SECRET = apiSecret;
+
   Ora({ text: Messages.success.apiCredentialsSet, color: 'green' }).succeed();
 }
 

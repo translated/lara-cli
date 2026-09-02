@@ -12,14 +12,21 @@ import { ConfigProvider } from '#modules/config/config.provider.js';
 import { ConfigType, ORPHAN_KEYS_MODES, OrphanKeysMode } from '#modules/config/config.types.js';
 import { TranslationEngine } from '#modules/translation/translation.engine.js';
 import { TranslationService, TextBlock } from '#modules/translation/translation.service.js';
+import { runSafely } from '../common/command.js';
 import { searchLocalePathsByPattern, ensureDirectoryExists, getFileType } from '#utils/path.js';
 import { detectFormatting } from '#utils/formatting.js';
 import picomatch from 'picomatch';
-import { handleLaraApiError, isQuotaError, getErrorMessage } from '#utils/error.js';
+import {
+  handleLaraApiError,
+  isQuotaError,
+  getErrorMessage,
+  HandledExitError,
+} from '#utils/error.js';
 import { LaraApiError, TranslateOptions as LaraTranslateOptions } from '@translated/lara';
 import { progressWithOra } from '#utils/progressWithOra.js';
 import { Messages } from '#messages/messages.js';
 import { displaySummaryBox } from '#utils/display.js';
+import * as metrics from '#modules/metrics/metrics.js';
 import { ParserFactory } from '../../../parsers/parser.factory.js';
 
 type TranslateOptions = {
@@ -113,58 +120,72 @@ export default new Command()
     ).choices([...ORPHAN_KEYS_MODES])
   )
   .action(async (options: TranslateOptions) => {
-    try {
-      const mode = validateAndDetectMode(options);
-
-      if (mode === 'text') {
-        await handleTextMode(options);
-        return;
-      }
-
-      if (mode === 'file') {
-        await handleFileMode(options);
-        return;
-      }
-
-      // Existing config-based flow
-      const config = ConfigProvider.getInstance().getConfig();
-
-      if (options.target.includes(config.locales.source)) {
-        throw new Error(Messages.errors.sourceLocaleInTarget);
-      }
-
-      const spinner = Ora({ text: Messages.info.calculatingWork, color: 'yellow' }).start();
-      const { totalElements } = await calculateTotalWork(options, config);
-      spinner.succeed(Messages.success.foundFileCombinations(totalElements));
-
-      progressWithOra.start({ message: Messages.info.translatingFiles, total: totalElements });
-
-      let hasErrors = false;
-      for (const fileType of Object.keys(config.files)) {
-        hasErrors = hasErrors || (await handleFileType(fileType, options, config));
-      }
-
-      if (hasErrors) {
-        process.exit(1);
-      }
-
-      const totalTargetLocales = getTargetLocales(options, config).length;
-      progressWithOra.stop();
-
-      displaySummaryBox({
-        title: Messages.summary.title,
-        items: [
-          [Messages.summary.filesLabel, Messages.summary.filesLocalized(totalElements)],
-          [Messages.summary.targetLocalesLabel, Messages.summary.targetLocales(totalTargetLocales)],
-        ],
-        footer: Messages.summary.allDone,
-      });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      Ora({ text: message, color: 'red' }).fail();
-      process.exit(1);
-    }
+    // runSafely opens and closes the usage-metrics window and turns any failure
+    // into a reported, non-zero exit — see src/cli/cmd/common/command.ts.
+    await runSafely(() => runTranslate(options), 'translation');
   });
+
+async function runTranslate(options: TranslateOptions): Promise<void> {
+  const mode = validateAndDetectMode(options);
+  // A single known language pair only exists in the direct modes; config mode
+  // fans out to N targets, so the pair is left off those events.
+  metrics.setContext({
+    mode,
+    ...(mode === 'config' ? {} : { sourceLang: options.source, targetLang: options.target[0] }),
+  });
+
+  if (mode === 'text') {
+    return handleTextMode(options);
+  }
+
+  if (mode === 'file') {
+    return handleFileMode(options);
+  }
+
+  // Existing config-based flow
+  const config = ConfigProvider.getInstance().getConfig();
+
+  if (options.target.includes(config.locales.source)) {
+    throw new Error(Messages.errors.sourceLocaleInTarget);
+  }
+
+  const spinner = Ora({ text: Messages.info.calculatingWork, color: 'yellow' }).start();
+  const { totalElements } = await calculateTotalWork(options, config);
+  spinner.succeed(Messages.success.foundFileCombinations(totalElements));
+  metrics.setContext({
+    elements: totalElements,
+    locales: getTargetLocales(options, config).length,
+    // The keys of `files` are the config's own file types, a closed enum.
+    fileTypes: Object.keys(config.files),
+  });
+
+  progressWithOra.start({ message: Messages.info.translatingFiles, total: totalElements });
+
+  let hasErrors = false;
+  for (const fileType of Object.keys(config.files)) {
+    hasErrors = hasErrors || (await handleFileType(fileType, options, config));
+  }
+
+  // Before either exit: the closing flush can take up to two seconds, and a
+  // progress bar still animating over it leaves the terminal mid-redraw.
+  progressWithOra.stop();
+
+  if (hasErrors) {
+    // Every failure has already been reported per file.
+    throw new HandledExitError(Messages.errors.someFilesFailed);
+  }
+
+  const totalTargetLocales = getTargetLocales(options, config).length;
+
+  displaySummaryBox({
+    title: Messages.summary.title,
+    items: [
+      [Messages.summary.filesLabel, Messages.summary.filesLocalized(totalElements)],
+      [Messages.summary.targetLocalesLabel, Messages.summary.targetLocales(totalTargetLocales)],
+    ],
+    footer: Messages.summary.allDone,
+  });
+}
 
 function validateAndDetectMode(options: TranslateOptions): TranslateMode {
   const isDirectMode = !!(options.file || options.text);
@@ -276,6 +297,9 @@ async function handleFileMode(options: TranslateOptions): Promise<void> {
       Messages.errors.unsupportedFileType(fileType, SEARCHABLE_EXTENSIONS.join(', '))
     );
   }
+  // Only past the check: an unsupported extension is whatever the user named
+  // their file, and that is not something to report.
+  metrics.setContext({ fileTypes: [fileType] });
 
   let content: string;
   try {
@@ -384,17 +408,20 @@ async function handleFileType(
     try {
       await translationEngine.translate();
     } catch (error) {
+      // Every branch below either continues with the next file or unwinds with
+      // a generic "some files failed", so this is the last place that still
+      // holds what actually broke.
+      metrics.recordError(error);
+
       if (error instanceof LaraApiError) {
+        // Fatal errors (401, 402/403, quota, 5xx) unwind from here; if this
+        // returns, the error was not fatal and the remaining files still run.
         handleLaraApiError(
           error,
           Messages.errors.errorTranslatingFile(inputPath),
           progressWithOra.spinner
         );
-        // Check if the error was fatal (401 or >= 500) - if so, process.exit was called
-        // For non-fatal errors, continue but mark as having errors
-        if (error.statusCode !== 401 && error.statusCode < 500) {
-          hasErrors = true;
-        }
+        hasErrors = true;
         continue;
       }
 
@@ -406,7 +433,7 @@ async function handleFileType(
           getErrorMessage(error)
         );
         progressWithOra.stop(quotaMessage, 'fail');
-        process.exit(1);
+        throw new HandledExitError(quotaMessage, error);
       }
 
       const message = getErrorMessage(error);

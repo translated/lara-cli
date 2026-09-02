@@ -4,7 +4,7 @@ import { confirm, input } from '@inquirer/prompts';
 import { LaraApiError } from '@translated/lara';
 
 import { LocalesEnum } from '#modules/common/common.types.js';
-import { handleLaraApiError } from '#utils/error.js';
+import { handleLaraApiError, HandledExitError } from '#utils/error.js';
 import { Messages } from '#messages/messages.js';
 import customSearchableSelect from '#utils/prompt.js';
 import { addIdToConfig } from './config-sync.js';
@@ -146,8 +146,12 @@ export async function resolveResourceId(options: {
     items = await options.fetch();
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, options.gettingError, spinner);
-      return process.exit(1);
+      // Fatal errors unwind from inside; a non-fatal one has been reported and
+      // hands back what it printed, so the error carries the words the user
+      // actually saw. Either way runSafely closes the command rather than this
+      // exiting under it.
+      const reported = handleLaraApiError(error, options.gettingError, spinner);
+      throw new HandledExitError(reported, error);
     }
     throw error;
   }
