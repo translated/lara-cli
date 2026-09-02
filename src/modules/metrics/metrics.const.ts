@@ -4,15 +4,6 @@
  */
 export const METRICS_CHANNEL = 'cli';
 
-/**
- * The only event types the backend accepts without an `accountId`: they can
- * happen before the client ever holds one. For this CLI that is `auth_fail` on
- * a key Lara rejects the first time it is used — the funnel step that says the
- * user never got set up. `install` is in the backend's list too, but a package
- * download is not something the CLI can report, so it never sends one.
- */
-export const PRE_AUTH_EVENT_TYPES = ['install', 'auth_fail'];
-
 // TODO(before release): replace the placeholders below with the production
 // values, or (preferred) keep them as-is and let CI substitute them — see
 // scripts/bake-metrics-key.mjs and the "Bake metrics key" step in

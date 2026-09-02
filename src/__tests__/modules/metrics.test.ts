@@ -982,7 +982,7 @@ describe('instrumentCommand', () => {
     mockBackend();
 
     metrics.instrument('auth-only');
-    metrics.recordAuthResult(true);
+    metrics.recordApiAnswer();
     metrics.finishCommand(0);
 
     expect(queuedEvents().map((event) => event.eventType)).toEqual(['auth_success']);
@@ -1017,12 +1017,12 @@ describe('finishAndFlush', () => {
   });
 });
 
-describe('recordAuthResult', () => {
+describe('recordApiAnswer', () => {
   it('sends auth_success at most once per run', async () => {
     const metrics = await loadMetrics();
     metrics.instrument('translation');
-    metrics.recordAuthResult(true);
-    metrics.recordAuthResult(true);
+    metrics.recordApiAnswer();
+    metrics.recordApiAnswer();
 
     expect(queuedEvents()).toHaveLength(1);
     expect(queuedEvents()[0]!.eventType).toBe('auth_success');
@@ -1031,11 +1031,34 @@ describe('recordAuthResult', () => {
   it('sends auth_fail with a mapped errorType', async () => {
     const metrics = await loadMetrics();
     metrics.instrument('translation');
-    metrics.recordAuthResult(false, new LaraApiError(401, 'Error', 'bad key'));
+    metrics.recordApiAnswer(new LaraApiError(401, 'Error', 'bad key'));
 
     expect(queuedEvents()[0]).toMatchObject({
       eventType: 'auth_fail',
       errorType: 'auth_401',
     });
+  });
+
+  it.each([
+    [400, 'auth_success'],
+    [402, 'auth_success'],
+    [429, 'auth_success'],
+  ])('reads a %i as the key having been accepted', async (status, expected) => {
+    const metrics = await loadMetrics();
+    metrics.instrument('translation');
+    metrics.recordApiAnswer(new LaraApiError(status, 'Error', 'boom'));
+
+    expect(queuedEvents()[0]!.eventType).toBe(expected);
+  });
+
+  it.each([
+    ['a 5xx', new LaraApiError(503, 'Error', 'down')],
+    ['a network failure', new Error('socket hang up')],
+  ])('says nothing about the key on %s', async (_label, error) => {
+    const metrics = await loadMetrics();
+    metrics.instrument('translation');
+    metrics.recordApiAnswer(error);
+
+    expect(queuedEvents()).toEqual([]);
   });
 });

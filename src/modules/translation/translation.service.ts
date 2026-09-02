@@ -87,26 +87,17 @@ export class TranslationService {
   }
 
   /**
-   * Reports auth on any real API answer and gets out of the way. Wraps the
-   * memory and glossary calls, which authenticate but never translate.
+   * Hands every real API answer to metrics and gets out of the way — what a
+   * given status means is decided there. Wraps the memory and glossary calls
+   * too, which authenticate but never translate.
    */
   private async reporting<T>(call: Promise<T>): Promise<T> {
     try {
       const result = await call;
-      metrics.recordAuthResult(true);
+      metrics.recordApiAnswer();
       return result;
     } catch (error) {
-      if (error instanceof LaraApiError) {
-        if (error.statusCode === 401 || error.statusCode === 403) {
-          metrics.recordAuthResult(false, error);
-        } else if (error.statusCode < 500) {
-          // A 400, 402 or 429 is Lara answering past its auth check: the key was
-          // accepted, and the funnel would otherwise lose a user who got in fine
-          // and then ran out of credit. A 5xx says nothing either way, so it
-          // reports nothing.
-          metrics.recordAuthResult(true);
-        }
-      }
+      metrics.recordApiAnswer(error);
       throw error;
     }
   }
@@ -138,16 +129,20 @@ export class TranslationService {
         metrics.recordTranslated(textBlocks.reduce((total, block) => total + block.text.length, 0));
         return response.translation;
       } catch (error) {
-        metrics.recordError(error);
+        // Only what escapes this loop is reported: an error the next attempt
+        // recovers from never reached the user, and recording it would pin the
+        // run's errorType on a failure that did not happen.
 
         // Retrying an auth/quota failure is pointless — surface it immediately.
         if (isFatalApiError(error)) {
+          metrics.recordError(error);
           throw error;
         }
 
         attempt++;
 
         if (attempt >= maxRetries) {
+          metrics.recordError(error);
           throw error;
         }
 

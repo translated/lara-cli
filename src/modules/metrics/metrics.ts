@@ -26,7 +26,6 @@ import {
   MAX_QUEUE,
   MAX_UINT32,
   METRICS_CHANNEL,
-  PRE_AUTH_EVENT_TYPES,
   QUEUE_FILE,
   TOKEN_COOLDOWN_FILE,
   TOKEN_MARGIN_MS,
@@ -82,7 +81,8 @@ type TokenBearingClient = { token?: string };
 /** Groups every event of a single CLI invocation. */
 const SESSION_ID = randomUUID();
 
-let startedAt = Date.now();
+/** Set by instrument(), which every command goes through before anything reads it. */
+let startedAt = 0;
 let charsTranslated = 0;
 let lastError: unknown = undefined;
 let authEventSent = false;
@@ -287,10 +287,10 @@ export function queueEvent(event: Record<string, unknown>): void {
     }
     const accountId = currentAccountId();
     // `auth_fail` is the one event that matters most when there is no account
-    // id to attach: a key Lara rejected the first time it was used. The backend
-    // accepts it, and `install`, without one. Everything else is dropped —
-    // an event missing a required field would 400 the whole batch it rides in.
-    if (!accountId && !PRE_AUTH_EVENT_TYPES.includes(String(event.eventType))) {
+    // id to attach: a key Lara rejected the first time it was used, and the
+    // backend takes it without one. Everything else is dropped — an event
+    // missing a required field would 400 the whole batch it rides in.
+    if (!accountId && event.eventType !== 'auth_fail') {
       return;
     }
     const file = stateFile(QUEUE_FILE);
@@ -624,16 +624,44 @@ export function recordError(error: unknown): void {
 }
 
 /**
- * The CLI has no login step, so auth is only ever proven by a real API answer.
- * Sent at most once per run.
+ * What a Lara answer says about the key, or `undefined` when it says nothing.
+ * This is metrics' own vocabulary: a caller reports what happened, it does not
+ * decide what a status code means.
  */
-export function recordAuthResult(ok: boolean, error?: unknown): void {
+function authOutcome(error: unknown): boolean | undefined {
+  if (error === undefined) {
+    return true;
+  }
+  if (!(error instanceof LaraApiError)) {
+    return undefined;
+  }
+  if (error.statusCode === 401 || error.statusCode === 403) {
+    return false;
+  }
+  // Anything else Lara answered came back past its auth check, so the key was
+  // accepted — the funnel would otherwise lose a user who got in fine and then
+  // ran out of credit. A 5xx says nothing either way.
+  return error.statusCode < 500 ? true : undefined;
+}
+
+/**
+ * The CLI has no login step, so auth is only ever proven by a real API answer:
+ * call this with nothing when the call succeeded, with the error when it did
+ * not. Sent at most once per run.
+ */
+export function recordApiAnswer(error?: unknown): void {
   if (authEventSent) {
+    return;
+  }
+  const accepted = authOutcome(error);
+  if (accepted === undefined) {
     return;
   }
   authEventSent = true;
   queueEvent(
-    ok ? { eventType: 'auth_success' } : { eventType: 'auth_fail', errorType: errorTypeFor(error) }
+    accepted
+      ? { eventType: 'auth_success' }
+      : { eventType: 'auth_fail', errorType: errorTypeFor(error) }
   );
 }
 

@@ -1,5 +1,5 @@
 import { LaraApiError } from '@translated/lara';
-import Ora, { type Ora as OraSpinner } from 'ora';
+import { type Ora as OraSpinner } from 'ora';
 import { Messages } from '#messages/messages.js';
 
 /**
@@ -92,15 +92,3 @@ function displayError(message: string, spinner: OraSpinner): void {
   spinner.fail(message);
 }
 
-/**
- * Reports an error to the user, unless it is one that was already reported
- * where it was raised. Every catch that prints goes through here, so "already
- * on screen" stays a property of the error rather than a rule each catcher has
- * to remember.
- */
-export function reportUnlessHandled(error: unknown): void {
-  if (error instanceof HandledExitError) {
-    return;
-  }
-  Ora({ text: getErrorMessage(error), color: 'red' }).fail();
-}

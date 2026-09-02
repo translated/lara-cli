@@ -2,7 +2,7 @@ import Ora from 'ora';
 import { ExitPromptError } from '@inquirer/core';
 
 import { Messages } from '#messages/messages.js';
-import { reportUnlessHandled } from '#utils/error.js';
+import { getErrorMessage, HandledExitError } from '#utils/error.js';
 import * as metrics from '#modules/metrics/metrics.js';
 
 /**
@@ -47,7 +47,10 @@ export async function runSafely(
     // The service records the API errors it can classify; this catches
     // everything else the command can die of.
     metrics.recordError(error);
-    reportUnlessHandled(error);
+    // A HandledExitError was already printed where it was raised.
+    if (!(error instanceof HandledExitError)) {
+      Ora({ text: getErrorMessage(error), color: 'red' }).fail();
+    }
     await metrics.finishAndFlush(1);
     process.exit(1);
   }

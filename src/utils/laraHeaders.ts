@@ -1,7 +1,11 @@
 import { Translator } from '@translated/lara';
 import { getPackageVersion } from './version.js';
 
-type ClientWithExtraHeader = { setExtraHeader?: (name: string, value: string) => void };
+/** The two members of the SDK's internal client this CLI reaches for. */
+export type LaraInternalClient = {
+  setExtraHeader?: (name: string, value: string) => void;
+  token?: string;
+};
 
 /**
  * The SDK's internal HTTP client. It has no public accessor, so we reach it
@@ -10,8 +14,8 @@ type ClientWithExtraHeader = { setExtraHeader?: (name: string, value: string) =>
  * cast here means an SDK rename is one thing to fix, and the laraHeaders test —
  * which asserts the real SDK still applies our headers — guards every consumer.
  */
-export function internalLaraClient(translator: Translator): unknown {
-  return (translator as unknown as { client?: unknown }).client;
+export function internalLaraClient(translator: Translator): LaraInternalClient | undefined {
+  return (translator as unknown as { client?: LaraInternalClient }).client;
 }
 
 /**
@@ -23,7 +27,7 @@ export function internalLaraClient(translator: Translator): unknown {
  * request (translate, detect, memories.*, glossaries.*).
  */
 export function applyLaraClientHeaders(translator: Translator): void {
-  const internal = internalLaraClient(translator) as ClientWithExtraHeader | undefined;
+  const internal = internalLaraClient(translator);
   if (typeof internal?.setExtraHeader !== 'function') {
     return;
   }

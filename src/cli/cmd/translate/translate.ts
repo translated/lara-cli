@@ -405,6 +405,11 @@ async function handleFileType(
     try {
       await translationEngine.translate();
     } catch (error) {
+      // Every branch below either continues with the next file or unwinds with
+      // a generic "some files failed", so this is the last place that still
+      // holds what actually broke.
+      metrics.recordError(error);
+
       if (error instanceof LaraApiError) {
         // Fatal errors (401, 402/403, quota, 5xx) unwind from here; if this
         // returns, the error was not fatal and the remaining files still run.
@@ -427,11 +432,6 @@ async function handleFileType(
         progressWithOra.stop(quotaMessage, 'fail');
         throw new HandledExitError(quotaMessage, error);
       }
-
-      // The command carries on with the other files and finally unwinds with a
-      // generic "some files failed", which classifies as nothing. Record the
-      // real error here or the funnel never learns what actually broke.
-      metrics.recordError(error);
 
       const message = getErrorMessage(error);
       const errorMessage = Messages.errors.translatingFile(inputPath, message);
