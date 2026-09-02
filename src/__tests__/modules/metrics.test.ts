@@ -19,6 +19,7 @@ const CHANNEL_KEY = 'metrics-key';
 const INGEST_TOKEN = 'ingest-token-aaa';
 const ENV_KEYS = [
   'LARA_TELEMETRY_DISABLED',
+  'DO_NOT_TRACK',
   'METRICS_URL',
   'METRICS_API_KEY',
   'LARA_ACCESS_KEY_ID',
@@ -161,6 +162,33 @@ describe('opt-out and configuration', () => {
     expect(queuedEvents()).toEqual([]);
   });
 
+  it('writes nothing and calls no network when DO_NOT_TRACK is set', async () => {
+    process.env.DO_NOT_TRACK = '1';
+    const { spy } = mockBackend();
+    const metrics = await loadMetrics();
+
+    metrics.queueEvent({ eventType: 'call_success' });
+    await metrics.flushQueue();
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(queuedEvents()).toEqual([]);
+  });
+
+  it.each(['0', 'false', ''])(
+    'treats %o as "leave telemetry alone", not as an opt-out',
+    async (value) => {
+      process.env.LARA_TELEMETRY_DISABLED = value;
+      process.env.DO_NOT_TRACK = value;
+      const { ingestCalls } = mockBackend();
+      const metrics = await loadMetrics();
+
+      metrics.queueEvent({ eventType: 'call_success' });
+      await metrics.flushQueue();
+
+      expect(ingestCalls).toHaveLength(1);
+    }
+  );
+
   it('stays off when the bake step never replaced the placeholders', async () => {
     delete process.env.METRICS_URL;
     delete process.env.METRICS_API_KEY;
@@ -228,6 +256,28 @@ describe('installationId', () => {
 
     expect(second).toBeTruthy();
     expect(second).not.toBe(first);
+  });
+
+  it('announces telemetry once, on stderr, when the installation is first stored', async () => {
+    const written: string[] = [];
+    const stderr = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((chunk: string | Uint8Array) => {
+        written.push(String(chunk));
+        return true;
+      });
+
+    try {
+      (await loadMetrics()).installationId();
+      expect(written.join('')).toContain('LARA_TELEMETRY_DISABLED=1');
+
+      // Second run, same machine: the id is already on disk, so nothing is said.
+      written.length = 0;
+      (await loadMetrics()).installationId();
+      expect(written).toEqual([]);
+    } finally {
+      stderr.mockRestore();
+    }
   });
 
   it('is the installationId sent to the token endpoint', async () => {

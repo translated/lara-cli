@@ -12,6 +12,7 @@ import { join } from 'node:path';
 
 import { LaraApiError } from '@translated/lara';
 
+import { Messages } from '#messages/messages.js';
 import { getErrorMessage, isQuotaError } from '#utils/error.js';
 import { getPackageVersion } from '#utils/version.js';
 import {
@@ -99,8 +100,24 @@ function isConfigured(value: string | undefined): value is string {
   return Boolean(value) && !/^__.*__$/.test(value!);
 }
 
+/**
+ * An opt-out switch is off only when it is unset or explicitly says so. Any
+ * other value means the user meant to switch it on: `=0` and `=false` are the
+ * two people reach for when they want telemetry left alone, and treating them
+ * as "disabled" would silently do the opposite of what they asked.
+ */
+function isSet(value: string | undefined): boolean {
+  const normalized = value?.trim().toLowerCase();
+  return normalized !== undefined && !['', '0', 'false'].includes(normalized);
+}
+
+/** DO_NOT_TRACK is the cross-tool standard; ours is the one the README names. */
+function optedOut(): boolean {
+  return isSet(process.env.LARA_TELEMETRY_DISABLED) || isSet(process.env.DO_NOT_TRACK);
+}
+
 function transport(): Transport | null {
-  if (process.env.LARA_TELEMETRY_DISABLED) {
+  if (optedOut()) {
     return null;
   }
   const url = process.env.METRICS_URL ?? BAKED_METRICS_URL;
@@ -160,6 +177,10 @@ export function installationId(): string | null {
     }
     const fresh = randomUUID();
     writeFileSync(file, fresh);
+    // The first time this machine stores anything for telemetry is the only
+    // honest moment to say that it does. Once, on stderr, so a piped stdout
+    // stays exactly as clean as it was before.
+    process.stderr.write(`\n${Messages.warnings.telemetryNotice}\n`);
     return fresh;
   } catch {
     return null;

@@ -191,6 +191,12 @@ check('run 1 delivered its own events (flush on the way out)', received.length =
 check('run 1 bought exactly one token', tokenRequests.length === 1, String(tokenRequests.length));
 check('run 1 left an empty queue behind', queueContent() === '');
 
+check(
+  'run 1 announced telemetry on stderr',
+  r1.stderr.includes('LARA_TELEMETRY_DISABLED=1'),
+  r1.stderr.slice(0, 120)
+);
+
 // --- run 2: fails before any API call, still attributable --------------------
 const r2 = await run(FAILING);
 check('run 2 (bad input) exits 1', r2.code === 1, `code=${r2.code}`);
@@ -198,6 +204,12 @@ check('run 2 (bad input) exits 1', r2.code === 1, `code=${r2.code}`);
 // --- run 3: another good run -------------------------------------------------
 const r3 = await run(OK);
 check('run 3 exits 0', r3.code === 0, `code=${r3.code}`);
+
+check(
+  'run 3 said nothing: the notice is once per machine, not once per command',
+  !r3.stderr.includes('LARA_TELEMETRY_DISABLED=1'),
+  r3.stderr.slice(0, 120)
+);
 
 const events = received.flatMap((r) => r.body.events);
 console.log('\nevents received:');

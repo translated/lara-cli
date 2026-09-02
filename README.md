@@ -238,13 +238,18 @@ over rides along with the next command's send. If the metrics backend is slow or
 CLI behaves exactly as it does today: the send is bounded to two seconds and whatever could not be
 delivered simply waits for the next run.
 
-**To turn it off**, set the environment variable:
+The first run that records anything prints a one-line notice on `stderr` saying all of this, once
+per machine — the README is not somewhere consent can hide.
+
+**To turn it off**, set either environment variable:
 
 ```bash
 LARA_TELEMETRY_DISABLED=1
+DO_NOT_TRACK=1
 ```
 
-With that set, nothing is recorded and no file is written.
+With either set, nothing is recorded and no file is written — not even the installation id. Only
+`0`, `false` and an empty value are read as "leave it on"; anything else turns it off.
 
 ## Documentation
 
