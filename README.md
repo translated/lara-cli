@@ -17,6 +17,7 @@ Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18
 - [Local Development Setup](#local-development-setup)
 - [Technology Stack](#technology-stack)
 - [Supported Locales](#supported-locales)
+- [Usage Metrics](#usage-metrics)
 - [Documentation](#documentation)
 
 ## Installation
@@ -208,6 +209,33 @@ The codebase follows a modular architecture with clear separation of concerns, m
 Lara CLI supports translations using different locale codes, following two main standards:
 
 See the [full list of supported locales](docs/config/locales.md#supported-locales).
+
+## Usage Metrics
+
+Lara CLI reports usage metrics so we can see where people get stuck between installing it and
+translating something. What it records is whether setup and translation succeeded, with timings,
+volumes, the CLI version and your Lara account id — the same one shown on your account.
+
+**What is never sent**: your source or translated text, file names or paths, your configuration,
+or your credentials.
+
+Events are appended to a local file and sent in one batch when the command finishes; anything left
+over rides along with the next command's send. If the metrics backend is slow or unreachable the
+CLI behaves exactly as it does today: the send is bounded to two seconds and whatever could not be
+delivered simply waits for the next run.
+
+The first run that records anything prints a one-line notice on `stderr` saying so, once per
+machine.
+
+**To turn it off**, set either environment variable:
+
+```bash
+LARA_TELEMETRY_DISABLED=1
+DO_NOT_TRACK=1
+```
+
+With either set, nothing is recorded and no file is written — not even the installation id. Only
+`0`, `false` and an empty value are read as "leave it on"; anything else turns it off.
 
 ## Documentation
 

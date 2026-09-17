@@ -49,6 +49,12 @@ jobs:
       - name: Build project
         run: pnpm run build
 
+      - name: Bake metrics key
+        run: node scripts/bake-metrics-key.mjs
+        env:
+          METRICS_URL: ${{ secrets.METRICS_URL }}
+          METRICS_API_KEY: ${{ secrets.METRICS_API_KEY }}
+
       - name: Validate version matches tag
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
