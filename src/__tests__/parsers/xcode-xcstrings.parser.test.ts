@@ -690,6 +690,315 @@ describe('XcodeXcstringsParser', () => {
     });
   });
 
+  describe('formatting preservation', () => {
+    // Formatting as written by Xcode: `"key" : value`, keys sorted at every level,
+    // no trailing newline, `/` and unicode not escaped.
+    const xcodeContent = `{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "files_count" : {
+      "comment" : "Number of files",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "No files"
+                }
+              }
+            }
+          }
+        },
+        "ps" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 فایل"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld فایلونه"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "هیڅ فایلونه نشته"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "last_updated" : {
+      "comment" : "Last updated: timestamp",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last updated: %@"
+          }
+        },
+        "ps" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وروستی ځل تازه شوی: %@"
+          }
+        }
+      }
+    },
+    "photos_videos" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photos / Videos 📷"
+          }
+        },
+        "ps" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انځورونه / ویډیوګانې 📷"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}`;
+
+    it('should preserve Xcode formatting byte-for-byte on round-trip', () => {
+      const data = parser.parse(xcodeContent, {
+        targetLocale: 'ps',
+        originalContent: xcodeContent,
+      });
+
+      const result = parser.serialize(data, { targetLocale: 'ps', originalContent: xcodeContent });
+
+      expect(result).toBe(xcodeContent);
+    });
+
+    it('should insert a new locale in Xcode key order with Xcode formatting', () => {
+      // Plural forms intentionally not in sorted order
+      const data = {
+        'files_count/zero': 'Keine Dateien',
+        'files_count/one': '1 Datei',
+        'files_count/other': '%lld Dateien',
+        last_updated: 'Zuletzt aktualisiert: %@',
+        photos_videos: 'Fotos / Videos 📷',
+      };
+
+      const result = parser.serialize(data, { targetLocale: 'de', originalContent: xcodeContent });
+
+      const deUnit = (value: string) => `"de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${value}"
+          }
+        },
+        "en" : {`;
+      const expected = xcodeContent
+        .replace(
+          `"localizations" : {
+        "en" : {
+          "variations"`,
+          `"localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 Datei"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Dateien"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Keine Dateien"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations"`
+        )
+        .replace(
+          `"en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last updated: %@"`,
+          `${deUnit('Zuletzt aktualisiert: %@')}
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last updated: %@"`
+        )
+        .replace(
+          `"en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photos / Videos 📷"`,
+          `${deUnit('Fotos / Videos 📷')}
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photos / Videos 📷"`
+        );
+      expect(expected).not.toBe(xcodeContent);
+
+      expect(result).toBe(expected);
+    });
+
+    it('should escape values containing quotes, colons and newlines', () => {
+      const value = 'Say "hi" : now\nok';
+
+      const result = parser.serialize(
+        { photos_videos: value },
+        { targetLocale: 'de', originalContent: xcodeContent }
+      ) as string;
+
+      expect(result).toContain('"value" : "Say \\"hi\\" : now\\nok"');
+      expect(JSON.parse(result).strings.photos_videos.localizations.de.stringUnit.value).toBe(
+        value
+      );
+    });
+
+    it('should preserve non-Xcode formatting and key order', () => {
+      const originalContent =
+        JSON.stringify(
+          {
+            version: '1.0',
+            sourceLanguage: 'en',
+            strings: {
+              hello: {
+                localizations: {
+                  it: { stringUnit: { state: 'translated', value: 'Ciao' } },
+                  en: { stringUnit: { state: 'translated', value: 'Hello' } },
+                },
+              },
+            },
+          },
+          null,
+          2
+        ) + '\n';
+
+      const roundTrip = parser.serialize(
+        { hello: 'Ciao' },
+        { targetLocale: 'it', originalContent }
+      );
+      expect(roundTrip).toBe(originalContent);
+
+      const withNewLocale = parser.serialize(
+        { hello: 'Hallo' },
+        { targetLocale: 'de', originalContent }
+      ) as string;
+      expect(withNewLocale).not.toContain('" :');
+      expect(withNewLocale.endsWith('}\n')).toBe(true);
+      expect(Object.keys(JSON.parse(withNewLocale).strings.hello.localizations)).toEqual([
+        'it',
+        'en',
+        'de',
+      ]);
+    });
+
+    it('should not switch to Xcode formatting when only a value contains " : "', () => {
+      const originalContent = JSON.stringify(
+        {
+          sourceLanguage: 'en',
+          strings: {
+            hello: {
+              localizations: {
+                en: { stringUnit: { state: 'translated', value: 'Say "hi" : now' } },
+              },
+            },
+          },
+          version: '1.0',
+        },
+        null,
+        2
+      );
+      const data = parser.parse(originalContent, { targetLocale: 'en', originalContent });
+
+      const result = parser.serialize(data, { targetLocale: 'en', originalContent });
+
+      expect(result).toBe(originalContent);
+    });
+
+    it('should not reorder keys of an Xcode-style file that is not sorted by code unit', () => {
+      // A case-insensitive order ("about" before "Continue") must not be rewritten
+      const originalContent = `{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "about" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
+          }
+        }
+      }
+    },
+    "Continue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}`;
+      const data = parser.parse(originalContent, { targetLocale: 'en', originalContent });
+
+      const result = parser.serialize(data, { targetLocale: 'en', originalContent });
+
+      expect(result).toBe(originalContent);
+    });
+
+    it('should use Xcode formatting when original content is empty', () => {
+      const result = parser.serialize(
+        { hello: 'Bonjour' },
+        { targetLocale: 'fr', originalContent: '' }
+      ) as string;
+
+      expect(result).toContain('"sourceLanguage" : "en"');
+      expect(result).toContain('"value" : "Bonjour"');
+      expect(result).not.toMatch(/": /);
+    });
+  });
+
   describe('getFallback', () => {
     it('should return a valid empty xcstrings JSON structure', () => {
       const fallback = parser.getFallback();
