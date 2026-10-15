@@ -71,11 +71,8 @@ export class XcodeXcstringsParser implements Parser<
   Record<string, unknown>,
   XcodeXcstringsParserOptionsType
 > {
-  private readonly fallbackContent = JSON.stringify(
-    { sourceLanguage: 'en', strings: {}, version: '1.0' },
-    null,
-    2
-  );
+  private readonly fallbackContent =
+    '{\n  "sourceLanguage" : "en",\n  "strings" : {},\n  "version" : "1.0"\n}';
 
   /**
    * Detects the indentation used in JSON content.
@@ -86,6 +83,54 @@ export class XcodeXcstringsParser implements Parser<
       return match[1].length;
     }
     return 2;
+  }
+
+  /**
+   * Detects whether JSON content uses Xcode's key/value separator: `"key" : value`
+   * (JSON.stringify writes `"key": value`).
+   */
+  private usesXcodeSeparator(content: string): boolean {
+    // Anchored to line start: JSON strings can't contain raw newlines, so this matches a key, not a value
+    return /^[ \t]*"(?:[^"\\]|\\.)*" :/m.test(content);
+  }
+
+  /**
+   * Checks whether every object in the value has its keys in sorted order,
+   * as Xcode writes them.
+   */
+  private isDeepSorted(value: unknown): boolean {
+    if (value === null || typeof value !== 'object') {
+      return true;
+    }
+    const isArray = Array.isArray(value);
+    let previous: string | undefined;
+    for (const [key, item] of Object.entries(value)) {
+      if (!isArray && previous !== undefined && previous >= key) {
+        return false;
+      }
+      if (!this.isDeepSorted(item)) {
+        return false;
+      }
+      previous = key;
+    }
+    return true;
+  }
+
+  /**
+   * Returns a deep copy of the value with object keys in sorted order.
+   */
+  private sortKeysDeep(value: unknown): unknown {
+    if (value === null || typeof value !== 'object') {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sortKeysDeep(item));
+    }
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([key, item]) => [key, this.sortKeysDeep(item)])
+    );
   }
 
   /**
@@ -197,6 +242,10 @@ export class XcodeXcstringsParser implements Parser<
       return baseContent;
     }
 
+    // Detect formatting before mutating, so new keys follow the original style
+    const xcodeSeparator = this.usesXcodeSeparator(baseContent);
+    const sortKeys = this.isDeepSorted(xcstrings);
+
     if (!xcstrings.strings) {
       xcstrings.strings = {};
     }
@@ -277,7 +326,16 @@ export class XcodeXcstringsParser implements Parser<
     }
 
     const trailingNewline = baseContent.endsWith('\n') ? '\n' : '';
-    return JSON.stringify(xcstrings, null, indentation) + trailingNewline;
+    let output = JSON.stringify(
+      sortKeys ? this.sortKeysDeep(xcstrings) : xcstrings,
+      null,
+      indentation
+    );
+    if (xcodeSeparator) {
+      // Every key starts its own line in indented JSON.stringify output, so only keys match
+      output = output.replace(/^([ \t]*"(?:[^"\\]|\\.)*"):/gm, '$1 :');
+    }
+    return output + trailingNewline;
   }
 
   /**
