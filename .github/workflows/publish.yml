@@ -49,10 +49,12 @@ jobs:
       - name: Build project
         run: pnpm run build
 
+      # --require: a release that ships un-baked placeholders reports nothing and
+      # says nothing about it. Fail here instead, before anything is published.
       - name: Bake metrics key
-        run: node scripts/bake-metrics-key.mjs
+        run: node scripts/bake-metrics-key.mjs --require
         env:
-          METRICS_URL: ${{ secrets.METRICS_URL }}
+          METRICS_URL: ${{ vars.METRICS_URL }}
           METRICS_API_KEY: ${{ secrets.METRICS_API_KEY }}
 
       - name: Validate version matches tag

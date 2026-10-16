@@ -8,7 +8,12 @@
  * placeholders, CI replaces them in build/ right before publishing, and a value
  * still in placeholder form is treated as absent at runtime (telemetry off).
  *
- * Missing env vars are not an error — a local build simply stays un-baked.
+ * Missing env vars are not an error — a local build simply stays un-baked. With
+ * `--require` they are: that is the publish path, where an un-baked build is a
+ * release that silently reports nothing.
+ *
+ * The URL is not a secret (it is in the open on the mcp channel too) and lives in
+ * the repository variable METRICS_URL; only the channel key is a GitHub secret.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -19,7 +24,16 @@ const substitutions = [
   ['__METRICS_API_KEY__', process.env.METRICS_API_KEY],
 ];
 
-if (substitutions.every(([, value]) => !value)) {
+const required = process.argv.includes('--require');
+const missing = substitutions.filter(([, value]) => !value).map(([name]) => name);
+
+if (missing.length > 0 && required) {
+  console.error(`bake-metrics-key: no value for ${missing.join(', ')}.`);
+  console.error('Set the repository variable METRICS_URL and the secret METRICS_API_KEY.');
+  process.exit(1);
+}
+
+if (missing.length === substitutions.length) {
   console.log('bake-metrics-key: METRICS_URL/METRICS_API_KEY unset, leaving placeholders.');
   process.exit(0);
 }
