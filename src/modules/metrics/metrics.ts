@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   existsSync,
+  linkSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -17,8 +18,10 @@ import { lockSync } from 'proper-lockfile';
 import { Messages } from '#messages/messages.js';
 import { getErrorMessage, isQuotaError } from '#utils/error.js';
 import { getPackageVersion } from '#utils/version.js';
+import { touchSession } from './metrics.session.js';
 import {
   ACCOUNT_FILE_PREFIX,
+  AUTH_SUCCESS_FILE_PREFIX,
   BAKED_METRICS_API_KEY,
   BAKED_METRICS_URL,
   CI_ENV_VARS,
@@ -71,6 +74,30 @@ export type MetricsErrorType =
   | 'unknown';
 
 type Transport = { url: string; key: string };
+type QueuedEvent = {
+  timestamp?: unknown;
+  eventType?: unknown;
+  accountId?: unknown;
+  eventId?: unknown;
+};
+
+/** UUIDv5 in the URL namespace: one milestone id across keys and installations. */
+function authSuccessId(accountId: string): string {
+  const namespace = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex');
+  const bytes = createHash('sha1')
+    .update(namespace)
+    .update(`https://laratranslate.com/metrics/${METRICS_CHANNEL}/auth_success/${accountId}`)
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x50;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = bytes.toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function authSuccessFile(dir: string, accountId: string): string {
+  return join(dir, `${AUTH_SUCCESS_FILE_PREFIX}${authSuccessId(accountId)}`);
+}
 
 /** What a command tells the metrics module about itself while it runs. */
 export type RunContext = {
@@ -91,8 +118,8 @@ export type RunContext = {
 /** The SDK's internal client, reached defensively — see trackLaraClient. */
 type TokenBearingClient = { token?: string };
 
-/** Groups every event of a single CLI invocation. */
-const SESSION_ID = randomUUID();
+/** Keeps queue filenames unique even when commands share a usage session. */
+const INVOCATION_ID = randomUUID();
 
 /** Set by instrument(), which every command goes through before anything reads it. */
 let startedAt = 0;
@@ -305,20 +332,31 @@ export function currentAccountId(): string | null {
     return live;
   }
 
+  const stored = accountIdFromDisk();
+  if (stored) cachedAccountId = stored;
+  return stored;
+}
+
+function accountIdFromDisk(): string | null {
   try {
     const file = accountCacheFile();
     if (file && existsSync(file)) {
       const stored = readFileSync(file, 'utf8').trim();
-      if (stored.startsWith('acc_')) {
-        cachedAccountId = stored;
-        return stored;
-      }
+      if (stored.startsWith('acc_')) return stored;
     }
   } catch {
-    // Unreadable cache: no account id, no events. Never fatal.
+    // An unreadable cache cannot identify this command.
   }
-
   return null;
+}
+
+function usageSession(dir: string, accountId: string | null): string | null {
+  const scope =
+    accountId ??
+    `unverified:${createHash('sha256')
+      .update(process.env.LARA_ACCESS_KEY_ID ?? '')
+      .digest('hex')}`;
+  return touchSession(dir, `${METRICS_CHANNEL}:${scope}`);
 }
 
 /**
@@ -345,6 +383,13 @@ export function queueEvent(event: Record<string, unknown>): void {
     if (!dir) {
       return;
     }
+    const sessionId = usageSession(dir, accountId);
+    if (!sessionId) return;
+    const firstAuth = event.eventType === 'auth_success';
+    if (firstAuth && existsSync(authSuccessFile(dir, accountId!))) {
+      return;
+    }
+    const eventId = firstAuth ? authSuccessId(accountId!) : randomUUID();
     // The identity fields come last on purpose: a caller cannot override the
     // channel it reports as, the account the event belongs to, or its clock.
     const line = JSON.stringify({
@@ -355,22 +400,34 @@ export function queueEvent(event: Record<string, unknown>): void {
         ...baseMetadata(),
         ...(event.metadata as Record<string, unknown> | undefined),
       },
-      eventId: randomUUID(),
+      eventId,
       channel: METRICS_CHANNEL,
       // Omit means omit: an invented or empty id would be a fake account.
       ...(accountId ? { accountId } : {}),
       channelVersion: getPackageVersion(),
-      sessionId: SESSION_ID,
+      sessionId,
       timestamp: new Date().toISOString(),
     });
     // Publish each segment atomically. A flush can delete only the immutable
     // files in its snapshot; another process can keep queuing during upload.
     // The sequence keeps events from this run ordered even in the same ms.
-    const name = `${QUEUE_FILE}.${Date.now()}.${SESSION_ID}.${String(queueSequence++).padStart(8, '0')}.jsonl`;
+    const name = firstAuth
+      ? `${QUEUE_FILE}.0001.${eventId}.jsonl`
+      : `${QUEUE_FILE}.${Date.now()}.${INVOCATION_ID}.${String(queueSequence++).padStart(8, '0')}.jsonl`;
     const file = join(dir, name);
-    const pending = `${file}.tmp`;
-    writeFileSync(pending, `${line}\n`);
-    renameSync(pending, file);
+    const pending = `${file}.${randomUUID()}.tmp`;
+    try {
+      writeFileSync(pending, `${line}\n`);
+      if (firstAuth) {
+        // Exclusive publication: concurrent commands share the same pending
+        // milestone without overwriting the first session/timestamp or payload.
+        linkSync(pending, file);
+      } else {
+        renameSync(pending, file);
+      }
+    } finally {
+      rmSync(pending, { force: true });
+    }
   } catch {
     // Telemetry must never surface to the user.
   }
@@ -527,13 +584,13 @@ export async function flushQueue(): Promise<void> {
       .filter((name) => name.startsWith(`${QUEUE_FILE}.`) && name.endsWith('.jsonl'))
       .sort()
       .map((name) => join(dir, name));
-    const snapshot: { file: string; events: { timestamp?: unknown }[] }[] = [];
+    const snapshot: { file: string; events: QueuedEvent[] }[] = [];
     for (const file of files) {
       try {
         const events = readFileSync(file, 'utf8')
           .split('\n')
           .filter(Boolean)
-          .map((line) => JSON.parse(line) as { timestamp?: unknown });
+          .map((line) => JSON.parse(line) as QueuedEvent);
         snapshot.push({ file, events });
       } catch {
         // Corrupt segments cannot be accepted. A missing segment may already
@@ -557,12 +614,24 @@ export async function flushQueue(): Promise<void> {
       })
       .reverse();
     const now = Date.now();
+    const authAccounts = new Set<string>();
     const events = retained
       .flatMap((segment) => segment.events)
       .slice(-MAX_QUEUE)
       .filter((event) => {
         const at = typeof event?.timestamp === 'string' ? Date.parse(event.timestamp) : Number.NaN;
         return at >= now - MAX_EVENT_AGE_MS && at <= now + MAX_EVENT_FUTURE_MS;
+      })
+      .filter((event) => {
+        if (event.eventType !== 'auth_success') return true;
+        if (typeof event.accountId !== 'string') return false;
+        const account = event.accountId;
+        if (authAccounts.has(account) || existsSync(authSuccessFile(dir, account))) return false;
+        authAccounts.add(account);
+        // Older queues can contain one auth_success per command. Collapse
+        // those too and give the milestone the same cross-installation id.
+        event.eventId = authSuccessId(account);
+        return true;
       });
     const acknowledge = (): void => {
       for (const { file } of retained) {
@@ -603,6 +672,15 @@ export async function flushQueue(): Promise<void> {
     const dead = response
       ? response.ok || response.status === 400 || response.status === 413
       : channelKeyRejected;
+    if (response?.ok) {
+      // Commit the milestone only after ingestion acknowledged it. A failed
+      // send leaves the original event queued for the next invocation.
+      for (const event of events) {
+        if (event.eventType === 'auth_success' && typeof event.accountId === 'string') {
+          writeFileSync(authSuccessFile(dir, event.accountId), '1');
+        }
+      }
+    }
     if (dead) {
       acknowledge();
     }
@@ -745,6 +823,17 @@ export function instrument(command: CommandId, noTrace = false): void {
   // queued is deleted here rather than waiting for a run that would send it.
   if (optedOut()) {
     purgeQueue();
+  } else if (transport()) {
+    try {
+      const account =
+        (trackedClient?.token ? accountIdFromJwt(trackedClient.token) : null) ??
+        cachedAccountId ??
+        accountIdFromDisk();
+      const dir = account ? stateDir() : null;
+      if (dir) usageSession(dir, account);
+    } catch {
+      // Session tracking cannot prevent a command from starting.
+    }
   }
   process.once('exit', (code: number) => finishCommand(code));
 }
@@ -794,7 +883,8 @@ function authOutcome(error: unknown): boolean | undefined {
 /**
  * The CLI has no login step, so auth is only ever proven by a real API answer:
  * call this with nothing when the call succeeded, with the error when it did
- * not. Sent at most once per run.
+ * not. A successful answer queues the account/channel activation milestone
+ * once; failures remain diagnostic events, at most once per run.
  */
 export function recordApiAnswer(error?: unknown): void {
   if (authEventSent) {

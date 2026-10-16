@@ -15,11 +15,14 @@ import { join } from 'node:path';
 import { LaraApiError } from '@translated/lara';
 
 import {
+  AUTH_SUCCESS_FILE_PREFIX,
   CI_ENV_VARS,
   FLUSH_LOCK_FILE,
   INSTALLATION_FILE,
   MAX_UINT32,
   QUEUE_FILE,
+  SESSION_FILE,
+  SESSION_IDLE_TIMEOUT_MS,
   TOKEN_COOLDOWN_FILE,
 } from '#modules/metrics/metrics.const.js';
 
@@ -387,6 +390,179 @@ describe('accountId', () => {
   });
 });
 
+describe('usage sessions', () => {
+  function state(): { scope: string; sessionId: string; lastActivity: number } {
+    return JSON.parse(readFileSync(join(stateDir, SESSION_FILE), 'utf8'));
+  }
+
+  it('shares a session across commands and renews the inactivity deadline', async () => {
+    let now = Date.now();
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const first = await loadMetrics();
+    first.instrument('init');
+    first.finishCommand(0);
+    const original = state().sessionId;
+    now += 20 * 60_000;
+    const second = await loadMetrics();
+    second.instrument('translate');
+    second.finishCommand(0);
+    expect(state().sessionId).toBe(original);
+    expect(state().lastActivity).toBe(now);
+    now += 20 * 60_000;
+    const third = await loadMetrics();
+    third.instrument('memory list');
+    third.finishCommand(0);
+    expect(queuedEvents().map((event) => event.sessionId)).toEqual([original, original, original]);
+  });
+
+  it.each([SESSION_IDLE_TIMEOUT_MS, SESSION_IDLE_TIMEOUT_MS + 1])(
+    'opens a new session after %i ms without activity',
+    async (elapsed) => {
+      let now = Date.now();
+      vi.spyOn(Date, 'now').mockImplementation(() => now);
+      const first = await loadMetrics();
+      first.queueEvent({ eventType: 'call_success' });
+      const original = state().sessionId;
+      now += elapsed;
+      const second = await loadMetrics();
+      second.queueEvent({ eventType: 'call_success' });
+      expect(state().sessionId).not.toBe(original);
+      expect(queuedEvents()).toHaveLength(2);
+    }
+  );
+
+  it('keeps a long command in its original session and renews activity when it finishes', async () => {
+    let now = Date.now();
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const metrics = await loadMetrics();
+    metrics.instrument('translate');
+    metrics.recordApiAnswer();
+    const original = state().sessionId;
+    now += SESSION_IDLE_TIMEOUT_MS + 1;
+    metrics.finishCommand(0);
+    expect(queuedEvents().every((event) => event.sessionId === original)).toBe(true);
+    expect(state().lastActivity).toBe(now);
+    const next = await loadMetrics();
+    next.queueEvent({ eventType: 'call_success' });
+    expect(state().sessionId).toBe(original);
+  });
+
+  it('does not replace a newer session when an older long command finishes', async () => {
+    let now = Date.now();
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const first = await loadMetrics();
+    first.instrument('translate');
+    first.recordApiAnswer();
+    const original = state().sessionId;
+    now += SESSION_IDLE_TIMEOUT_MS + 1;
+    const second = await loadMetrics();
+    second.instrument('translate');
+    second.finishCommand(0);
+    const newer = state().sessionId;
+    expect(newer).not.toBe(original);
+    now += 1;
+    first.recordApiAnswer();
+    first.finishCommand(0);
+    expect(state().sessionId).toBe(newer);
+    const next = await loadMetrics();
+    next.queueEvent({ eventType: 'call_success' });
+    expect(state().sessionId).toBe(newer);
+  });
+
+  it('starts a new session when switching accounts and when switching back', async () => {
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    const first = state().sessionId;
+    (await loadMetrics('acc_other')).queueEvent({ eventType: 'call_success' });
+    const other = state().sessionId;
+    expect(other).not.toBe(first);
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    expect(state().sessionId).not.toBe(other);
+    expect(state().sessionId).not.toBe(first);
+  });
+
+  it('shares the account session after API key rotation', async () => {
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    const first = state().sessionId;
+    process.env.LARA_ACCESS_KEY_ID = 'rotated-key';
+    const next = await loadMetrics();
+    next.instrument('translate');
+    next.queueEvent({ eventType: 'call_success' });
+    expect(state().sessionId).toBe(first);
+  });
+
+  it.each([
+    'invalid JSON',
+    JSON.stringify({ sessionId: 'invalid', scope: 'cli:' + ACCOUNT_ID, lastActivity: Date.now() }),
+    JSON.stringify({
+      sessionId: 'd0f8feed-530b-4fa4-a163-a60111111111',
+      scope: 'cli:' + ACCOUNT_ID,
+      lastActivity: 'bad',
+    }),
+  ])('replaces corrupted session state: %s', async (broken) => {
+    writeFileSync(join(stateDir, SESSION_FILE), broken);
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    expect(state().sessionId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(queuedEvents()).toHaveLength(1);
+  });
+
+  it('opens a new session when the saved activity is in the future', async () => {
+    const metrics = await loadMetrics();
+    metrics.queueEvent({ eventType: 'call_success' });
+    const old = state();
+    writeFileSync(
+      join(stateDir, SESSION_FILE),
+      JSON.stringify({ ...old, lastActivity: Date.now() + 60_000 })
+    );
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    expect(state().sessionId).not.toBe(old.sessionId);
+  });
+
+  it('keeps an opt-out from creating or extending a session', async () => {
+    const first = await loadMetrics();
+    first.queueEvent({ eventType: 'call_success' });
+    const before = readFileSync(join(stateDir, SESSION_FILE), 'utf8');
+    const quiet = await loadMetrics();
+    quiet.instrument('translate', true);
+    quiet.recordApiAnswer();
+    quiet.finishCommand(0);
+    expect(readFileSync(join(stateDir, SESSION_FILE), 'utf8')).toBe(before);
+  });
+
+  it('joins an existing session under brief lock contention without overwriting it', async () => {
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    const before = state();
+    mkdirSync(join(stateDir, `${SESSION_FILE}.lock`));
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    expect(state()).toEqual(before);
+    expect(queuedEvents()).toHaveLength(2);
+    expect(queuedEvents().every((event) => event.sessionId === before.sessionId)).toBe(true);
+  });
+
+  it('recovers the session lock after a crashed writer', async () => {
+    const lock = join(stateDir, `${SESSION_FILE}.lock`);
+    mkdirSync(lock);
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lock, old, old);
+    (await loadMetrics()).queueEvent({ eventType: 'call_success' });
+    expect(queuedEvents()).toHaveLength(1);
+    expect(existsSync(lock)).toBe(false);
+  });
+
+  it('attributes errors before authentication to the existing account session', async () => {
+    const first = await loadMetrics();
+    first.queueEvent({ eventType: 'call_success' });
+    const original = state().sessionId;
+    const failed = await loadMetrics(null);
+    failed.instrument('translate');
+    failed.finishCommand(1);
+    expect(queuedEvents().at(-1)).toMatchObject({
+      eventType: 'call_error',
+      accountId: ACCOUNT_ID,
+      sessionId: original,
+    });
+  });
+});
+
 describe('queueEvent', () => {
   it('stamps eventId, channel, accountId, version, sessionId and timestamp', async () => {
     const metrics = await loadMetrics();
@@ -631,7 +807,7 @@ describe('flushQueue', () => {
 
     const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
     expect(events).toHaveLength(2);
-    expect(events[0]).toMatchObject({ eventType: 'call_success', channel: 'cli' });
+    expect(events[0]).toMatchObject({ eventType: 'auth_success', channel: 'cli' });
     expect(queuedEvents()).toEqual([]);
   });
 
@@ -1303,6 +1479,150 @@ describe('recordApiAnswer', () => {
 
     expect(queuedEvents()).toHaveLength(1);
     expect(queuedEvents()[0]!.eventType).toBe('auth_success');
+  });
+
+  it('reports activation only once across init, translations and repeated init', async () => {
+    const { ingestCalls } = mockBackend();
+    for (const command of ['init', 'translate', 'init', 'memory list'] as const) {
+      const metrics = await loadMetrics();
+      metrics.instrument(command);
+      metrics.recordApiAnswer();
+      await metrics.finishAndFlush(0);
+    }
+    const batches = ingestCalls.map((call) => bodyOf(call).events as Record<string, unknown>[]);
+    expect(batches.map((batch) => batch.map((event) => event.eventType))).toEqual([
+      ['auth_success', 'call_success'],
+      ['call_success'],
+      ['call_success'],
+      ['call_success'],
+    ]);
+    expect(new Set(batches.flat().map((event) => event.sessionId)).size).toBe(1);
+  });
+
+  it('keeps just the original pending activation across runs while ingestion is unavailable', async () => {
+    mockBackend({ ingest: () => response(503) });
+    const first = await loadMetrics();
+    first.instrument('init');
+    first.recordApiAnswer();
+    const original = queuedEvents()[0];
+    await first.finishAndFlush(0);
+    const second = await loadMetrics();
+    second.instrument('translate');
+    second.recordApiAnswer();
+    await second.finishAndFlush(0);
+
+    const auth = queuedEvents().filter((event) => event.eventType === 'auth_success');
+    expect(auth).toEqual([original]);
+    expect(
+      readdirSync(stateDir).filter((name) => name.startsWith(AUTH_SUCCESS_FILE_PREFIX))
+    ).toEqual([]);
+    const { ingestCalls } = mockBackend();
+    await second.flushQueue();
+    expect(
+      (bodyOf(ingestCalls[0]!).events as Record<string, unknown>[]).filter(
+        (event) => event.eventType === 'auth_success'
+      )
+    ).toEqual([original]);
+    expect(
+      readdirSync(stateDir).filter((name) => name.startsWith(AUTH_SUCCESS_FILE_PREFIX))
+    ).toHaveLength(1);
+  });
+
+  it('scopes activation to the account rather than the API key', async () => {
+    mockBackend();
+    const first = await loadMetrics();
+    first.recordApiAnswer();
+    await first.flushQueue();
+    process.env.LARA_ACCESS_KEY_ID = 'another-key-for-the-same-account';
+    const rotated = await loadMetrics();
+    rotated.recordApiAnswer();
+    expect(queuedEvents()).toEqual([]);
+    const other = await loadMetrics('acc_different');
+    other.recordApiAnswer();
+    expect(queuedEvents()).toHaveLength(1);
+    expect(queuedEvents()[0]!.accountId).toBe('acc_different');
+  });
+
+  it('reuses the account/channel event id on a different installation', async () => {
+    const first = await loadMetrics();
+    first.recordApiAnswer();
+    const original = queuedEvents()[0]!;
+    process.env.LARA_STATE_DIR = join(stateDir, 'other-installation');
+    const second = await loadMetrics();
+    second.recordApiAnswer();
+    const file = readdirSync(process.env.LARA_STATE_DIR).find((name) => name.endsWith('.jsonl'))!;
+    const event = JSON.parse(readFileSync(join(process.env.LARA_STATE_DIR, file), 'utf8'));
+    expect(event.eventId).toBe(original.eventId);
+    expect(event.eventId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    );
+    expect(event.sessionId).not.toBe(original.sessionId);
+  });
+
+  it.each([400, 413])('does not mark a rejected activation as delivered on %i', async (status) => {
+    const first = await loadMetrics();
+    mockBackend({ ingest: () => response(status) });
+    first.recordApiAnswer();
+    const originalId = queuedEvents()[0]!.eventId;
+    await first.flushQueue();
+    expect(queuedEvents()).toEqual([]);
+    const second = await loadMetrics();
+    second.recordApiAnswer();
+    expect(queuedEvents()).toHaveLength(1);
+    expect(queuedEvents()[0]!.eventId).toBe(originalId);
+  });
+
+  it('collapses legacy per-command auth events into one activation at flush', async () => {
+    const metrics = await loadMetrics();
+    const { ingestCalls } = mockBackend();
+    const timestamp = new Date().toISOString();
+    writeFileSync(
+      queuePath(),
+      [
+        { eventType: 'auth_success', eventId: 'old-1', accountId: ACCOUNT_ID, timestamp },
+        { eventType: 'call_success', eventId: 'call-1', accountId: ACCOUNT_ID, timestamp },
+        { eventType: 'auth_success', eventId: 'old-2', accountId: ACCOUNT_ID, timestamp },
+        { eventType: 'call_success', eventId: 'call-2', accountId: ACCOUNT_ID, timestamp },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join('\n')
+    );
+    await metrics.flushQueue();
+    const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
+    expect(events.map((event) => event.eventType)).toEqual([
+      'auth_success',
+      'call_success',
+      'call_success',
+    ]);
+    expect(events[0]!.eventId).not.toBe('old-1');
+    expect(events[0]!.eventId).not.toBe('old-2');
+    const second = await loadMetrics();
+    second.recordApiAnswer();
+    expect(queuedEvents()).toEqual([]);
+  });
+
+  it('does not let an opt-out consume the first authentication milestone', async () => {
+    const quiet = await loadMetrics();
+    quiet.instrument('init', true);
+    quiet.recordApiAnswer();
+    expect(readdirSync(stateDir)).toEqual([]);
+    const tracked = await loadMetrics();
+    tracked.recordApiAnswer();
+    expect(queuedEvents().map((event) => event.eventType)).toEqual(['auth_success']);
+  });
+
+  it('keeps reporting authentication failures after activation without reactivating the account', async () => {
+    const first = await loadMetrics();
+    mockBackend();
+    first.recordApiAnswer();
+    await first.flushQueue();
+    const failed = await loadMetrics();
+    failed.recordApiAnswer(new LaraApiError(401, 'AuthenticationError', 'revoked'));
+    expect(queuedEvents().map((event) => event.eventType)).toEqual(['auth_fail']);
+    clearQueue();
+    const recovered = await loadMetrics();
+    recovered.recordApiAnswer();
+    expect(queuedEvents()).toEqual([]);
   });
 
   it('sends auth_fail with a mapped errorType', async () => {

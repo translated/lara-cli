@@ -28,8 +28,15 @@ export const FLUSH_LOCK_FILE = 'metrics-flush.lock';
 /** One UUID per installation, persisted: a fresh one per run breaks rate limiting. */
 export const INSTALLATION_FILE = 'installation-id';
 
+/** Account-scoped CLI usage session on this installation, shared by commands. */
+export const SESSION_FILE = 'metrics-session.json';
+export const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1_000;
+
 /** Cache of the resolved Lara account id, one file per access key id. */
 export const ACCOUNT_FILE_PREFIX = 'account-';
+
+/** Authentication milestones acknowledged by ingestion, keyed by account/channel. */
+export const AUTH_SUCCESS_FILE_PREFIX = 'auth-success-';
 
 /**
  * Earliest time the token endpoint will hand out another token. It answers one

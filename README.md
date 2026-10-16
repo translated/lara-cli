@@ -227,6 +227,21 @@ delivered simply waits for the next run. Only one process flushes a shared queue
 Delivery retries reuse the same `eventId`; the ingestion backend must deduplicate by that id
 because a server can accept a batch even if its response never reaches the CLI.
 
+`auth_success` represents the first verified authentication for a Lara account in the CLI channel.
+The CLI keeps one pending milestone across commands and remembers it after ingestion acknowledges
+it. Repeating `init`, translating again or rotating an API key for the same account does not create
+another milestone. Each command still records its own `call_success` or `call_error`;
+`auth_fail` remains a diagnostic event for failed authentication attempts.
+
+`sessionId` groups commands from the same account on the same machine, including across projects.
+Each command renews the session; 30 minutes without activity starts a new one. Switching accounts
+also starts a new session. Events within a command keep the same session, including during a long
+translation, and retries retain the session recorded when the event was created.
+
+The activation event id is stable for an account/channel across installations. The backend must
+deduplicate this id (and historical activation events by account/channel) to keep the funnel unique
+across machines or after local state is deleted.
+
 The first run that records anything prints a one-line notice on `stderr` saying so, once per
 machine.
 

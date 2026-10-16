@@ -28,7 +28,7 @@ const CLI = join(REPO, 'build', 'index.js');
 // From the built module, not retyped: `queueContent()` returns '' for a missing
 // file, so a drifted filename would make every queue assertion below pass by
 // looking at nothing.
-const { QUEUE_FILE, INSTALLATION_FILE } = await import(
+const { QUEUE_FILE, INSTALLATION_FILE, SESSION_FILE, SESSION_IDLE_TIMEOUT_MS } = await import(
   pathToFileURL(join(REPO, 'build', 'modules', 'metrics', 'metrics.const.js')).href
 );
 
@@ -76,7 +76,11 @@ const lara = createServer(async (req, res) => {
     return json(res, 401, { error: { type: 'AuthenticationError', message: 'invalid key' } });
   }
   if (req.url === '/v2/auth') {
-    return json(res, 200, { token: laraJwt(ACCOUNT_ID) });
+    return json(res, 200, {
+      token: laraJwt(
+        JSON.parse(body).id === 'e2e-other-account-key' ? 'acc_other_e2e' : ACCOUNT_ID
+      ),
+    });
   }
   if (req.url === '/v2/languages') {
     return json(res, 200, ['en', 'it']);
@@ -177,14 +181,14 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 };
 
-const queueContent = () =>
-  readdirSync(state)
+const queueContent = (dir = state) =>
+  readdirSync(dir)
     .filter(
       (name) =>
         name === QUEUE_FILE || (name.startsWith(`${QUEUE_FILE}.`) && name.endsWith('.jsonl'))
     )
     .sort()
-    .map((name) => readFileSync(join(state, name), 'utf8').trim())
+    .map((name) => readFileSync(join(dir, name), 'utf8').trim())
     .filter(Boolean)
     .join('\n');
 
@@ -261,9 +265,9 @@ check(
 
 check('no deprecated first_call event', !events.some((e) => e.eventType === 'first_call'));
 check(
-  'funnel: auth_success, call_success, call_error, auth_success, call_success',
+  'funnel: one auth_success followed by a result for every command',
   JSON.stringify(events.map((e) => e.eventType)) ===
-    JSON.stringify(['auth_success', 'call_success', 'call_error', 'auth_success', 'call_success']),
+    JSON.stringify(['auth_success', 'call_success', 'call_error', 'call_success']),
   events.map((e) => e.eventType).join(',')
 );
 check(
@@ -295,7 +299,11 @@ check(
   !JSON.stringify(received).includes('e2e-access-key')
 );
 const sessions = new Set(events.map((e) => e.sessionId));
-check('each run has its own sessionId', sessions.size === 3, `${sessions.size} sessions`);
+check(
+  'successive commands share one usage session',
+  sessions.size === 1,
+  `${sessions.size} sessions`
+);
 
 const success = events.find((e) => e.eventType === 'call_success');
 check(
@@ -359,9 +367,8 @@ check(
 
   const fresh = received.flatMap((r) => r.body.events).slice(before);
   check(
-    'memory list reports auth and its own call event',
-    JSON.stringify(fresh.map((e) => e.eventType)) ===
-      JSON.stringify(['auth_success', 'call_success']),
+    'memory list reports usage without reactivating the account',
+    JSON.stringify(fresh.map((e) => e.eventType)) === JSON.stringify(['call_success']),
     fresh.map((e) => e.eventType).join(',')
   );
   check(
@@ -390,9 +397,8 @@ check(
 
   const fresh = received.flatMap((r) => r.body.events).slice(before);
   check(
-    'init verifies the key and closes with its own call event',
-    JSON.stringify(fresh.map((e) => e.eventType)) ===
-      JSON.stringify(['auth_success', 'call_success']),
+    'init verifies the key without reactivating the account',
+    JSON.stringify(fresh.map((e) => e.eventType)) === JSON.stringify(['call_success']),
     fresh.map((e) => e.eventType).join(',')
   );
   check(
@@ -402,6 +408,80 @@ check(
     JSON.stringify(fresh.at(-1)?.metadata)
   );
   check('init still wrote its config', existsSync(join(project, 'lara.yaml')));
+}
+
+// --- first init activates the account; repeated init only reports usage -------
+{
+  const freshState = mkdtempSync(join(tmpdir(), 'lara-e2e-auth-'));
+  try {
+    const before = received.flatMap((r) => r.body.events).length;
+    const args = ['-y', 'init', '--force', '-s', 'en', '-t', 'it'];
+    const first = await run(args, { LARA_STATE_DIR: freshState });
+    const second = await run(args, { LARA_STATE_DIR: freshState });
+    const fresh = received.flatMap((r) => r.body.events).slice(before);
+    check('first and repeated init both succeed', first.code === 0 && second.code === 0);
+    check(
+      'repeated init does not emit a second authentication milestone',
+      JSON.stringify(fresh.map((e) => e.eventType)) ===
+        JSON.stringify(['auth_success', 'call_success', 'call_success'])
+    );
+    check(
+      'same account on a fresh installation reuses the activation id',
+      fresh.find((e) => e.eventType === 'auth_success')?.eventId ===
+        events.find((e) => e.eventType === 'auth_success')?.eventId
+    );
+    check(
+      'repeated init shares the same usage session',
+      new Set(fresh.map((e) => e.sessionId)).size === 1
+    );
+    const otherProject = mkdtempSync(join(tmpdir(), 'lara-e2e-session-project-'));
+    try {
+      const otherProjectRun = await run(
+        ['memory', 'list'],
+        { LARA_STATE_DIR: freshState },
+        otherProject
+      );
+      check(
+        'another project on the same machine joins the same session',
+        otherProjectRun.code === 0 &&
+          received.at(-1).body.events.every((e) => e.sessionId === fresh[0].sessionId)
+      );
+    } finally {
+      rmSync(otherProject, { recursive: true, force: true });
+    }
+    const otherAccount = await run(['memory', 'list'], {
+      LARA_STATE_DIR: freshState,
+      LARA_ACCESS_KEY_ID: 'e2e-other-account-key',
+    });
+    const otherSession = received.at(-1).body.events.at(-1).sessionId;
+    check(
+      'switching accounts starts a separate session',
+      otherAccount.code === 0 && otherSession !== fresh[0].sessionId
+    );
+    const back = await run(['memory', 'list'], { LARA_STATE_DIR: freshState });
+    const backSession = received.at(-1).body.events.at(-1).sessionId;
+    check(
+      'switching back to the original account opens a new session',
+      back.code === 0 && backSession !== otherSession && backSession !== fresh[0].sessionId
+    );
+    const sessionPath = join(freshState, SESSION_FILE);
+    const session = JSON.parse(readFileSync(sessionPath, 'utf8'));
+    writeFileSync(
+      sessionPath,
+      JSON.stringify({ ...session, lastActivity: Date.now() - SESSION_IDLE_TIMEOUT_MS - 1 })
+    );
+    const resumed = await run(OK, { LARA_STATE_DIR: freshState });
+    const resumedEvents = received.at(-1).body.events;
+    check(
+      'thirty minutes of inactivity opens a new session without reactivating the account',
+      resumed.code === 0 &&
+        resumedEvents.length === 1 &&
+        resumedEvents[0].eventType === 'call_success' &&
+        resumedEvents[0].sessionId !== session.sessionId
+    );
+  } finally {
+    rmSync(freshState, { recursive: true, force: true });
+  }
 }
 
 // --- handled resource errors must close the command as a failure -------------
@@ -542,9 +622,11 @@ for (const hangPath of ['/v2/auth', '/v2/languages']) {
 // --- a key that is fine but out of credit -----------------------------------
 {
   const before = received.flatMap((r) => r.body.events).length;
+  const freshState = mkdtempSync(join(tmpdir(), 'lara-e2e-quota-auth-'));
   laraTranslateStatus = 402;
-  const broke = await run(OK);
+  const broke = await run(OK, { LARA_STATE_DIR: freshState });
   laraTranslateStatus = 0;
+  rmSync(freshState, { recursive: true, force: true });
 
   check('out of credit: the command fails', broke.code !== 0, `code=${broke.code}`);
   const fresh = received.flatMap((r) => r.body.events).slice(before);
@@ -610,6 +692,7 @@ for (const hangPath of ['/v2/auth', '/v2/languages']) {
 // --- another process queues events while a flush is on the network -----------
 {
   const beforeConcurrent = received.length;
+  const freshState = mkdtempSync(join(tmpdir(), 'lara-e2e-concurrent-auth-'));
   let releaseUpload;
   let uploadStarted;
   const blocked = new Promise((resolve) => {
@@ -623,45 +706,87 @@ for (const hangPath of ['/v2/auth', '/v2/languages']) {
     await blocked;
     return 202;
   };
-  const first = run(['memory', 'list']);
+  const first = run(['memory', 'list'], { LARA_STATE_DIR: freshState });
   await started;
-  const second = await run(['memory', 'list']);
+  const second = await run(['memory', 'list'], { LARA_STATE_DIR: freshState });
   check(
     'concurrent flush sends no second batch while the first is pending',
     received.length === beforeConcurrent + 1
   );
-  const pending = queueContent()
+  const pending = queueContent(freshState)
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line));
   releaseUpload();
   const firstResult = await first;
   ingestResponder = null;
-  const remaining = queueContent()
+  const remaining = queueContent(freshState)
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line));
   check('concurrent commands both succeed', firstResult.code === 0 && second.code === 0);
   check(
     'first flush leaves the second process events queued',
-    remaining.length === 2 &&
+    remaining.length === 1 &&
       remaining.every((event) => pending.some((item) => item.eventId === event.eventId)),
     JSON.stringify(remaining)
   );
   const before = received.flatMap((r) => r.body.events).length;
-  await run(['memory', 'list']);
+  await run(['memory', 'list'], { LARA_STATE_DIR: freshState });
   const delivered = received.flatMap((r) => r.body.events).slice(before);
   check(
     'next command delivers the events preserved across the concurrent flush',
     remaining.every((event) => delivered.some((item) => item.eventId === event.eventId)) &&
-      queueContent() === ''
+      queueContent(freshState) === ''
   );
   const concurrentEvents = received.slice(beforeConcurrent).flatMap((batch) => batch.body.events);
   check(
-    'concurrent flush delivers all six events exactly once',
-    concurrentEvents.length === 6 &&
-      new Set(concurrentEvents.map((event) => event.eventId)).size === 6
+    'concurrent flush delivers one activation and three command results exactly once',
+    concurrentEvents.length === 4 &&
+      new Set(concurrentEvents.map((event) => event.eventId)).size === 4
   );
+  check(
+    'concurrent first authentications emit only one milestone',
+    concurrentEvents.filter((event) => event.eventType === 'auth_success').length === 1
+  );
+  check(
+    'concurrent commands share the same usage session',
+    new Set(concurrentEvents.map((event) => event.sessionId)).size === 1
+  );
+  rmSync(freshState, { recursive: true, force: true });
+}
+
+// --- concurrent first commands must agree on a session without losing events --
+{
+  const freshState = mkdtempSync(join(tmpdir(), 'lara-e2e-session-burst-'));
+  try {
+    const before = received.length;
+    const runs = await Promise.all(
+      Array.from({ length: 4 }, () => run(['memory', 'list'], { LARA_STATE_DIR: freshState }))
+    );
+    const drained = await run(['memory', 'list'], { LARA_STATE_DIR: freshState });
+    const delivered = received.slice(before).flatMap((batch) => batch.body.events);
+    check(
+      'parallel first commands all succeed',
+      runs.every((r) => r.code === 0) && drained.code === 0
+    );
+    check(
+      'parallel commands keep every command result and one activation',
+      delivered.filter((event) => event.eventType === 'call_success').length === 5 &&
+        delivered.filter((event) => event.eventType === 'auth_success').length === 1 &&
+        queueContent(freshState) === ''
+    );
+    check(
+      'parallel first commands agree on one session',
+      new Set(delivered.map((event) => event.sessionId)).size === 1
+    );
+    check(
+      'parallel commands deliver unique events',
+      new Set(delivered.map((event) => event.eventId)).size === delivered.length
+    );
+  } finally {
+    rmSync(freshState, { recursive: true, force: true });
+  }
 }
 
 // --- degradation: metrics backend unreachable --------------------------------
