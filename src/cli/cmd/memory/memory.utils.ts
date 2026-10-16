@@ -3,7 +3,7 @@ import { LaraApiError } from '@translated/lara';
 
 import { TranslationService } from '#modules/translation/translation.service.js';
 import { LARA_WEB_URL } from '#modules/common/common.const.js';
-import { handleLaraApiError } from '#utils/error.js';
+import { handleLaraApiError, HandledExitError } from '#utils/error.js';
 import { Messages } from '#messages/messages.js';
 import customSearchableSelect from '#utils/prompt.js';
 import { removeIdFromConfig } from '../common/config-sync.js';
@@ -57,8 +57,8 @@ export async function listMemories(): Promise<void> {
     }
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.gettingMemories, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.gettingMemories, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -92,8 +92,8 @@ export async function createMemory(name: string | undefined, interactive: boolea
     await maybeAddToConfig('memories', memory.id, interactive, Messages.prompts.addMemoryToConfig);
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.creatingMemory, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.creatingMemory, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -129,8 +129,8 @@ export async function updateMemory(
     console.log(Messages.ui.itemName(memory.name) + '\n');
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.updatingMemory, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.updatingMemory, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -161,8 +161,8 @@ export async function deleteMemory(id: string | undefined, interactive: boolean)
     }
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.deletingMemory, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.deletingMemory, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -223,8 +223,8 @@ export async function addTranslation(
     spinner.succeed(Messages.success.memoryTranslationAdded);
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.addingMemoryTranslation, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.addingMemoryTranslation, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -291,8 +291,12 @@ export async function deleteTranslation(
     spinner.succeed(Messages.success.memoryTranslationDeleted);
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.deletingMemoryTranslation, spinner);
-      return;
+      const reported = handleLaraApiError(
+        error,
+        Messages.errors.deletingMemoryTranslation,
+        spinner
+      );
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -319,8 +323,8 @@ export async function importTmx(
     spinner.succeed(Messages.success.tmxImported);
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.importingTmx, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.importingTmx, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;

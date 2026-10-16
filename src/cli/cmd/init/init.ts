@@ -97,28 +97,32 @@ export default new Command()
   )
   .addOption(new Option('--no-trace', 'Prevent server-side storage of translated content'))
   .action(async (options: InitOptions, command: Command) => {
-    await runSafely(async () => {
-      const config = isRunningInInteractiveMode(command)
-        ? await handleInteractiveMode(options)
-        : handleNonInteractiveMode(options);
+    await runSafely(
+      async () => {
+        const config = isRunningInInteractiveMode(command)
+          ? await handleInteractiveMode(options)
+          : handleNonInteractiveMode(options);
 
-      const spinner = Ora({ text: Messages.info.creatingConfig, color: 'yellow' }).start();
+        const spinner = Ora({ text: Messages.info.creatingConfig, color: 'yellow' }).start();
 
-      ConfigProvider.getInstance().saveConfig(config);
+        ConfigProvider.getInstance().saveConfig(config);
 
-      spinner.succeed(Messages.success.configCreated);
+        spinner.succeed(Messages.success.configCreated);
 
-      // After the config is on disk, never before: verifying the key is a round
-      // trip to Lara, and the file this command exists to write must not wait on
-      // a slow network for it.
-      await checkCredentials();
-    }, 'init', !options.trace);
+        // After the config is on disk, never before: verifying the key is a round
+        // trip to Lara, and the file this command exists to write must not wait on
+        // a slow network for it.
+        await checkCredentials();
+      },
+      'init',
+      !options.trace
+    );
   });
 
 /**
  * Turns the key the user just entered into a real yes/no answer, and reports it.
- * Never blocks: `init` writes the config either way, so the command still works
- * offline or behind a proxy that is momentarily down.
+ * Uses short socket deadlines: `init` writes the config either way and warns
+ * if the optional verification fails or times out.
  */
 async function checkCredentials(): Promise<void> {
   // Nothing to verify, and the user has already been told they are missing:

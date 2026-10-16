@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  chmodSync,
+  readdirSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { LaraApiError } from '@translated/lara';
@@ -56,14 +64,29 @@ function queuePath(): string {
   return join(stateDir, QUEUE_FILE);
 }
 
-function queuedEvents(): Record<string, unknown>[] {
-  if (!existsSync(queuePath())) {
-    return [];
+function queueFiles(): string[] {
+  return readdirSync(stateDir)
+    .filter(
+      (name) =>
+        name === QUEUE_FILE || (name.startsWith(`${QUEUE_FILE}.`) && name.endsWith('.jsonl'))
+    )
+    .sort()
+    .map((name) => join(stateDir, name));
+}
+
+function clearQueue(): void {
+  for (const file of queueFiles()) {
+    rmSync(file, { force: true });
   }
-  return readFileSync(queuePath(), 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+function queuedEvents(): Record<string, unknown>[] {
+  return queueFiles().flatMap((file) =>
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+  );
 }
 
 function response(status: number): Response {
@@ -417,7 +440,11 @@ describe('queueEvent', () => {
       const metrics = await loadMetrics();
       expect(() => metrics.queueEvent({ eventType: 'call_success' })).not.toThrow();
       expect(existsSync(join(locked, 'nested'))).toBe(false);
-      expect(existsSync(join(tmpdir(), 'lara-cli', QUEUE_FILE))).toBe(true);
+      expect(
+        readdirSync(join(tmpdir(), 'lara-cli')).some(
+          (name) => name.startsWith(`${QUEUE_FILE}.`) && name.endsWith('.jsonl')
+        )
+      ).toBe(true);
     } finally {
       chmodSync(stateDir, 0o700);
       rmSync(join(tmpdir(), 'lara-cli'), { recursive: true, force: true });
@@ -432,7 +459,7 @@ describe('queueEvent', () => {
     await metrics.flushQueue();
     metrics.queueEvent({ eventType: 'call_success' });
 
-    expect(readFileSync(queuePath(), 'utf8')).not.toContain(INGEST_TOKEN);
+    expect(JSON.stringify(queuedEvents())).not.toContain(INGEST_TOKEN);
     expect(readFileSync(join(stateDir, INSTALLATION_FILE), 'utf8')).not.toContain(INGEST_TOKEN);
   });
 });
@@ -603,6 +630,65 @@ describe('flushQueue', () => {
     expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({ eventType: 'call_success', channel: 'cli' });
     expect(queuedEvents()).toEqual([]);
+  });
+
+  it.each([202, 400, 413])(
+    'preserves events published during an upload acknowledged with %i',
+    async (status) => {
+      const first = await loadMetrics();
+      const second = await loadMetrics();
+      let resolveUpload!: (response: Response) => void;
+      let uploadStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        uploadStarted = resolve;
+      });
+      const upload = new Promise<Response>((resolve) => {
+        resolveUpload = resolve;
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: unknown) => {
+          if (String(input).endsWith('/auth/issue-token')) return tokenOk();
+          uploadStarted();
+          return upload;
+        })
+      );
+      first.queueEvent({ eventType: 'call_success', marker: 'sent' });
+      const flushing = first.flushQueue();
+      await started;
+      second.queueEvent({ eventType: 'call_success', marker: 'later' });
+      resolveUpload(response(status));
+      await flushing;
+
+      expect(queuedEvents().map((event) => event.marker)).toEqual(['later']);
+      const { ingestCalls } = mockBackend();
+      await second.flushQueue();
+      expect(
+        (bodyOf(ingestCalls[0]!).events as Record<string, unknown>[]).map((event) => event.marker)
+      ).toEqual(['later']);
+      expect(queuedEvents()).toEqual([]);
+    }
+  );
+
+  it('keeps both the snapshot and later events after a failed upload', async () => {
+    const metrics = await loadMetrics();
+    mockBackend({
+      ingest: () => {
+        metrics.queueEvent({ eventType: 'call_success', marker: 'later' });
+        return response(503);
+      },
+    });
+    metrics.queueEvent({ eventType: 'call_success', marker: 'retry' });
+    await metrics.flushQueue();
+    expect(queuedEvents().map((event) => event.marker)).toEqual(['retry', 'later']);
+  });
+
+  it('purges segment files too when a later command opts out', async () => {
+    const metrics = await loadMetrics();
+    metrics.queueEvent({ eventType: 'call_success' });
+    expect(queueFiles()).toHaveLength(1);
+    metrics.instrument('translate', true);
+    expect(queueFiles()).toEqual([]);
   });
 
   it('drops an event past the backend age bound instead of losing the batch with it', async () => {
@@ -898,7 +984,7 @@ describe('finishCommand', () => {
       ['file', 'document'],
       ['config', 'document'],
     ] as const) {
-      rmSync(queuePath(), { force: true });
+      clearQueue();
       const metrics = await loadMetrics();
       metrics.instrument('translate');
       metrics.setContext({ mode });
@@ -920,7 +1006,7 @@ describe('finishCommand', () => {
       targetLang: 'pt-br',
     });
 
-    rmSync(queuePath(), { force: true });
+    clearQueue();
     const fanout = await loadMetrics();
     fanout.instrument('translate');
     fanout.setContext({ mode: 'config', elements: 12, locales: 3 });

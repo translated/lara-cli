@@ -19,7 +19,7 @@ export const BAKED_METRICS_API_KEY: string = '__METRICS_API_KEY__';
 export const TOKEN_PATH = '/auth/issue-token';
 export const INGEST_PATH = '/metrics/ingest-events';
 
-/** Name of the queue file inside the state directory. */
+/** Legacy queue filename and prefix for immutable queue segments. */
 export const QUEUE_FILE = 'metrics-queue.jsonl';
 
 /** One UUID per installation, persisted: a fresh one per run breaks rate limiting. */

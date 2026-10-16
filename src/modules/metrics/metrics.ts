@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  appendFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
+  renameSync,
   rmSync,
-  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -41,8 +41,8 @@ import {
  * Usage metrics for the `cli` channel.
  *
  * The rule that governs every line of this file: nothing here may slow down or
- * break the CLI. Events are appended synchronously to a queue file and sent in
- * a single bounded batch on the way out of the command; whatever could not be
+ * break the CLI. Events are saved synchronously as immutable queue segments
+ * and sent in a single bounded batch on the way out of the command; whatever could not be
  * delivered rides along with the next command's send — there is no flush on the
  * way in. Every exported function swallows its own errors; a missing key, an
  * unreachable backend or a read-only disk all degrade to "no telemetry", never
@@ -103,6 +103,7 @@ let commandId: CommandId = 'translate';
 /** Set by instrument(): no-trace mode, resolved by the command before anything runs. */
 let disabled = false;
 let context: RunContext = {};
+let queueSequence = 0;
 
 /** Memory only. A token on disk is a credential on disk. */
 let cachedToken: { value: string; expiresAt: number } | null = null;
@@ -187,7 +188,11 @@ function candidateStateDirs(): string[] {
 function purgeQueue(): void {
   for (const dir of candidateStateDirs()) {
     try {
-      rmSync(join(dir, QUEUE_FILE), { force: true });
+      for (const name of readdirSync(dir)) {
+        if (name === QUEUE_FILE || name.startsWith(`${QUEUE_FILE}.`)) {
+          rmSync(join(dir, name), { force: true });
+        }
+      }
     } catch {
       // Nowhere we are allowed to delete. Nothing left to do about it.
     }
@@ -334,8 +339,8 @@ export function queueEvent(event: Record<string, unknown>): void {
     if (!accountId && event.eventType !== 'auth_fail') {
       return;
     }
-    const file = stateFile(QUEUE_FILE);
-    if (!file) {
+    const dir = stateDir();
+    if (!dir) {
       return;
     }
     // The identity fields come last on purpose: a caller cannot override the
@@ -356,7 +361,14 @@ export function queueEvent(event: Record<string, unknown>): void {
       sessionId: SESSION_ID,
       timestamp: new Date().toISOString(),
     });
-    appendFileSync(file, `${line}\n`);
+    // Publish each segment atomically. A flush can delete only the immutable
+    // files in its snapshot; another process can keep queuing during upload.
+    // The sequence keeps events from this run ordered even in the same ms.
+    const name = `${QUEUE_FILE}.${Date.now()}.${SESSION_ID}.${String(queueSequence++).padStart(8, '0')}.jsonl`;
+    const file = join(dir, name);
+    const pending = `${file}.tmp`;
+    writeFileSync(pending, `${line}\n`);
+    renameSync(pending, file);
   } catch {
     // Telemetry must never surface to the user.
   }
@@ -481,44 +493,70 @@ export async function flushQueue(): Promise<void> {
     if (!t) {
       return;
     }
-    const file = stateFile(QUEUE_FILE);
-    if (!file || !existsSync(file)) {
+    const dir = stateDir();
+    if (!dir) {
       return;
     }
 
-    let events: unknown[];
-    try {
-      const lines = readFileSync(file, 'utf8').split('\n').filter(Boolean);
-      // Trim on disk, not just on the wire: a machine that has been failing to
-      // flush for months would otherwise re-read and re-parse every line it is
-      // never going to send.
-      const kept = lines.slice(-MAX_QUEUE);
-      if (kept.length < lines.length) {
-        writeFileSync(file, `${kept.join('\n')}\n`);
+    // Migrate the append-only queue from older versions to a named snapshot.
+    // New writers never append here, and competing flushers can claim it once.
+    const legacy = join(dir, QUEUE_FILE);
+    if (existsSync(legacy)) {
+      try {
+        renameSync(legacy, join(dir, `${QUEUE_FILE}.0000.${randomUUID()}.jsonl`));
+      } catch {
+        // Another process may already have rotated it.
       }
-      // A timestamp the backend rejects takes the whole batch down with it, so
-      // one stale line would cost every fresh event beside it. Anything that is
-      // not a date we can read goes too: queueEvent always stamps one, so a line
-      // without it is a hand-edited or older-schema leftover, and keeping it
-      // would trade a batch of good events for a guess.
-      const now = Date.now();
-      events = kept
-        .map((line) => JSON.parse(line) as { timestamp?: unknown })
-        .filter((event) => {
-          const at = typeof event.timestamp === 'string' ? Date.parse(event.timestamp) : Number.NaN;
-          // NaN fails both comparisons, which is the point.
-          return at >= now - MAX_EVENT_AGE_MS && at <= now + MAX_EVENT_FUTURE_MS;
-        });
-    } catch {
-      // A corrupted queue can never be accepted: drop it rather than retry forever.
-      unlinkSync(file);
-      return;
     }
 
+    const files = readdirSync(dir)
+      .filter((name) => name.startsWith(`${QUEUE_FILE}.`) && name.endsWith('.jsonl'))
+      .sort()
+      .map((name) => join(dir, name));
+    const snapshot: { file: string; events: { timestamp?: unknown }[] }[] = [];
+    for (const file of files) {
+      try {
+        const events = readFileSync(file, 'utf8')
+          .split('\n')
+          .filter(Boolean)
+          .map((line) => JSON.parse(line) as { timestamp?: unknown });
+        snapshot.push({ file, events });
+      } catch {
+        // Corrupt segments cannot be accepted. A missing segment may already
+        // have been acknowledged by a concurrent flush of the same event ids.
+        rmSync(file, { force: true });
+      }
+    }
+
+    // Bound the retained queue too. Only discard whole segments outside the
+    // newest MAX_QUEUE events; a legacy segment can contain multiple events.
+    let count = 0;
+    const retained = snapshot
+      .reverse()
+      .filter(({ file, events }) => {
+        if (count >= MAX_QUEUE) {
+          rmSync(file, { force: true });
+          return false;
+        }
+        count += events.length;
+        return true;
+      })
+      .reverse();
+    const now = Date.now();
+    const events = retained
+      .flatMap((segment) => segment.events)
+      .slice(-MAX_QUEUE)
+      .filter((event) => {
+        const at = typeof event?.timestamp === 'string' ? Date.parse(event.timestamp) : Number.NaN;
+        return at >= now - MAX_EVENT_AGE_MS && at <= now + MAX_EVENT_FUTURE_MS;
+      });
+    const acknowledge = (): void => {
+      for (const { file } of retained) {
+        rmSync(file, { force: true });
+      }
+    };
     if (events.length === 0) {
-      // Everything on disk aged past what the backend accepts: nothing to send,
-      // and nothing worth re-reading next run either.
-      writeFileSync(file, '');
+      acknowledge();
       return;
     }
 
@@ -552,7 +590,7 @@ export async function flushQueue(): Promise<void> {
       ? response.ok || response.status === 400 || response.status === 413
       : channelKeyRejected;
     if (dead) {
-      writeFileSync(file, '');
+      acknowledge();
     }
   } catch {
     // Network down, timeout, unwritable file: keep the queue for next time.
@@ -669,7 +707,7 @@ export type { CommandId } from './metrics.const.js';
  * Opens the metrics window for a command. Pair it with finishAndFlush, which
  * runSafely does for every command in the CLI.
  *
- * The exit hook is the safety net, not the main path. It only appends to a file,
+ * The exit hook is the safety net, not the main path. It only writes locally,
  * so it can never hang the user's terminal, and it covers the exits that bypass
  * finishAndFlush (prompt cancellations, argument validation). Those events go
  * out with the next run's flush.
@@ -677,7 +715,7 @@ export type { CommandId } from './metrics.const.js';
  * Nothing is flushed here. An open-time flush would put a token exchange and an
  * upload in front of the user's command — before it has even validated its
  * arguments — to send events that the closing flush picks up anyway: it reads
- * the whole queue file, so leftovers from earlier runs ride along with it.
+ * all published queue segments, so leftovers from earlier runs ride along with it.
  */
 export function instrument(command: CommandId, noTrace = false): void {
   commandId = command;

@@ -220,7 +220,7 @@ and your Lara account id — the same one shown on your account.
 **What is never sent**: your source or translated text, file names or paths, your configuration,
 or your credentials.
 
-Events are appended to a local file and sent in one batch when the command finishes; anything left
+Events are saved locally and sent in one batch when the command finishes; anything left
 over rides along with the next command's send. If the metrics backend is slow or unreachable the
 CLI behaves exactly as it does today: the send is bounded to two seconds and whatever could not be
 delivered simply waits for the next run.

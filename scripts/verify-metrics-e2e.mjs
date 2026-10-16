@@ -16,7 +16,7 @@
 import { createServer } from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtempSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -124,7 +124,7 @@ const metrics = createServer(async (req, res) => {
 
   received.push({ url: req.url, auth: req.headers.authorization, body: JSON.parse(body) });
   if (ingestResponder) {
-    const status = ingestResponder(received.length);
+    const status = await ingestResponder(received.length);
     if (status !== 202) {
       return json(res, status, { code: 'token_expired', message: 'expired' });
     }
@@ -177,8 +177,16 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 };
 
-const queueFile = join(state, QUEUE_FILE);
-const queueContent = () => (existsSync(queueFile) ? readFileSync(queueFile, 'utf8').trim() : '');
+const queueContent = () =>
+  readdirSync(state)
+    .filter(
+      (name) =>
+        name === QUEUE_FILE || (name.startsWith(`${QUEUE_FILE}.`) && name.endsWith('.jsonl'))
+    )
+    .sort()
+    .map((name) => readFileSync(join(state, name), 'utf8').trim())
+    .filter(Boolean)
+    .join('\n');
 
 // --- run 1: a real translation, delivered by the same run --------------------
 const r1 = await run(OK);
@@ -396,6 +404,55 @@ check(
   check('init still wrote its config', existsSync(join(project, 'lara.yaml')));
 }
 
+// --- handled resource errors must close the command as a failure -------------
+for (const resource of ['memory', 'glossary']) {
+  const before = received.flatMap((r) => r.body.events).length;
+  const failed = await run([resource, 'update', 'missing', 'Renamed']);
+  const fresh = received.flatMap((r) => r.body.events).slice(before);
+  check(`${resource} update 404 exits 1`, failed.code === 1, failed.stderr);
+  check(
+    `${resource} update 404 emits call_error with the API status`,
+    fresh.some((e) => e.eventType === 'call_error' && e.metadata?.httpStatus === 404) &&
+      !fresh.some((e) => e.eventType === 'call_success'),
+    JSON.stringify(fresh)
+  );
+  check(
+    `${resource} update 404 prints its failure once`,
+    failed.stderr.split('Translation failed').length === 2,
+    failed.stderr
+  );
+}
+
+// --- init must finish promptly even when Lara accepts but never answers -------
+for (const hangPath of ['/v2/auth', '/v2/languages']) {
+  const hung = createServer((req, res) => {
+    if (req.url === hangPath) return;
+    return json(res, 200, { token: laraJwt(ACCOUNT_ID) });
+  });
+  const hungUrl = await listen(hung);
+  try {
+    const started = Date.now();
+    const init = await run(['-y', 'init', '--force', '-s', 'en', '-t', 'it'], {
+      LARA_SERVER_URL: hungUrl,
+      DO_NOT_TRACK: '1',
+    });
+    const elapsed = Date.now() - started;
+    check(
+      `init with stalled ${hangPath} exits successfully within 4s`,
+      init.code === 0 && elapsed < 4_000,
+      `${elapsed}ms, code=${init.code}`
+    );
+    check(
+      `init with stalled ${hangPath} writes config and warns`,
+      existsSync(join(project, 'lara.yaml')) && init.stderr.includes('timed out'),
+      init.stderr
+    );
+  } finally {
+    hung.closeAllConnections();
+    await new Promise((resolve) => hung.close(resolve));
+  }
+}
+
 // --- a key Lara refuses ------------------------------------------------------
 {
   const before = received.flatMap((r) => r.body.events).length;
@@ -548,6 +605,52 @@ check(
     `tokens=${tokenRequests.length - tokensBefore} ingests=${received.length - ingestsBefore}`
   );
   check('expired token: the queue still drained', queueContent() === '');
+}
+
+// --- another process queues events while a flush is on the network -----------
+{
+  let releaseUpload;
+  let uploadStarted;
+  const blocked = new Promise((resolve) => {
+    releaseUpload = resolve;
+  });
+  const started = new Promise((resolve) => {
+    uploadStarted = resolve;
+  });
+  ingestResponder = async () => {
+    uploadStarted();
+    await blocked;
+    return 202;
+  };
+  const first = run(['memory', 'list']);
+  await started;
+  const second = await run(['memory', 'list'], { METRICS_URL: 'http://127.0.0.1:1' });
+  const pending = queueContent()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  releaseUpload();
+  const firstResult = await first;
+  ingestResponder = null;
+  const remaining = queueContent()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  check('concurrent commands both succeed', firstResult.code === 0 && second.code === 0);
+  check(
+    'first flush leaves the second process events queued',
+    remaining.length === 2 &&
+      remaining.every((event) => pending.some((item) => item.eventId === event.eventId)),
+    JSON.stringify(remaining)
+  );
+  const before = received.flatMap((r) => r.body.events).length;
+  await run(['memory', 'list']);
+  const delivered = received.flatMap((r) => r.body.events).slice(before);
+  check(
+    'next command delivers the events preserved across the concurrent flush',
+    remaining.every((event) => delivered.some((item) => item.eventId === event.eventId)) &&
+      queueContent() === ''
+  );
 }
 
 // --- degradation: metrics backend unreachable --------------------------------

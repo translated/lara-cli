@@ -20,6 +20,9 @@ export type GlossaryTerm = { language: string; value: string };
 // forever (the SDK has no default timeout). A slow-but-healthy request finishes
 // well within this; a stalled one fails fast so retries/fallback can proceed.
 const REQUEST_TIMEOUT_MS = 30_000;
+// init's optional probe must not inherit the translation timeout. The SDK
+// destroys the request socket at this deadline, including on each auth retry.
+const CREDENTIAL_PROBE_TIMEOUT_MS = 1_000;
 
 // Account-level failures that affect EVERY request: bad credentials (401),
 // payment required (402), forbidden (403), and "plan out of characters" (quota,
@@ -56,6 +59,10 @@ export class TranslationService {
   private readonly client: Translator;
 
   private constructor() {
+    this.client = this.createClient(REQUEST_TIMEOUT_MS);
+  }
+
+  private createClient(timeoutMs: number): Translator {
     const keyId = process.env.LARA_ACCESS_KEY_ID!;
     const keySecret = process.env.LARA_ACCESS_KEY_SECRET!;
 
@@ -63,18 +70,19 @@ export class TranslationService {
       throw new Error(Messages.errors.envVarsNotSet);
     }
 
-    this.client = new Translator(new Credentials(keyId, keySecret), {
+    const client = new Translator(new Credentials(keyId, keySecret), {
       // Maps to the node client's hard request timeout (req.destroy), which is
       // the client-side socket timeout that actually prevents a frozen CLI.
-      connectionTimeoutMs: REQUEST_TIMEOUT_MS,
+      connectionTimeoutMs: timeoutMs,
       // Points the SDK at a non-production Lara deployment (staging, a
       // self-hosted instance, or the e2e harness). Unset in normal use.
       ...(process.env.LARA_SERVER_URL ? { serverUrl: process.env.LARA_SERVER_URL } : {}),
     });
-    applyLaraClientHeaders(this.client);
+    applyLaraClientHeaders(client);
     // Lets the metrics module read the Lara account id off the JWT the SDK
     // already holds, instead of signing a second /v2/auth call of its own.
-    metrics.trackLaraClient(internalLaraClient(this.client));
+    metrics.trackLaraClient(internalLaraClient(client));
+    return client;
   }
 
   /**
@@ -83,7 +91,8 @@ export class TranslationService {
    * response is the only proof credentials are good.
    */
   public async validateCredentials(): Promise<void> {
-    await this.reporting(this.client.getLanguages());
+    const probe = this.createClient(CREDENTIAL_PROBE_TIMEOUT_MS);
+    await this.reporting(probe.getLanguages());
   }
 
   /**
