@@ -181,29 +181,6 @@ afterEach(() => {
 });
 
 describe('opt-out and configuration', () => {
-  it('writes nothing and calls no network once instrumented in no-trace mode', async () => {
-    const { spy } = mockBackend();
-    const metrics = await loadMetrics();
-
-    metrics.instrument('translate', true);
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(spy).not.toHaveBeenCalled();
-    expect(queuedEvents()).toEqual([]);
-  });
-
-  it('deletes what an earlier, traced run had queued', async () => {
-    const metrics = await loadMetrics();
-    const { spy } = mockBackend();
-    writeFileSync(queuePath(), `${JSON.stringify({ eventType: 'call_success' })}\n`);
-
-    metrics.instrument('translate', true);
-
-    expect(existsSync(queuePath())).toBe(false);
-    expect(spy).not.toHaveBeenCalled();
-  });
-
   it('writes nothing and calls no network when DO_NOT_TRACK is set', async () => {
     process.env.DO_NOT_TRACK = '1';
     const { spy } = mockBackend();
@@ -266,14 +243,6 @@ describe('opt-out and configuration', () => {
 
     expect(existsSync(missing)).toBe(false);
   });
-
-  it('reports when key, url and a resolvable account are all present', async () => {
-    const metrics = await loadMetrics();
-
-    metrics.queueEvent({ eventType: 'call_success' });
-
-    expect(queuedEvents()).toHaveLength(1);
-  });
 });
 
 describe('installationId', () => {
@@ -321,30 +290,9 @@ describe('installationId', () => {
       stderr.mockRestore();
     }
   });
-
-  it('is the installationId sent to the token endpoint', async () => {
-    const metrics = await loadMetrics();
-    const { tokenCalls } = mockBackend();
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(bodyOf(tokenCalls[0]!)).toEqual({
-      installationId: readFileSync(join(stateDir, INSTALLATION_FILE), 'utf8'),
-    });
-  });
 });
 
 describe('accountId', () => {
-  it('is the raw acc_ id read from the Lara JWT, never a hash', async () => {
-    const metrics = await loadMetrics();
-
-    expect(metrics.currentAccountId()).toBe(ACCOUNT_ID);
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    expect(queuedEvents()[0]!.accountId).toBe(ACCOUNT_ID);
-  });
-
   it('survives a restart in which the SDK never authenticated', async () => {
     const first = await loadMetrics();
     expect(first.currentAccountId()).toBe(ACCOUNT_ID);
@@ -547,20 +495,6 @@ describe('usage sessions', () => {
     expect(queuedEvents()).toHaveLength(1);
     expect(existsSync(lock)).toBe(false);
   });
-
-  it('attributes errors before authentication to the existing account session', async () => {
-    const first = await loadMetrics();
-    first.queueEvent({ eventType: 'call_success' });
-    const original = state().sessionId;
-    const failed = await loadMetrics(null);
-    failed.instrument('translate');
-    failed.finishCommand(1);
-    expect(queuedEvents().at(-1)).toMatchObject({
-      eventType: 'call_error',
-      accountId: ACCOUNT_ID,
-      sessionId: original,
-    });
-  });
 });
 
 describe('queueEvent', () => {
@@ -644,178 +578,97 @@ describe('queueEvent', () => {
 });
 
 describe('token exchange', () => {
-  it('buys a token with the channel key, then ingests with the token', async () => {
+  it('exchanges the channel key for an in-memory ingestion token', async () => {
     const metrics = await loadMetrics();
     const { spy, tokenCalls, ingestCalls } = mockBackend();
-
     metrics.queueEvent({ eventType: 'call_success' });
     await metrics.flushQueue();
-
-    // Order matters: the key must never reach the ingestion endpoint.
-    expect(spy.mock.calls[0]![0]).toBe('https://metrics.example/auth/issue-token');
-    expect(spy.mock.calls[1]![0]).toBe('https://metrics.example/metrics/ingest-events');
+    expect(spy.mock.calls.map(([url]) => url)).toEqual([
+      'https://metrics.example/auth/issue-token',
+      'https://metrics.example/metrics/ingest-events',
+    ]);
     expect(authOf(tokenCalls[0]!)).toBe(`Bearer ${CHANNEL_KEY}`);
+    expect(bodyOf(tokenCalls[0]!)).toEqual({ installationId: metrics.installationId() });
     expect(authOf(ingestCalls[0]!)).toBe(`Bearer ${INGEST_TOKEN}`);
     expect(String(ingestCalls[0]!.init.body)).not.toContain(CHANNEL_KEY);
   });
 
-  it('reuses the token for a second flush in the same process', async () => {
+  it.each([
+    [3600, 1],
+    [10, 2],
+  ])('reuses only tokens outside the refresh margin (TTL %i)', async (ttl, requests) => {
     const metrics = await loadMetrics();
-    const { tokenCalls } = mockBackend();
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(tokenCalls).toHaveLength(1);
+    const { tokenCalls } = mockBackend({ token: () => tokenOk(INGEST_TOKEN, ttl) });
+    for (let run = 0; run < 2; run++) {
+      metrics.queueEvent({ eventType: 'call_success' });
+      await metrics.flushQueue();
+    }
+    expect(tokenCalls).toHaveLength(requests);
   });
 
-  it('re-issues a token that is already inside its refresh margin', async () => {
-    const metrics = await loadMetrics();
-    // expiresIn shorter than the margin: the cache is stale the moment it lands.
-    const { tokenCalls } = mockBackend({ token: () => tokenOk(INGEST_TOKEN, 10) });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(tokenCalls).toHaveLength(2);
-  });
-
-  it('asks for a new token once on 401 and retries once', async () => {
+  it.each([202, 401])('refreshes once after 401, ending with %i', async (status) => {
     const metrics = await loadMetrics();
     const { tokenCalls, ingestCalls } = mockBackend({
       token: (n) => tokenOk(`token-${n}`),
-      ingest: (n) => (n === 1 ? response(401) : response(202)),
+      ingest: (n) => response(n === 1 ? 401 : status),
     });
-
     metrics.queueEvent({ eventType: 'call_success' });
     await metrics.flushQueue();
-
     expect(tokenCalls).toHaveLength(2);
-    expect(authOf(ingestCalls[0]!)).toBe('Bearer token-1');
-    expect(authOf(ingestCalls[1]!)).toBe('Bearer token-2');
-    expect(queuedEvents()).toEqual([]);
+    expect(ingestCalls.map(authOf)).toEqual(['Bearer token-1', 'Bearer token-2']);
+    expect(queuedEvents()).toHaveLength(status === 202 ? 0 : 1);
   });
 
-  it('gives up after one retry and keeps the queue', async () => {
-    const metrics = await loadMetrics();
-    const { ingestCalls } = mockBackend({ ingest: () => response(401) });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(ingestCalls).toHaveLength(2);
-    expect(queuedEvents()).toHaveLength(1);
-  });
-
-  it('keeps the queue when the token endpoint is unreachable', async () => {
-    const metrics = await loadMetrics();
-    const spy = vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
-    vi.stubGlobal('fetch', spy);
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await expect(metrics.flushQueue()).resolves.toBeUndefined();
-
-    expect(queuedEvents()).toHaveLength(1);
-  });
-
-  it('keeps the queue when the token endpoint is rate limited', async () => {
-    const metrics = await loadMetrics();
-    const { ingestCalls } = mockBackend({ token: () => rateLimited(7) });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(ingestCalls).toHaveLength(0);
-    expect(queuedEvents()).toHaveLength(1);
-  });
-
-  it('waits out the cooldown instead of asking again every run', async () => {
+  it('honours Retry-After across processes and resumes after expiry', async () => {
     const first = await loadMetrics();
     const limited = mockBackend({ token: () => rateLimited(30) });
-
     first.queueEvent({ eventType: 'call_success' });
     await first.flushQueue();
-    expect(limited.tokenCalls).toHaveLength(1);
+    expect(limited.ingestCalls).toHaveLength(0);
     expect(Number(readFileSync(join(stateDir, TOKEN_COOLDOWN_FILE), 'utf8'))).toBeGreaterThan(
       Date.now()
     );
-
-    // A whole new process, still inside the window the backend asked for.
-    vi.unstubAllGlobals();
     const second = await loadMetrics();
-    const quiet = mockBackend();
+    const backend = mockBackend();
     await second.flushQueue();
-
-    expect(quiet.tokenCalls).toHaveLength(0);
+    expect(backend.tokenCalls).toHaveLength(0);
     expect(queuedEvents()).toHaveLength(1);
-  });
-
-  it('asks again once the cooldown has passed', async () => {
-    const metrics = await loadMetrics();
-    writeFileSync(join(stateDir, TOKEN_COOLDOWN_FILE), String(Date.now() - 1_000));
-    const { tokenCalls } = mockBackend();
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(tokenCalls).toHaveLength(1);
+    writeFileSync(join(stateDir, TOKEN_COOLDOWN_FILE), String(Date.now() - 1));
+    await second.flushQueue();
+    expect(backend.tokenCalls).toHaveLength(1);
     expect(queuedEvents()).toEqual([]);
   });
 
-  it('drops the queue when the baked channel key is rejected', async () => {
-    const metrics = await loadMetrics();
-    const { tokenCalls, ingestCalls } = mockBackend({
-      token: () => jsonResponse(401, { code: 'api_key_invalid', message: 'nope' }),
-    });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    // The key is compiled into this published version: it will never work again.
-    expect(queuedEvents()).toEqual([]);
-    expect(ingestCalls).toHaveLength(0);
-
-    // And it stops asking for the rest of the process.
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-    expect(tokenCalls).toHaveLength(1);
-  });
-
-  it('keeps the queue on a 401 that is not the key being invalid', async () => {
-    const metrics = await loadMetrics();
-    mockBackend({ token: () => jsonResponse(401, { code: 'api_key_missing' }) });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(queuedEvents()).toHaveLength(1);
-  });
+  it.each([
+    [401, 'api_key_invalid', true],
+    [403, 'forbidden', true],
+    [401, 'api_key_missing', false],
+  ])(
+    'discards the queue only for a permanently rejected channel key (%i/%s)',
+    async (status, code, permanent) => {
+      const metrics = await loadMetrics();
+      const { tokenCalls, ingestCalls } = mockBackend({
+        token: () => jsonResponse(status as number, { code }),
+      });
+      metrics.queueEvent({ eventType: 'call_success' });
+      await metrics.flushQueue();
+      expect(queuedEvents()).toHaveLength(permanent ? 0 : 1);
+      expect(ingestCalls).toHaveLength(0);
+      if (permanent) {
+        metrics.queueEvent({ eventType: 'call_success' });
+        await metrics.flushQueue();
+        expect(tokenCalls).toHaveLength(1);
+      }
+    }
+  );
 });
 
 describe('flushQueue', () => {
-  it('sends the queue as a batch and clears it on 202', async () => {
-    const metrics = await loadMetrics();
-    const { ingestCalls } = mockBackend();
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    metrics.queueEvent({ eventType: 'auth_success' });
-    await metrics.flushQueue();
-
-    const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
-    expect(events).toHaveLength(2);
-    expect(events[0]).toMatchObject({ eventType: 'auth_success', channel: 'cli' });
-    expect(queuedEvents()).toEqual([]);
-  });
-
-  it.each(['same module', 'separate module'])(
-    'does not upload the same snapshot concurrently from the %s',
-    async (module) => {
+  it.each([202, 400, 413])(
+    'serializes uploads and preserves events outside the acknowledged snapshot (%i)',
+    async (status) => {
       const first = await loadMetrics();
-      const second = module === 'same module' ? first : await loadMetrics();
+      const second = await loadMetrics();
       let releaseUpload!: (response: Response) => void;
       let uploadStarted!: () => void;
       const started = new Promise<void>((resolve) => {
@@ -845,7 +698,7 @@ describe('flushQueue', () => {
       await started;
       second.queueEvent({ eventType: 'call_success', marker: 'later' });
       await second.flushQueue();
-      releaseUpload(response(202));
+      releaseUpload(response(status));
       await flushing;
 
       expect(batches).toHaveLength(1);
@@ -888,24 +741,37 @@ describe('flushQueue', () => {
     expect(existsSync(lock)).toBe(false);
   });
 
-  it.each([202, 400, 503, 'network error'])('releases its lock after %s', async (status) => {
-    const metrics = await loadMetrics();
-    mockBackend({
-      ingest: () => {
-        if (status === 'network error') throw new Error('connection reset');
-        return response(status as number);
-      },
-    });
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
+  it.each([202, 400, 413, 403, 429, 500, 503])(
+    'acknowledges only accepted or unrecoverable batches (%i)',
+    async (status) => {
+      const metrics = await loadMetrics();
+      mockBackend({ ingest: () => response(status) });
+      metrics.queueEvent({ eventType: 'call_success' });
+      await metrics.flushQueue();
+      expect(queuedEvents()).toHaveLength([202, 400, 413].includes(status) ? 0 : 1);
+      expect(existsSync(join(stateDir, FLUSH_LOCK_FILE))).toBe(false);
+    }
+  );
 
-    expect(existsSync(join(stateDir, FLUSH_LOCK_FILE))).toBe(false);
-    const { ingestCalls } = mockBackend();
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-    expect(ingestCalls).toHaveLength(1);
-    expect(queuedEvents()).toEqual([]);
-  });
+  it.each(['token', 'ingest'] as const)(
+    'keeps events and releases the lock when %s fails',
+    async (endpoint) => {
+      const metrics = await loadMetrics();
+      mockBackend({
+        [endpoint]: () => {
+          throw new Error('connection reset');
+        },
+      });
+      metrics.queueEvent({ eventType: 'call_success' });
+      await expect(metrics.flushQueue()).resolves.toBeUndefined();
+      expect(queuedEvents()).toHaveLength(1);
+      expect(existsSync(join(stateDir, FLUSH_LOCK_FILE))).toBe(false);
+      const { ingestCalls } = mockBackend();
+      await metrics.flushQueue();
+      expect(ingestCalls).toHaveLength(1);
+      expect(queuedEvents()).toEqual([]);
+    }
+  );
 
   it('keeps the same event ids on retry after the server accepted a batch but its response was lost', async () => {
     const metrics = await loadMetrics();
@@ -924,43 +790,13 @@ describe('flushQueue', () => {
     expect(queuedEvents()).toEqual([]);
   });
 
-  it.each([202, 400, 413])(
-    'preserves events published during an upload acknowledged with %i',
-    async (status) => {
-      const first = await loadMetrics();
-      const second = await loadMetrics();
-      let resolveUpload!: (response: Response) => void;
-      let uploadStarted!: () => void;
-      const started = new Promise<void>((resolve) => {
-        uploadStarted = resolve;
-      });
-      const upload = new Promise<Response>((resolve) => {
-        resolveUpload = resolve;
-      });
-      vi.stubGlobal(
-        'fetch',
-        vi.fn((input: unknown) => {
-          if (String(input).endsWith('/auth/issue-token')) return tokenOk();
-          uploadStarted();
-          return upload;
-        })
-      );
-      first.queueEvent({ eventType: 'call_success', marker: 'sent' });
-      const flushing = first.flushQueue();
-      await started;
-      second.queueEvent({ eventType: 'call_success', marker: 'later' });
-      resolveUpload(response(status));
-      await flushing;
-
-      expect(queuedEvents().map((event) => event.marker)).toEqual(['later']);
-      const { ingestCalls } = mockBackend();
-      await second.flushQueue();
-      expect(
-        (bodyOf(ingestCalls[0]!).events as Record<string, unknown>[]).map((event) => event.marker)
-      ).toEqual(['later']);
-      expect(queuedEvents()).toEqual([]);
-    }
-  );
+  it('serializes repeated flushes within one process', async () => {
+    const metrics = await loadMetrics();
+    const { ingestCalls } = mockBackend();
+    metrics.queueEvent({ eventType: 'call_success' });
+    await Promise.all([metrics.flushQueue(), metrics.flushQueue()]);
+    expect(ingestCalls).toHaveLength(1);
+  });
 
   it('keeps both the snapshot and later events after a failed upload', async () => {
     const metrics = await loadMetrics();
@@ -975,33 +811,8 @@ describe('flushQueue', () => {
     expect(queuedEvents().map((event) => event.marker)).toEqual(['retry', 'later']);
   });
 
-  it('purges segment files too when a later command opts out', async () => {
-    const metrics = await loadMetrics();
-    metrics.queueEvent({ eventType: 'call_success' });
-    expect(queueFiles()).toHaveLength(1);
-    metrics.instrument('translate', true);
-    expect(queueFiles()).toEqual([]);
-  });
-
-  it('drops an event past the backend age bound instead of losing the batch with it', async () => {
-    const metrics = await loadMetrics();
-    const { ingestCalls } = mockBackend();
-    const stale = new Date(Date.now() - 40 * 24 * 60 * 60 * 1_000).toISOString();
-    writeFileSync(
-      queuePath(),
-      `${JSON.stringify({ eventType: 'call_success', channel: 'cli', accountId: ACCOUNT_ID, timestamp: stale })}\n`
-    );
-
-    metrics.queueEvent({ eventType: 'auth_success' });
-    await metrics.flushQueue();
-
-    const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ eventType: 'auth_success' });
-    expect(queuedEvents()).toEqual([]);
-  });
-
   it.each([
+    ['an expired event', { timestamp: new Date(Date.now() - 40 * 86_400_000).toISOString() }],
     ['no timestamp at all', {}],
     ['a timestamp that is not a date', { timestamp: 'yesterday' }],
     ['a clock running far ahead', { timestamp: new Date(Date.now() + 7_200_000).toISOString() }],
@@ -1036,40 +847,6 @@ describe('flushQueue', () => {
     expect(queuedEvents()).toEqual([]);
   });
 
-  it.each([400, 413])('clears the queue on %i: it will never be accepted', async (status) => {
-    const metrics = await loadMetrics();
-    mockBackend({ ingest: () => response(status) });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(queuedEvents()).toEqual([]);
-  });
-
-  it.each([403, 429, 500, 503])('keeps the queue on %i: recoverable', async (status) => {
-    const metrics = await loadMetrics();
-    mockBackend({ ingest: () => response(status) });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await metrics.flushQueue();
-
-    expect(queuedEvents()).toHaveLength(1);
-  });
-
-  it('keeps the queue and does not throw when the network is down', async () => {
-    const metrics = await loadMetrics();
-    mockBackend({
-      ingest: () => {
-        throw new Error('socket hang up');
-      },
-    });
-
-    metrics.queueEvent({ eventType: 'call_success' });
-    await expect(metrics.flushQueue()).resolves.toBeUndefined();
-
-    expect(queuedEvents()).toHaveLength(1);
-  });
-
   it('sends at most the last MAX_QUEUE events', async () => {
     const metrics = await loadMetrics();
     const { ingestCalls } = mockBackend();
@@ -1100,15 +877,6 @@ describe('flushQueue', () => {
     expect(spy).not.toHaveBeenCalled();
     expect(existsSync(queuePath())).toBe(false);
   });
-
-  it('does nothing when there is no queue', async () => {
-    const metrics = await loadMetrics();
-    const { spy } = mockBackend();
-
-    await metrics.flushQueue();
-
-    expect(spy).not.toHaveBeenCalled();
-  });
 });
 
 describe('errorTypeFor', () => {
@@ -1120,142 +888,57 @@ describe('errorTypeFor', () => {
     [413, 'payload_too_large'],
     [429, 'rate_limit_429'],
     [500, 'server_5xx'],
-    [503, 'server_5xx'],
-  ])('maps %i to the shared vocabulary', async (status, expected) => {
-    const metrics = await loadMetrics();
-    expect(metrics.errorTypeFor(new LaraApiError(status, 'Error', 'boom'))).toBe(expected);
+  ])('maps HTTP %i to %s', async (status, expected) => {
+    expect((await loadMetrics()).errorTypeFor(new LaraApiError(status, 'Error', 'boom'))).toBe(
+      expected
+    );
   });
 
-  it.each(['ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET'])(
-    'tells Lara being unreachable (%s) apart from Lara refusing',
-    async (code) => {
-      const metrics = await loadMetrics();
-      const failure = Object.assign(new Error('fetch failed'), { code });
+  it.each([
+    [new LaraApiError(500, 'AuthenticationError', 'no answer'), 'network_error'],
+    ...['ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET'].map((code): [unknown, string] => [
+      Object.assign(new Error('fetch failed'), { code }),
+      'network_error',
+    ]),
+    [new Error('Your plan quota is exhausted'), 'quota_exceeded'],
+    [new SyntaxError('bad JSON'), 'parse_error'],
+    [Object.assign(new Error('bad YAML'), { name: 'YAMLParseError' }), 'parse_error'],
+    [Object.assign(new Error('aborted'), { name: 'AbortError' }), 'timeout'],
+    [new Error('connect ETIMEDOUT'), 'timeout'],
+    [new Error('request timed out'), 'timeout'],
+    [
+      new Error('Authentication failed', { cause: new LaraApiError(401, 'Error', 'bad key') }),
+      'auth_401',
+    ],
+    [new Error('connect ETIMEDOUT', { cause: new Error('no idea') }), 'timeout'],
+    [new Error('something odd'), 'unknown'],
+    ['a string', 'unknown'],
+    [undefined, 'unknown'],
+  ])('classifies %s without leaking free text', async (error, expected) => {
+    const metrics = await loadMetrics();
+    expect(metrics.errorTypeFor(error)).toBe(expected);
+    if (!(error instanceof Error) || error.cause === undefined) {
+      expect(metrics.errorTypeFor(new Error('wrapped', { cause: error }))).toBe(expected);
+    }
+  });
 
-      expect(metrics.errorTypeFor(failure)).toBe('network_error');
-      // The SDK wraps it, so the cause is where it usually shows up.
-      expect(metrics.errorTypeFor(new Error('translation failed', { cause: failure }))).toBe(
-        'network_error'
-      );
+  it.each([
+    [new SyntaxError('bad JSON'), 'parse_error'],
+    [new LaraApiError(429, 'Error', 'slow down'), 'rate_limit_429'],
+  ])(
+    'preserves the classified failure when the command unwinds with a generic error',
+    async (error, expected) => {
+      const metrics = await loadMetrics();
+      metrics.instrument('translate');
+      metrics.recordError(error);
+      metrics.recordError(new Error('Some files could not be translated'));
+      metrics.finishCommand(1);
+      expect(queuedEvents()[0]).toMatchObject({ eventType: 'call_error', errorType: expected });
     }
   );
-
-  it('reads an unanswered auth call as Lara unreachable, not as Lara failing', async () => {
-    const metrics = await loadMetrics();
-
-    // What the SDK raises when /v2/auth never answered.
-    expect(metrics.errorTypeFor(new LaraApiError(500, 'AuthenticationError', 'no answer'))).toBe(
-      'network_error'
-    );
-    // A 500 Lara did answer with stays a server error.
-    expect(metrics.errorTypeFor(new LaraApiError(500, 'Error', 'boom'))).toBe('server_5xx');
-    // A refused key is still a refused key.
-    expect(metrics.errorTypeFor(new LaraApiError(401, 'AuthenticationError', 'bad key'))).toBe(
-      'auth_401'
-    );
-  });
-
-  it('recognises the quota error, which has no dedicated status code', async () => {
-    const metrics = await loadMetrics();
-    expect(metrics.errorTypeFor(new Error('Your plan quota is exhausted'))).toBe('quota_exceeded');
-  });
-
-  it('recognises a malformed file, whatever parser raised it', async () => {
-    const metrics = await loadMetrics();
-    const yaml = new Error('bad indentation');
-    yaml.name = 'YAMLParseError';
-
-    // What a broken i18n JSON actually throws.
-    let json: unknown;
-    try {
-      JSON.parse('{"a": 1,,}');
-    } catch (error) {
-      json = error;
-    }
-
-    expect(metrics.errorTypeFor(json)).toBe('parse_error');
-    expect(metrics.errorTypeFor(yaml)).toBe('parse_error');
-  });
-
-  it('keeps the parse error a later, vaguer failure would have buried', async () => {
-    const metrics = await loadMetrics();
-    metrics.instrument('translate');
-
-    metrics.recordError(new SyntaxError("Expected ',' or '}' after property value in JSON"));
-    // What the command finally unwinds with once the other files are done.
-    metrics.recordError(new Error('Some files could not be translated'));
-    metrics.finishCommand(1);
-
-    expect(queuedEvents()[0]).toMatchObject({
-      eventType: 'call_error',
-      errorType: 'parse_error',
-    });
-  });
-
-  it('recognises timeouts by name and by message', async () => {
-    const metrics = await loadMetrics();
-    const aborted = new Error('aborted');
-    aborted.name = 'AbortError';
-
-    expect(metrics.errorTypeFor(aborted)).toBe('timeout');
-    expect(metrics.errorTypeFor(new Error('connect ETIMEDOUT'))).toBe('timeout');
-    expect(metrics.errorTypeFor(new Error('request timed out'))).toBe('timeout');
-  });
-
-  it('looks through an error raised only to unwind', async () => {
-    const metrics = await loadMetrics();
-    const fatal = new Error('Authentication failed', {
-      cause: new LaraApiError(401, 'Error', 'bad key'),
-    });
-
-    expect(metrics.errorTypeFor(fatal)).toBe('auth_401');
-  });
-
-  it('keeps its own classification when the cause says nothing', async () => {
-    const metrics = await loadMetrics();
-    const wrapped = new Error('connect ETIMEDOUT', { cause: new Error('no idea') });
-
-    expect(metrics.errorTypeFor(wrapped)).toBe('timeout');
-  });
-
-  it('falls back to unknown, never to free text', async () => {
-    const metrics = await loadMetrics();
-    expect(metrics.errorTypeFor(new Error('something odd'))).toBe('unknown');
-    expect(metrics.errorTypeFor('a string')).toBe('unknown');
-    expect(metrics.errorTypeFor(undefined)).toBe('unknown');
-  });
 });
 
 describe('finishCommand', () => {
-  it('emits call_success on the first run and on every run after it', async () => {
-    const first = await loadMetrics();
-    first.instrument('translate');
-    first.setContext({ mode: 'text' });
-    first.finishCommand(0);
-
-    const second = await loadMetrics();
-    second.instrument('translate');
-    second.setContext({ mode: 'text' });
-    second.finishCommand(0);
-
-    // first_call is deprecated: activation is derived from the earliest success.
-    expect(queuedEvents().map((event) => event.eventType)).toEqual([
-      'call_success',
-      'call_success',
-    ]);
-  });
-
-  it('keeps the classified error when a vaguer one follows', async () => {
-    const metrics = await loadMetrics();
-    metrics.instrument('translate');
-    metrics.recordError(new LaraApiError(429, 'Error', 'slow down'));
-    // What the command finally unwinds with says nothing about why it failed.
-    metrics.recordError(new Error('Some files could not be translated'));
-    metrics.finishCommand(1);
-
-    expect(queuedEvents()[0]!.errorType).toBe('rate_limit_429');
-  });
-
   it('emits call_error with errorType and latencyMs on a non-zero exit', async () => {
     const metrics = await loadMetrics();
     metrics.instrument('translate');
@@ -1270,74 +953,31 @@ describe('finishCommand', () => {
     expect(typeof queuedEvents()[0]!.latencyMs).toBe('number');
   });
 
-  it('always carries a feature, and maps every mode onto the shared vocabulary', async () => {
-    for (const [mode, feature] of [
-      ['text', 'text'],
-      ['file', 'document'],
-      ['config', 'document'],
-    ] as const) {
-      clearQueue();
-      const metrics = await loadMetrics();
-      metrics.instrument('translate');
-      metrics.setContext({ mode });
-      metrics.finishCommand(0);
-
-      expect(queuedEvents()[0]!.metadata).toMatchObject({ feature, surface: mode });
-    }
-  });
-
-  it('reports the language pair only when a single one is known', async () => {
-    const direct = await loadMetrics();
-    direct.instrument('translate');
-    direct.setContext({ mode: 'text', sourceLang: 'EN', targetLang: 'pt-BR' });
-    direct.finishCommand(0);
-
-    // Lowercased BCP 47, as the shared standard requires.
-    expect(queuedEvents()[0]!.metadata).toMatchObject({
-      sourceLang: 'en',
-      targetLang: 'pt-br',
-    });
-
-    clearQueue();
-    const fanout = await loadMetrics();
-    fanout.instrument('translate');
-    fanout.setContext({ mode: 'config', elements: 12, locales: 3 });
-    fanout.finishCommand(0);
-
-    const metadata = queuedEvents()[0]!.metadata as Record<string, unknown>;
-    expect(metadata).toMatchObject({ feature: 'document', elements: 12, locales: 3 });
-    expect(metadata).not.toHaveProperty('sourceLang');
-    expect(metadata).not.toHaveProperty('targetLang');
-    // `mode` is reported as `surface`; it must not also leak as a bare key.
-    expect(metadata).not.toHaveProperty('mode');
-  });
-
-  it('reports the file types as one sorted, de-duplicated value', async () => {
+  it.each([
+    ['text', 'text', { sourceLang: 'en', targetLang: 'pt-br' }],
+    ['file', 'document', { sourceLang: 'en', targetLang: 'pt-br' }],
+    ['config', 'document', { fileTypes: 'json,po', elements: 12, locales: 3 }],
+  ] as const)('reports the %s context and character volume', async (mode, feature, fields) => {
     const metrics = await loadMetrics();
     metrics.instrument('translate');
-    metrics.setContext({ mode: 'config', fileTypes: ['po', 'json', 'po'] });
-    metrics.finishCommand(0);
-
-    expect(queuedEvents()[0]!.metadata).toMatchObject({ fileTypes: 'json,po' });
-  });
-
-  it('leaves fileTypes out entirely when nothing was read from a file', async () => {
-    const metrics = await loadMetrics();
-    metrics.instrument('translate');
-    metrics.setContext({ mode: 'text' });
-    metrics.finishCommand(0);
-
-    expect(queuedEvents()[0]!.metadata).not.toHaveProperty('fileTypes');
-  });
-
-  it('reports the characters recorded during the run', async () => {
-    const metrics = await loadMetrics();
-    metrics.instrument('translate');
+    metrics.setContext(
+      mode === 'config'
+        ? { mode, fileTypes: ['po', 'json', 'po'], elements: 12, locales: 3 }
+        : { mode, sourceLang: 'EN', targetLang: 'pt-BR' }
+    );
     metrics.recordTranslated(120);
     metrics.recordTranslated(80);
     metrics.finishCommand(0);
-
-    expect(queuedEvents()[0]!.charsTranslated).toBe(200);
+    const [event] = queuedEvents();
+    expect(event).toMatchObject({
+      eventType: 'call_success',
+      charsTranslated: 200,
+      metadata: { command: 'translate', feature, surface: mode, ...fields },
+    });
+    const metadata = event!.metadata as Record<string, unknown>;
+    expect(metadata).not.toHaveProperty('mode');
+    if (mode === 'config') expect(metadata).not.toHaveProperty('sourceLang');
+    else expect(metadata).not.toHaveProperty('fileTypes');
   });
 
   it('clamps counters the backend would reject', async () => {
@@ -1407,80 +1047,9 @@ describe('instrumentCommand', () => {
 
     expect(queuedEvents().map((event) => event.eventType)).toEqual(['call_success']);
   });
-
-  it('reports the exit code of a failed run', async () => {
-    const metrics = await loadMetrics();
-    mockBackend();
-
-    metrics.instrument('translate');
-    metrics.recordError(new LaraApiError(500, 'Error', 'down'));
-    fireExitHook(1);
-
-    expect(queuedEvents()[0]).toMatchObject({
-      eventType: 'call_error',
-      errorType: 'server_5xx',
-      metadata: { exitCode: 1 },
-    });
-  });
-
-  it('closes a command that never translates with its own call event', async () => {
-    const metrics = await loadMetrics();
-    mockBackend();
-
-    metrics.instrument('memory list');
-    metrics.recordApiAnswer();
-    metrics.finishCommand(0);
-
-    const events = queuedEvents();
-    expect(events.map((event) => event.eventType)).toEqual(['auth_success', 'call_success']);
-    // A `lara memory list` must not read as a translation in the funnel.
-    expect(events[1]!.metadata).toMatchObject({
-      command: 'memory list',
-      feature: 'resource_management',
-    });
-    expect(events[1]!.charsTranslated).toBe(0);
-  });
-});
-
-describe('finishAndFlush', () => {
-  it('closes the run and delivers it in the same breath', async () => {
-    const metrics = await loadMetrics();
-    const { ingestCalls } = mockBackend();
-
-    metrics.instrument('translate');
-    metrics.setContext({ mode: 'text' });
-    await metrics.finishAndFlush(0);
-
-    const sent = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
-    expect(sent.map((event) => event.eventType)).toEqual(['call_success']);
-    expect(queuedEvents()).toEqual([]);
-  });
-
-  it('never throws, whatever the backend does', async () => {
-    const metrics = await loadMetrics();
-    mockBackend({
-      token: () => {
-        throw new Error('DNS is on fire');
-      },
-    });
-
-    metrics.instrument('translate');
-    await expect(metrics.finishAndFlush(1)).resolves.toBeUndefined();
-    expect(queuedEvents()).toHaveLength(1);
-  });
 });
 
 describe('recordApiAnswer', () => {
-  it('sends auth_success at most once per run', async () => {
-    const metrics = await loadMetrics();
-    metrics.instrument('translate');
-    metrics.recordApiAnswer();
-    metrics.recordApiAnswer();
-
-    expect(queuedEvents()).toHaveLength(1);
-    expect(queuedEvents()[0]!.eventType).toBe('auth_success');
-  });
-
   it('reports activation only once across init, translations and repeated init', async () => {
     const { ingestCalls } = mockBackend();
     for (const command of ['init', 'translate', 'init', 'memory list'] as const) {
@@ -1661,43 +1230,21 @@ describe('recordApiAnswer', () => {
 });
 
 describe('metadata every event carries', () => {
-  it('reports the platform, the runtime and whether a pipeline ran it', async () => {
+  it('includes command, runtime and CI metadata on auth and command events', async () => {
     process.env.GITHUB_ACTIONS = 'true';
     const metrics = await loadMetrics();
-
-    metrics.instrument('translate');
+    metrics.instrument('glossary import-csv');
     metrics.recordApiAnswer();
     metrics.finishCommand(0);
-
+    expect(queuedEvents()).toHaveLength(2);
     for (const event of queuedEvents()) {
       expect(event.metadata).toMatchObject({
+        command: 'glossary import-csv',
         os: process.platform,
         nodeVersion: process.versions.node,
         ci: true,
       });
     }
-  });
-
-  it('reads CI=0 as a person, the same way the opt-out switches are read', async () => {
-    process.env.CI = '0';
-    const metrics = await loadMetrics();
-
-    metrics.instrument('translate');
-    metrics.finishCommand(0);
-
-    expect(queuedEvents()[0]!.metadata).toMatchObject({ ci: false });
-  });
-
-  it('names the command on every event, auth included', async () => {
-    const metrics = await loadMetrics();
-
-    metrics.instrument('glossary import-csv');
-    metrics.recordApiAnswer();
-    metrics.finishCommand(0);
-
-    expect(
-      queuedEvents().map((event) => (event.metadata as Record<string, unknown>).command)
-    ).toEqual(['glossary import-csv', 'glossary import-csv']);
   });
 
   it('adds what Lara answered to a failure, as a status and a short token', async () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { QUEUE_FILE } from '#modules/metrics/metrics.const.js';
 
@@ -85,7 +85,7 @@ afterEach(() => {
   process.chdir(savedCwd);
   vi.unstubAllGlobals();
   rmSync(projectDir, { recursive: true, force: true });
-  rmSync(stateDir, { recursive: true, force: true });
+  rmSync(dirname(stateDir), { recursive: true, force: true });
   for (const key of ENV_KEYS) {
     if (savedEnv[key] === undefined) {
       delete process.env[key];
@@ -96,44 +96,16 @@ afterEach(() => {
 });
 
 describe('no-trace mode governs usage metrics', () => {
-  it('records a plain run, with no config and no flag', async () => {
-    const { sent } = await runCommand();
-
-    expect(sent).toBe(true);
-  });
-
-  it('records nothing when the command was asked not to trace', async () => {
-    const { sent } = await runCommand(true);
-
-    expect(sent).toBe(false);
-    // Not so much as a directory: opting out must leave no trace of its own.
-    expect(existsSync(stateDir)).toBe(false);
-  });
-
-  it('records nothing for any command when the project config says noTrace', async () => {
-    writeFileSync(join(projectDir, 'lara.yaml'), `${VALID_CONFIG}noTrace: true\n`);
-
-    const { sent } = await runCommand();
-
-    expect(sent).toBe(false);
-    expect(existsSync(stateDir)).toBe(false);
-  });
-
-  it('keeps recording when the project config says noTrace: false', async () => {
-    writeFileSync(join(projectDir, 'lara.yaml'), `${VALID_CONFIG}noTrace: false\n`);
-
-    const { sent } = await runCommand();
-
-    expect(sent).toBe(true);
-  });
-
-  it('treats a lara.yaml it cannot read as a no', async () => {
-    writeFileSync(join(projectDir, 'lara.yaml'), 'version: [unclosed\n');
-
-    const { sent } = await runCommand();
-
-    expect(sent).toBe(false);
-    expect(existsSync(stateDir)).toBe(false);
+  it.each([
+    { name: 'default', config: undefined, flag: false, sent: true },
+    { name: 'per-command opt-out', config: undefined, flag: true, sent: false },
+    { name: 'project opt-out', config: `${VALID_CONFIG}noTrace: true\n`, flag: false, sent: false },
+    { name: 'project opt-in', config: `${VALID_CONFIG}noTrace: false\n`, flag: false, sent: true },
+    { name: 'unreadable config', config: 'version: [unclosed\n', flag: false, sent: false },
+  ])('respects $name', async ({ config, flag, sent }) => {
+    if (config !== undefined) writeFileSync(join(projectDir, 'lara.yaml'), config);
+    expect((await runCommand(flag)).sent).toBe(sent);
+    if (!sent) expect(existsSync(stateDir)).toBe(false);
   });
 
   it('deletes what an earlier, traced run had queued', async () => {
@@ -143,6 +115,6 @@ describe('no-trace mode governs usage metrics', () => {
     const { sent } = await runCommand(true);
 
     expect(sent).toBe(false);
-    expect(existsSync(queuePath())).toBe(false);
+    expect(readdirSync(stateDir).filter((name) => name.startsWith(QUEUE_FILE))).toEqual([]);
   });
 });
