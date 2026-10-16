@@ -1,0 +1,998 @@
+import { createHash, randomUUID } from 'node:crypto';
+import {
+  existsSync,
+  linkSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { LaraApiError } from '@translated/lara';
+import { lockSync } from 'proper-lockfile';
+
+import { Messages } from '#messages/messages.js';
+import { getErrorMessage, isQuotaError } from '#utils/error.js';
+import { getPackageVersion } from '#utils/version.js';
+import { touchSession } from './metrics.session.js';
+import {
+  ACCOUNT_FILE_PREFIX,
+  AUTH_SUCCESS_FILE_PREFIX,
+  BAKED_METRICS_API_KEY,
+  BAKED_METRICS_URL,
+  CI_ENV_VARS,
+  COMMAND_FEATURES,
+  type CommandId,
+  FLUSH_LOCK_FILE,
+  FLUSH_TIMEOUT_MS,
+  INGEST_PATH,
+  INSTALLATION_FILE,
+  MAX_EVENT_AGE_MS,
+  MAX_EVENT_FUTURE_MS,
+  MAX_QUEUE,
+  MAX_UINT32,
+  METRICS_CHANNEL,
+  QUEUE_FILE,
+  TOKEN_COOLDOWN_FILE,
+  TOKEN_MARGIN_MS,
+  TOKEN_PATH,
+} from './metrics.const.js';
+
+/**
+ * Usage metrics for the `cli` channel.
+ *
+ * The rule that governs every line of this file: nothing here may slow down or
+ * break the CLI. Events are saved synchronously as immutable queue segments
+ * and sent in a single bounded batch on the way out of the command; whatever could not be
+ * delivered rides along with the next command's send — there is no flush on the
+ * way in. Every exported function swallows its own errors; a missing key, an
+ * unreachable backend or a read-only disk all degrade to "no telemetry", never
+ * to a failed translation.
+ *
+ * Ingestion is two steps: the channel key buys a short-lived token from
+ * /auth/issue-token, and only that token is accepted by /metrics/ingest-events.
+ * The channel key never reaches the ingestion endpoint and the token never
+ * reaches the disk.
+ */
+
+export type MetricsErrorType =
+  | 'auth_401'
+  | 'auth_403'
+  | 'payment_402'
+  | 'quota_exceeded'
+  | 'rate_limit_429'
+  | 'timeout'
+  | 'network_error'
+  | 'payload_too_large'
+  | 'parse_error'
+  | 'server_5xx'
+  | 'validation_error'
+  | 'unknown';
+
+type Transport = { url: string; key: string };
+type QueuedEvent = {
+  timestamp?: unknown;
+  eventType?: unknown;
+  accountId?: unknown;
+  eventId?: unknown;
+};
+
+/** UUIDv5 in the URL namespace: one milestone id across keys and installations. */
+function authSuccessId(accountId: string): string {
+  const namespace = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex');
+  const bytes = createHash('sha1')
+    .update(namespace)
+    .update(`https://laratranslate.com/metrics/${METRICS_CHANNEL}/auth_success/${accountId}`)
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x50;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = bytes.toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function authSuccessFile(dir: string, accountId: string): string {
+  return join(dir, `${AUTH_SUCCESS_FILE_PREFIX}${authSuccessId(accountId)}`);
+}
+
+/** What a command tells the metrics module about itself while it runs. */
+export type RunContext = {
+  /** Which entry point the user reached for. Also decides `feature`. */
+  mode?: 'text' | 'file' | 'config';
+  sourceLang?: string;
+  targetLang?: string;
+  elements?: number;
+  locales?: number;
+  /** Config-level file types touched by the run, e.g. `['json', 'po']`. */
+  fileTypes?: string[];
+  /** How many translation memories the run used. The count, never the ids. */
+  memories?: number;
+  /** How many glossaries the run used. The count, never the ids. */
+  glossaries?: number;
+};
+
+/** The SDK's internal client, reached defensively — see trackLaraClient. */
+type TokenBearingClient = { token?: string };
+
+/** Keeps queue filenames unique even when commands share a usage session. */
+const INVOCATION_ID = randomUUID();
+
+/** Set by instrument(), which every command goes through before anything reads it. */
+let startedAt = 0;
+let charsTranslated = 0;
+let lastError: unknown = undefined;
+let authEventSent = false;
+let commandFinished = false;
+/** Which command is running, as `metadata.command` reports it. */
+let commandId: CommandId = 'translate';
+/** Set by instrument(): no-trace mode, resolved by the command before anything runs. */
+let disabled = false;
+let context: RunContext = {};
+let queueSequence = 0;
+
+/** Memory only. A token on disk is a credential on disk. */
+let cachedToken: { value: string; expiresAt: number } | null = null;
+/** Set when the baked channel key is rejected: it will never become valid again. */
+let channelKeyRejected = false;
+let cachedAccountId: string | null = null;
+let trackedClient: TokenBearingClient | null = null;
+
+/** Non-personal facts about every run: what it ran on, and whether a person ran it. */
+function baseMetadata(): Record<string, unknown> {
+  return {
+    os: process.platform,
+    nodeVersion: process.versions.node,
+    ci: CI_ENV_VARS.some((name) => isSet(process.env[name])),
+  };
+}
+
+/** A value the bake step never replaced is not a configured value. */
+function isConfigured(value: string | undefined): value is string {
+  return Boolean(value) && !/^__.*__$/.test(value!);
+}
+
+/**
+ * An opt-out switch is off only when it is unset or explicitly says so. Any
+ * other value means the user meant to switch it on: `=0` and `=false` are the
+ * two people reach for when they want telemetry left alone, and treating them
+ * as "disabled" would silently do the opposite of what they asked.
+ */
+function isSet(value: string | undefined): boolean {
+  const normalized = value?.trim().toLowerCase();
+  return normalized !== undefined && !['', '0', 'false'].includes(normalized);
+}
+
+/**
+ * No-trace mode is the switch: a run the user asked Lara not to keep is a run we
+ * do not measure either. DO_NOT_TRACK is kept as the cross-tool standard, and it
+ * is the only way to opt out of a command that has no config and no --no-trace.
+ */
+function optedOut(): boolean {
+  return disabled || isSet(process.env.DO_NOT_TRACK);
+}
+
+function transport(): Transport | null {
+  if (optedOut()) {
+    return null;
+  }
+  const url = process.env.METRICS_URL ?? BAKED_METRICS_URL;
+  const key = process.env.METRICS_API_KEY ?? BAKED_METRICS_API_KEY;
+  if (!isConfigured(url) || !isConfigured(key)) {
+    return null;
+  }
+  return { url: url.replace(/\/+$/, ''), key };
+}
+
+/**
+ * Per-user, per-machine state directory. It lives in the home directory and not
+ * in the project: the installation id and the resolved account id must survive
+ * a fresh checkout.
+ */
+function stateDir(): string | null {
+  for (const dir of candidateStateDirs()) {
+    try {
+      mkdirSync(dir, { recursive: true });
+      return dir;
+    } catch {
+      // Not writable (some CI images, locked-down containers): try the next one.
+    }
+  }
+  return null;
+}
+
+/** Where state can live, best first. The one list both writers and the purge read. */
+function candidateStateDirs(): string[] {
+  return [process.env.LARA_STATE_DIR ?? join(homedir(), '.lara'), join(tmpdir(), 'lara-cli')];
+}
+
+/**
+ * Deletes whatever an earlier, traced run left queued. Opting out has to mean
+ * the events that have not gone out never do, and it must not create the
+ * directory it is emptying — so this resolves the paths without mkdir.
+ */
+function purgeQueue(): void {
+  for (const dir of candidateStateDirs()) {
+    try {
+      for (const name of readdirSync(dir)) {
+        if (name === QUEUE_FILE || name.startsWith(`${QUEUE_FILE}.`)) {
+          rmSync(join(dir, name), { force: true });
+        }
+      }
+    } catch {
+      // Nowhere we are allowed to delete. Nothing left to do about it.
+    }
+  }
+}
+
+/** Resolves a file inside the state directory, or null if there is nowhere to put it. */
+function stateFile(name: string): string | null {
+  const dir = stateDir();
+  return dir ? join(dir, name) : null;
+}
+
+/**
+ * One UUID per installation, generated once and persisted. The backend keys its
+ * rate limits on this, so a fresh one per start-up would make them meaningless.
+ */
+export function installationId(): string | null {
+  try {
+    if (!transport()) {
+      return null;
+    }
+    const file = stateFile(INSTALLATION_FILE);
+    if (!file) {
+      return null;
+    }
+    if (existsSync(file)) {
+      const stored = readFileSync(file, 'utf8').trim();
+      if (stored) {
+        return stored;
+      }
+    }
+    const fresh = randomUUID();
+    writeFileSync(file, fresh);
+    // The first time this machine stores anything for telemetry is the only
+    // honest moment to say that it does. Once, on stderr, so a piped stdout
+    // stays exactly as clean as it was before.
+    process.stderr.write(`\n${Messages.warnings.telemetryNotice}\n`);
+    return fresh;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Registers the SDK's Lara client so the account id can be read from the JWT it
+ * already holds. The SDK authenticates with the access key on its own and keeps
+ * the resulting token on its internal client; reaching it costs nothing, while
+ * re-implementing the signed /v2/auth call would cost an extra round trip. The
+ * cast is defensive: if the SDK changes its internals we lose the account id and
+ * stop reporting, we never crash.
+ */
+export function trackLaraClient(client: unknown): void {
+  trackedClient = (client ?? null) as TokenBearingClient | null;
+}
+
+/** Where the resolved account id is cached, keyed by access key id. */
+function accountCacheFile(): string | null {
+  const keyId = process.env.LARA_ACCESS_KEY_ID;
+  if (!keyId) {
+    return null;
+  }
+  const scope = createHash('sha256').update(keyId).digest('hex').slice(0, 16);
+  return stateFile(`${ACCOUNT_FILE_PREFIX}${scope}`);
+}
+
+/**
+ * The Lara account id lives in the `id` claim of the Lara JWT. Anything that is
+ * not an `acc_` value is not an account id — a key hash or a key id would split
+ * one customer into several accounts, which is exactly what the shared standard
+ * forbids.
+ */
+function accountIdFromJwt(token: string): string | null {
+  try {
+    const segment = token.split('.')[1];
+    if (!segment) {
+      return null;
+    }
+    const payload = JSON.parse(Buffer.from(segment, 'base64url').toString('utf8')) as {
+      id?: unknown;
+    };
+    return typeof payload.id === 'string' && payload.id.startsWith('acc_') ? payload.id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Memory, then the live JWT, then the last value seen on this machine. The disk
+ * fallback is what lets a revoked or expired key still report auth_fail: at that
+ * point there is no token to read the account from.
+ */
+export function currentAccountId(): string | null {
+  if (cachedAccountId) {
+    return cachedAccountId;
+  }
+
+  const live = trackedClient?.token ? accountIdFromJwt(trackedClient.token) : null;
+  if (live) {
+    cachedAccountId = live;
+    try {
+      const file = accountCacheFile();
+      if (file) {
+        writeFileSync(file, live);
+      }
+    } catch {
+      // A cache we cannot write just means we resolve it again next run.
+    }
+    return live;
+  }
+
+  const stored = accountIdFromDisk();
+  if (stored) cachedAccountId = stored;
+  return stored;
+}
+
+function accountIdFromDisk(): string | null {
+  try {
+    const file = accountCacheFile();
+    if (file && existsSync(file)) {
+      const stored = readFileSync(file, 'utf8').trim();
+      if (stored.startsWith('acc_')) return stored;
+    }
+  } catch {
+    // An unreadable cache cannot identify this command.
+  }
+  return null;
+}
+
+function usageSession(dir: string, accountId: string | null): string | null {
+  const scope =
+    accountId ??
+    `unverified:${createHash('sha256')
+      .update(process.env.LARA_ACCESS_KEY_ID ?? '')
+      .digest('hex')}`;
+  return touchSession(dir, `${METRICS_CHANNEL}:${scope}`);
+}
+
+/**
+ * Never blocks, never touches the network, never throws. Every guard telemetry
+ * has lives here: this is the only door onto the queue, so nothing upstream has
+ * to re-check whether reporting is on.
+ */
+export function queueEvent(event: Record<string, unknown>): void {
+  try {
+    // Transport first: resolving the account id touches the disk, and telemetry
+    // that is switched off must not so much as create the state directory.
+    if (!transport()) {
+      return;
+    }
+    const accountId = currentAccountId();
+    // `auth_fail` is the one event that matters most when there is no account
+    // id to attach: a key Lara rejected the first time it was used, and the
+    // backend takes it without one. Everything else is dropped — an event
+    // missing a required field would 400 the whole batch it rides in.
+    if (!accountId && event.eventType !== 'auth_fail') {
+      return;
+    }
+    const dir = stateDir();
+    if (!dir) {
+      return;
+    }
+    const sessionId = usageSession(dir, accountId);
+    if (!sessionId) return;
+    const firstAuth = event.eventType === 'auth_success';
+    if (firstAuth && existsSync(authSuccessFile(dir, accountId!))) {
+      return;
+    }
+    const eventId = firstAuth ? authSuccessId(accountId!) : randomUUID();
+    // The identity fields come last on purpose: a caller cannot override the
+    // channel it reports as, the account the event belongs to, or its clock.
+    const line = JSON.stringify({
+      ...event,
+      // Every event carries the base facts, and the caller's own metadata rides
+      // on top: one place to assemble it means an auth event cannot miss it.
+      metadata: {
+        ...baseMetadata(),
+        ...(event.metadata as Record<string, unknown> | undefined),
+      },
+      eventId,
+      channel: METRICS_CHANNEL,
+      // Omit means omit: an invented or empty id would be a fake account.
+      ...(accountId ? { accountId } : {}),
+      channelVersion: getPackageVersion(),
+      sessionId,
+      timestamp: new Date().toISOString(),
+    });
+    // Publish each segment atomically. A flush can delete only the immutable
+    // files in its snapshot; another process can keep queuing during upload.
+    // The sequence keeps events from this run ordered even in the same ms.
+    const name = firstAuth
+      ? `${QUEUE_FILE}.0001.${eventId}.jsonl`
+      : `${QUEUE_FILE}.${Date.now()}.${INVOCATION_ID}.${String(queueSequence++).padStart(8, '0')}.jsonl`;
+    const file = join(dir, name);
+    const pending = `${file}.${randomUUID()}.tmp`;
+    try {
+      writeFileSync(pending, `${line}\n`);
+      if (firstAuth) {
+        // Exclusive publication: concurrent commands share the same pending
+        // milestone without overwriting the first session/timestamp or payload.
+        linkSync(pending, file);
+      } else {
+        renameSync(pending, file);
+      }
+    } finally {
+      rmSync(pending, { force: true });
+    }
+  } catch {
+    // Telemetry must never surface to the user.
+  }
+}
+
+/**
+ * The token endpoint rate limits per installation and answers 429 with a
+ * Retry-After. Remembering it across processes is the difference between one
+ * doomed request per CLI invocation and none: a burst of commands would
+ * otherwise each pay a round trip on the user's path to be told to wait.
+ */
+function tokenCooldownActive(): boolean {
+  try {
+    const file = stateFile(TOKEN_COOLDOWN_FILE);
+    if (!file || !existsSync(file)) {
+      return false;
+    }
+    return Number(readFileSync(file, 'utf8').trim()) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function rememberTokenCooldown(response: Response): void {
+  try {
+    const file = stateFile(TOKEN_COOLDOWN_FILE);
+    if (!file) {
+      return;
+    }
+    const header = Number(response.headers.get('retry-after'));
+    const seconds = Number.isFinite(header) && header > 0 ? header : 10;
+    writeFileSync(file, String(Date.now() + seconds * 1_000));
+  } catch {
+    // Without the note we simply pay one wasted request next run.
+  }
+}
+
+/**
+ * Buys an ingestion token with the channel key. Cached in memory for the rest of
+ * the process; never written anywhere.
+ */
+async function getToken(t: Transport, signal: AbortSignal): Promise<string | null> {
+  if (channelKeyRejected) {
+    return null;
+  }
+  if (cachedToken && cachedToken.expiresAt > Date.now()) {
+    return cachedToken.value;
+  }
+  if (tokenCooldownActive()) {
+    return null;
+  }
+
+  const install = installationId();
+  if (!install) {
+    return null;
+  }
+
+  const response = await fetch(`${t.url}${TOKEN_PATH}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${t.key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ installationId: install }),
+    signal,
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      rememberTokenCooldown(response);
+      return null;
+    }
+    // A rejected key is baked into this published version: it will never start
+    // working, so the queue behind it is dead weight.
+    if (response.status === 401 || response.status === 403) {
+      const code = await response
+        .json()
+        .then((body: unknown) => (body as { code?: unknown }).code)
+        .catch(() => undefined);
+      if (code === 'api_key_invalid' || response.status === 403) {
+        channelKeyRejected = true;
+      }
+    }
+    return null;
+  }
+
+  const body = (await response.json()) as { token?: unknown; expiresIn?: unknown };
+  if (typeof body.token !== 'string' || !body.token) {
+    return null;
+  }
+  const ttlMs = typeof body.expiresIn === 'number' ? body.expiresIn * 1_000 : 0;
+  cachedToken = {
+    value: body.token,
+    expiresAt: Date.now() + Math.max(ttlMs - TOKEN_MARGIN_MS, 0),
+  };
+  return body.token;
+}
+
+function postEvents(
+  t: Transport,
+  token: string,
+  events: unknown[],
+  signal: AbortSignal
+): Promise<Response> {
+  return fetch(`${t.url}${INGEST_PATH}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ events }),
+    signal,
+  });
+}
+
+/** Sends everything queued, in one batch. Bounded, silent, and never throws. */
+export async function flushQueue(): Promise<void> {
+  let release: (() => void) | undefined;
+  try {
+    // Check the transport before touching the disk: with telemetry off, this
+    // must not so much as create the state directory.
+    const t = transport();
+    if (!t) {
+      return;
+    }
+    const dir = stateDir();
+    if (!dir) {
+      return;
+    }
+
+    // One sender per state directory, including across CLI processes. Do not
+    // wait for a busy sender: new events stay queued for the next command.
+    // The lock heartbeat lets a later run recover a lock left by a killed CLI.
+    const controller = new AbortController();
+    release = lockSync(dir, {
+      lockfilePath: join(dir, FLUSH_LOCK_FILE),
+      retries: 0,
+      stale: 10_000,
+      onCompromised: () => controller.abort(),
+    });
+
+    // Migrate the append-only queue from older versions to a named snapshot.
+    // New writers never append here, and competing flushers can claim it once.
+    const legacy = join(dir, QUEUE_FILE);
+    if (existsSync(legacy)) {
+      try {
+        renameSync(legacy, join(dir, `${QUEUE_FILE}.0000.${randomUUID()}.jsonl`));
+      } catch {
+        // Another process may already have rotated it.
+      }
+    }
+
+    const files = readdirSync(dir)
+      .filter((name) => name.startsWith(`${QUEUE_FILE}.`) && name.endsWith('.jsonl'))
+      .sort()
+      .map((name) => join(dir, name));
+    const snapshot: { file: string; events: QueuedEvent[] }[] = [];
+    for (const file of files) {
+      try {
+        const events = readFileSync(file, 'utf8')
+          .split('\n')
+          .filter(Boolean)
+          .map((line) => JSON.parse(line) as QueuedEvent);
+        snapshot.push({ file, events });
+      } catch {
+        // Corrupt segments cannot be accepted. A missing segment may already
+        // have been acknowledged by a concurrent flush of the same event ids.
+        rmSync(file, { force: true });
+      }
+    }
+
+    // Bound the retained queue too. Only discard whole segments outside the
+    // newest MAX_QUEUE events; a legacy segment can contain multiple events.
+    let count = 0;
+    const retained = snapshot
+      .reverse()
+      .filter(({ file, events }) => {
+        if (count >= MAX_QUEUE) {
+          rmSync(file, { force: true });
+          return false;
+        }
+        count += events.length;
+        return true;
+      })
+      .reverse();
+    const now = Date.now();
+    const authAccounts = new Set<string>();
+    const events = retained
+      .flatMap((segment) => segment.events)
+      .slice(-MAX_QUEUE)
+      .filter((event) => {
+        const at = typeof event?.timestamp === 'string' ? Date.parse(event.timestamp) : Number.NaN;
+        return at >= now - MAX_EVENT_AGE_MS && at <= now + MAX_EVENT_FUTURE_MS;
+      })
+      .filter((event) => {
+        if (event.eventType !== 'auth_success') return true;
+        if (typeof event.accountId !== 'string') return false;
+        const account = event.accountId;
+        if (authAccounts.has(account) || existsSync(authSuccessFile(dir, account))) return false;
+        authAccounts.add(account);
+        // Older queues can contain one auth_success per command. Collapse
+        // those too and give the milestone the same cross-installation id.
+        event.eventId = authSuccessId(account);
+        return true;
+      });
+    const acknowledge = (): void => {
+      for (const { file } of retained) {
+        rmSync(file, { force: true });
+      }
+    };
+    if (events.length === 0) {
+      acknowledge();
+      return;
+    }
+
+    // One budget for the whole exchange: the flush sits on the user's path.
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(FLUSH_TIMEOUT_MS)]);
+    const send = async (): Promise<Response | null> => {
+      const token = await getToken(t, signal);
+      return token ? postEvents(t, token, events, signal) : null;
+    };
+
+    let response = await send();
+
+    // An expired token is the one recoverable 401: one new token, one retry.
+    // That is the whole refresh logic.
+    if (response?.status === 401) {
+      cachedToken = null;
+      response = await send();
+    }
+
+    // A 429 comes with a Retry-After and the contract says to honour it. The
+    // cooldown gates the token exchange, and no token means no flush — which is
+    // exactly the wait, carried to the next process the same way.
+    if (response?.status === 429) {
+      rememberTokenCooldown(response);
+    }
+
+    // Drop only what will never be accepted: a batch the backend refuses on
+    // sight, or one behind a channel key that this published version can never
+    // fix. A 401/403/429/5xx is recoverable, so the queue survives to next run.
+    const dead = response
+      ? response.ok || response.status === 400 || response.status === 413
+      : channelKeyRejected;
+    if (response?.ok) {
+      // Commit the milestone only after ingestion acknowledged it. A failed
+      // send leaves the original event queued for the next invocation.
+      for (const event of events) {
+        if (event.eventType === 'auth_success' && typeof event.accountId === 'string') {
+          writeFileSync(authSuccessFile(dir, event.accountId), '1');
+        }
+      }
+    }
+    if (dead) {
+      acknowledge();
+    }
+  } catch {
+    // Busy lock, network down, timeout, unwritable file: keep the queue for next time.
+  } finally {
+    try {
+      release?.();
+    } catch {
+      // A compromised lock must never turn a successful command into a failure.
+    }
+  }
+}
+
+/**
+ * Maps an error to one of a closed vocabulary of tokens. Free text would make
+ * the dashboard grouping useless, so every channel maps to the same words.
+ */
+export function errorTypeFor(error: unknown): MetricsErrorType {
+  // An error raised only to unwind carries the real one as its cause. Classify
+  // that, or a fatal 401 would be reported as a plain `unknown`.
+  const cause = error instanceof Error ? error.cause : undefined;
+  if (cause !== undefined) {
+    const fromCause = classify(cause);
+    if (fromCause !== 'unknown') {
+      return fromCause;
+    }
+  }
+  return classify(error);
+}
+
+function classify(error: unknown): MetricsErrorType {
+  if (isQuotaError(error)) {
+    return 'quota_exceeded';
+  }
+
+  if (error instanceof LaraApiError) {
+    switch (error.statusCode) {
+      case 400:
+        return 'validation_error';
+      case 401:
+        return 'auth_401';
+      case 402:
+        return 'payment_402';
+      case 403:
+        return 'auth_403';
+      case 413:
+        return 'payload_too_large';
+      case 429:
+        return 'rate_limit_429';
+      default:
+        break;
+    }
+    // The SDK turns an unanswered /v2/auth into a 500 AuthenticationError: it
+    // never heard back, which is Lara being unreachable and not Lara failing.
+    // Same reading as the mcp channel, so the two funnels can be compared.
+    if (error.type === 'AuthenticationError' && error.statusCode >= 500) {
+      return 'network_error';
+    }
+    if (error.statusCode >= 500) {
+      return 'server_5xx';
+    }
+  }
+
+  const name = error instanceof Error ? error.name : '';
+  if (name === 'AbortError' || name === 'TimeoutError') {
+    return 'timeout';
+  }
+  // Lara unreachable: a different product problem from Lara refusing, and the
+  // one the funnel used to report as a plain `unknown`.
+  const code =
+    typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
+  if (code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ECONNRESET') {
+    return 'network_error';
+  }
+  // The user's own file is malformed — a different product problem from our API
+  // failing, and the one the funnel could not tell apart before. The name is
+  // what carries it: SyntaxError from JSON, YAMLParseError, XMLParseError.
+  if (/syntax|parse/i.test(name)) {
+    return 'parse_error';
+  }
+  if (/\btimed?\s?out\b|\btimeout\b|ETIMEDOUT/i.test(getErrorMessage(error))) {
+    return 'timeout';
+  }
+
+  return 'unknown';
+}
+
+/** A Lara error type is a short token. A message must never ride in as one. */
+const LARA_ERROR_TYPE = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+
+/**
+ * What Lara itself said about a failure, on top of our own token: the status it
+ * answered with and the error type it named. Looked for on the error and on its
+ * cause, the same two places errorTypeFor reads.
+ */
+function errorDetailsFor(error: unknown): Record<string, unknown> {
+  const cause = error instanceof Error ? error.cause : undefined;
+  const apiError = [error, cause].find(
+    (candidate): candidate is LaraApiError => candidate instanceof LaraApiError
+  );
+  if (!apiError) {
+    return {};
+  }
+  return {
+    httpStatus: apiError.statusCode,
+    ...(LARA_ERROR_TYPE.test(apiError.type) ? { laraErrorType: apiError.type } : {}),
+  };
+}
+
+/** The backend 400s on values past uint32 rather than wrapping them in storage. */
+function clampUint32(value: number): number {
+  if (!Number.isFinite(value) || value < 0) {
+    return 0;
+  }
+  return Math.min(Math.trunc(value), MAX_UINT32);
+}
+
+export type { CommandId } from './metrics.const.js';
+
+/**
+ * Opens the metrics window for a command. Pair it with finishAndFlush, which
+ * runSafely does for every command in the CLI.
+ *
+ * The exit hook is the safety net, not the main path. It only writes locally,
+ * so it can never hang the user's terminal, and it covers the exits that bypass
+ * finishAndFlush (prompt cancellations, argument validation). Those events go
+ * out with the next run's flush.
+ *
+ * Nothing is flushed here. An open-time flush would put a token exchange and an
+ * upload in front of the user's command — before it has even validated its
+ * arguments — to send events that the closing flush picks up anyway: it reads
+ * all published queue segments, so leftovers from earlier runs ride along with it.
+ */
+export function instrument(command: CommandId, noTrace = false): void {
+  commandId = command;
+  disabled = noTrace;
+  startedAt = Date.now();
+  // Opting out has to reach backwards too: whatever an earlier, traced run left
+  // queued is deleted here rather than waiting for a run that would send it.
+  if (optedOut()) {
+    purgeQueue();
+  } else if (transport()) {
+    try {
+      const account =
+        (trackedClient?.token ? accountIdFromJwt(trackedClient.token) : null) ??
+        cachedAccountId ??
+        accountIdFromDisk();
+      const dir = account ? stateDir() : null;
+      if (dir) usageSession(dir, account);
+    } catch {
+      // Session tracking cannot prevent a command from starting.
+    }
+  }
+  process.once('exit', (code: number) => finishCommand(code));
+}
+
+/** Non-personal facts about the run. Never paths, text or credentials. */
+export function setContext(fields: RunContext): void {
+  context = { ...context, ...fields };
+}
+
+export function recordTranslated(chars: number): void {
+  if (Number.isFinite(chars) && chars > 0) {
+    charsTranslated += chars;
+  }
+}
+
+export function recordError(error: unknown): void {
+  // Never let a later, vaguer error bury one that was already classified: the
+  // per-file API failure is what the funnel needs, not the generic error the
+  // command finally unwinds with.
+  if (lastError !== undefined && errorTypeFor(error) === 'unknown') {
+    return;
+  }
+  lastError = error;
+}
+
+/**
+ * What a Lara answer says about the key, or `undefined` when it says nothing.
+ * This is metrics' own vocabulary: a caller reports what happened, it does not
+ * decide what a status code means.
+ */
+function authOutcome(error: unknown): boolean | undefined {
+  if (error === undefined) {
+    return true;
+  }
+  if (!(error instanceof LaraApiError)) {
+    return undefined;
+  }
+  if (error.statusCode === 401 || error.statusCode === 403) {
+    return false;
+  }
+  // Anything else Lara answered came back past its auth check, so the key was
+  // accepted — the funnel would otherwise lose a user who got in fine and then
+  // ran out of credit. A 5xx says nothing either way.
+  return error.statusCode < 500 ? true : undefined;
+}
+
+/**
+ * The CLI has no login step, so auth is only ever proven by a real API answer:
+ * call this with nothing when the call succeeded, with the error when it did
+ * not. A successful answer queues the account/channel activation milestone
+ * once; failures remain diagnostic events, at most once per run.
+ */
+export function recordApiAnswer(error?: unknown): void {
+  if (authEventSent) {
+    return;
+  }
+  const accepted = authOutcome(error);
+  if (accepted === undefined) {
+    return;
+  }
+  authEventSent = true;
+  queueEvent(
+    accepted
+      ? { eventType: 'auth_success', metadata: { command: commandId } }
+      : {
+          eventType: 'auth_fail',
+          errorType: errorTypeFor(error),
+          metadata: { command: commandId, ...errorDetailsFor(error) },
+        }
+  );
+}
+
+/**
+ * Builds the metadata block. `feature` names the capability that was exercised
+ * and is never omitted — a dashboard cannot tell an absent value apart from a
+ * capability that does not exist. `command` says which command ran, and
+ * `surface` which entry point the user reached for, in this CLI's own
+ * vocabulary.
+ */
+function buildMetadata(exitCode: number): Record<string, unknown> {
+  const { mode, sourceLang, targetLang, fileTypes, ...rest } = context;
+
+  const metadata: Record<string, unknown> = {
+    ...rest,
+    command: commandId,
+    feature: mode
+      ? mode === 'text'
+        ? 'text'
+        : 'document'
+      : COMMAND_FEATURES[commandId.split(' ')[0]!]!,
+    exitCode,
+  };
+
+  // One sorted, de-duplicated scalar rather than an array: a config run touches
+  // several formats at once, and `json,po` groups in a dashboard while a list
+  // does not. Both call sites pass what the config already calls a file type,
+  // so the vocabulary stays closed — never a path, never a file name. Every
+  // field here must stay bounded like this one: the backend caps serialized
+  // metadata at 4096 bytes and rejects the whole batch the event rides in.
+  const formats = [...new Set(fileTypes ?? [])].sort();
+  if (formats.length > 0) {
+    metadata.fileTypes = formats.join(',');
+  }
+
+  if (mode) {
+    metadata.surface = mode;
+  }
+  // Only when a single pair is actually known: config mode fans out to N targets.
+  if (sourceLang) {
+    metadata.sourceLang = sourceLang.toLowerCase();
+  }
+  if (targetLang) {
+    metadata.targetLang = targetLang.toLowerCase();
+  }
+
+  return metadata;
+}
+
+/**
+ * Queues the single terminal event for the command. Safe to call from a
+ * `process.on('exit')` handler: it only ever writes synchronously.
+ */
+export function finishCommand(exitCode: number): void {
+  if (commandFinished) {
+    return;
+  }
+  commandFinished = true;
+
+  try {
+    const common = {
+      latencyMs: clampUint32(Date.now() - startedAt),
+      charsTranslated: clampUint32(charsTranslated),
+      metadata: {
+        ...buildMetadata(exitCode),
+        ...(exitCode === 0 ? {} : errorDetailsFor(lastError)),
+      },
+    };
+
+    if (exitCode !== 0) {
+      queueEvent({
+        eventType: 'call_error',
+        errorType: errorTypeFor(lastError),
+        ...common,
+      });
+      return;
+    }
+
+    queueEvent({ eventType: 'call_success', ...common });
+  } catch {
+    // Never let the exit path fail because of telemetry.
+  }
+}
+
+/**
+ * Closes the run and sends it, in that order. This is what makes a one-shot user
+ * report at all: without it the last run's events sit on disk until the CLI is
+ * used again. Never throws — the caller is on its way out.
+ */
+export async function finishAndFlush(exitCode: number): Promise<void> {
+  finishCommand(exitCode);
+  await flushQueue();
+}

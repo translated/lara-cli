@@ -3,7 +3,7 @@ import { LaraApiError } from '@translated/lara';
 
 import { TranslationService } from '#modules/translation/translation.service.js';
 import { LARA_WEB_URL } from '#modules/common/common.const.js';
-import { handleLaraApiError } from '#utils/error.js';
+import { handleLaraApiError, HandledExitError } from '#utils/error.js';
 import { Messages } from '#messages/messages.js';
 import customSearchableSelect from '#utils/prompt.js';
 import { removeIdFromConfig } from '../common/config-sync.js';
@@ -57,8 +57,8 @@ export async function listGlossaries(): Promise<void> {
     }
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.gettingGlossaries, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.gettingGlossaries, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -99,8 +99,8 @@ export async function createGlossary(
     );
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.creatingGlossary, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.creatingGlossary, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -136,8 +136,8 @@ export async function updateGlossary(
     console.log(Messages.ui.itemName(glossary.name) + '\n');
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.updatingGlossary, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.updatingGlossary, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -168,8 +168,8 @@ export async function deleteGlossary(id: string | undefined, interactive: boolea
     }
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.deletingGlossary, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.deletingGlossary, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -226,8 +226,8 @@ export async function addEntry(
     spinner.succeed(Messages.success.glossaryEntryAdded);
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.addingGlossaryEntry, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.addingGlossaryEntry, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -273,8 +273,8 @@ export async function deleteEntry(
     spinner.succeed(Messages.success.glossaryEntryDeleted);
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.deletingGlossaryEntry, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.deletingGlossaryEntry, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;
@@ -301,8 +301,8 @@ export async function importCsv(
     spinner.succeed(Messages.success.csvImported);
   } catch (error) {
     if (error instanceof LaraApiError) {
-      handleLaraApiError(error, Messages.errors.importingCsv, spinner);
-      return;
+      const reported = handleLaraApiError(error, Messages.errors.importingCsv, spinner);
+      throw new HandledExitError(reported, error);
     }
 
     throw error;

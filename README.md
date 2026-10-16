@@ -6,7 +6,7 @@ Lara Cli automates translation of your i18n files with a single command, preserv
 
 Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18n single-file components, Markdown and MDX files, Android XML string resource files, Xcode localization files (.strings, .stringsdict, .xcstrings), and plain text (.txt) files. See [Supported Formats](docs/config/formats.md) for details.
 
-[![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)](https://github.com/translated/lara-cli)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/translated/lara-cli)
 
 </div>
 
@@ -17,6 +17,7 @@ Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18
 - [Local Development Setup](#local-development-setup)
 - [Technology Stack](#technology-stack)
 - [Supported Locales](#supported-locales)
+- [Usage Metrics](#usage-metrics)
 - [Documentation](#documentation)
 
 ## Installation
@@ -208,6 +209,60 @@ The codebase follows a modular architecture with clear separation of concerns, m
 Lara CLI supports translations using different locale codes, following two main standards:
 
 See the [full list of supported locales](docs/config/locales.md#supported-locales).
+
+## Usage Metrics
+
+Lara CLI reports usage metrics so we can see where people get stuck between installing it and
+translating something. What it records is whether setup and translation succeeded, with timings,
+volumes, which command ran, the CLI version, your platform and Node version, whether it ran on CI,
+and your Lara account id — the same one shown on your account.
+
+**What is never sent**: your source or translated text, file names or paths, your configuration,
+or your credentials.
+
+Events are saved locally and sent in one batch when the command finishes; anything left
+over rides along with the next command's send. If the metrics backend is slow or unreachable the
+CLI behaves exactly as it does today: the send is bounded to two seconds and whatever could not be
+delivered simply waits for the next run. Only one process flushes a shared queue at a time.
+Delivery retries reuse the same `eventId`; the ingestion backend must deduplicate by that id
+because a server can accept a batch even if its response never reaches the CLI.
+
+`auth_success` represents the first verified authentication for a Lara account in the CLI channel.
+The CLI keeps one pending milestone across commands and remembers it after ingestion acknowledges
+it. Repeating `init`, translating again or rotating an API key for the same account does not create
+another milestone. Each command still records its own `call_success` or `call_error`;
+`auth_fail` remains a diagnostic event for failed authentication attempts.
+
+`sessionId` groups commands from the same account on the same machine, including across projects.
+Each command renews the session; 30 minutes without activity starts a new one. Switching accounts
+also starts a new session. Events within a command keep the same session, including during a long
+translation, and retries retain the session recorded when the event was created.
+
+The activation event id is stable for an account/channel across installations. The backend must
+deduplicate this id (and historical activation events by account/channel) to keep the funnel unique
+across machines or after local state is deleted.
+
+The first run that records anything prints a one-line notice on `stderr` saying so, once per
+machine.
+
+**To turn it off**, use no-trace mode. The switch that keeps your content out of Lara's logs keeps
+the run out of these metrics too — one answer instead of two:
+
+```bash
+lara-cli translate --no-trace          # this run only
+```
+
+```yaml
+# lara.yaml — every command run in this project
+noTrace: true
+```
+
+`DO_NOT_TRACK=1` in the environment does the same, and is the way to opt out of a run that has
+neither a config file nor a flag.
+
+With any of them, nothing is recorded and no file is written — not even the installation id — and
+whatever an earlier run had left queued is deleted. Only `0`, `false` and an empty value are read as
+"leave it on"; anything else turns it off.
 
 ## Documentation
 

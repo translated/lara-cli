@@ -19,7 +19,7 @@ const memoryCommand = new Command()
   .helpOption('-h, --help', 'Show help')
   .action(async (_options: unknown, command: Command) => {
     ensureCredentials();
-    await runSafely(() => runMemoryMenu(isRunningInInteractiveMode(command)));
+    await runSafely(() => runMemoryMenu(isRunningInInteractiveMode(command)), 'memory');
   });
 
 memoryCommand
@@ -28,7 +28,7 @@ memoryCommand
   .helpOption('-h, --help', 'Show help')
   .action(async () => {
     ensureCredentials();
-    await runSafely(() => listMemories());
+    await runSafely(() => listMemories(), 'memory list');
   });
 
 memoryCommand
@@ -37,7 +37,7 @@ memoryCommand
   .helpOption('-h, --help', 'Show help')
   .action(async (name: string | undefined, _options: unknown, command: Command) => {
     ensureCredentials();
-    await runSafely(() => createMemory(name, isRunningInInteractiveMode(command)));
+    await runSafely(() => createMemory(name, isRunningInInteractiveMode(command)), 'memory create');
   });
 
 memoryCommand
@@ -52,7 +52,7 @@ memoryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() => updateMemory(id, name, isRunningInInteractiveMode(command)));
+      await runSafely(() => updateMemory(id, name, isRunningInInteractiveMode(command)), 'memory update');
     }
   );
 
@@ -62,7 +62,7 @@ memoryCommand
   .helpOption('-h, --help', 'Show help')
   .action(async (id: string | undefined, _options: unknown, command: Command) => {
     ensureCredentials();
-    await runSafely(() => deleteMemory(id, isRunningInInteractiveMode(command)));
+    await runSafely(() => deleteMemory(id, isRunningInInteractiveMode(command)), 'memory delete');
   });
 
 memoryCommand
@@ -88,7 +88,8 @@ memoryCommand
           sentence,
           translation,
           isRunningInInteractiveMode(command)
-        )
+        ),
+        'memory add-translation'
       );
     }
   );
@@ -116,7 +117,8 @@ memoryCommand
           sentence,
           translation,
           isRunningInInteractiveMode(command)
-        )
+        ),
+        'memory delete-translation'
       );
     }
   );
@@ -133,7 +135,7 @@ memoryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() => importTmx(id, file, isRunningInInteractiveMode(command)));
+      await runSafely(() => importTmx(id, file, isRunningInInteractiveMode(command)), 'memory import-tmx');
     }
   );
 

@@ -164,7 +164,7 @@ Use `--force` when you need to:
 
 ## No-Trace Mode
 
-Use `--no-trace` to prevent the translation API from storing or logging your content server-side. This is useful when translating sensitive or confidential content.
+Use `--no-trace` to prevent the translation API from storing or logging your content server-side. This is useful when translating sensitive or confidential content. A no-trace run is also left out of the CLI's [usage metrics](../../README.md#usage-metrics) entirely.
 
 ### Per-Invocation
 
@@ -192,7 +192,7 @@ To enable no-trace for all translations in a project, either:
    noTrace: true
    ```
 
-When set in the config, all `lara-cli translate` runs will use no-trace mode automatically. The `--no-trace` CLI flag always takes precedence over the config value.
+When set in the config, all `lara-cli translate` runs will use no-trace mode automatically, and every command run in that project is left out of usage metrics. The `--no-trace` CLI flag always takes precedence over the config value.
 
 ## Direct Translation
 

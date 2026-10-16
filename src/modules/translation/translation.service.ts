@@ -10,8 +10,9 @@ import {
   GlossaryFileFormat,
 } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
-import { applyLaraClientHeaders } from '#utils/laraHeaders.js';
+import { applyLaraClientHeaders, internalLaraClient } from '#utils/laraHeaders.js';
 import { isQuotaError } from '#utils/error.js';
+import * as metrics from '#modules/metrics/metrics.js';
 
 export type GlossaryTerm = { language: string; value: string };
 
@@ -19,6 +20,9 @@ export type GlossaryTerm = { language: string; value: string };
 // forever (the SDK has no default timeout). A slow-but-healthy request finishes
 // well within this; a stalled one fails fast so retries/fallback can proceed.
 const REQUEST_TIMEOUT_MS = 30_000;
+// init's optional probe must not inherit the translation timeout. The SDK
+// destroys the request socket at this deadline, including on each auth retry.
+const CREDENTIAL_PROBE_TIMEOUT_MS = 1_000;
 
 // Account-level failures that affect EVERY request: bad credentials (401),
 // payment required (402), forbidden (403), and "plan out of characters" (quota,
@@ -55,6 +59,10 @@ export class TranslationService {
   private readonly client: Translator;
 
   private constructor() {
+    this.client = this.createClient(REQUEST_TIMEOUT_MS);
+  }
+
+  private createClient(timeoutMs: number): Translator {
     const keyId = process.env.LARA_ACCESS_KEY_ID!;
     const keySecret = process.env.LARA_ACCESS_KEY_SECRET!;
 
@@ -62,12 +70,45 @@ export class TranslationService {
       throw new Error(Messages.errors.envVarsNotSet);
     }
 
-    this.client = new Translator(new Credentials(keyId, keySecret), {
+    const client = new Translator(new Credentials(keyId, keySecret), {
       // Maps to the node client's hard request timeout (req.destroy), which is
       // the client-side socket timeout that actually prevents a frozen CLI.
-      connectionTimeoutMs: REQUEST_TIMEOUT_MS,
+      connectionTimeoutMs: timeoutMs,
+      // Points the SDK at a non-production Lara deployment (staging, a
+      // self-hosted instance, or the e2e harness). Unset in normal use.
+      ...(process.env.LARA_SERVER_URL ? { serverUrl: process.env.LARA_SERVER_URL } : {}),
     });
-    applyLaraClientHeaders(this.client);
+    applyLaraClientHeaders(client);
+    // Lets the metrics module read the Lara account id off the JWT the SDK
+    // already holds, instead of signing a second /v2/auth call of its own.
+    metrics.trackLaraClient(internalLaraClient(client));
+    return client;
+  }
+
+  /**
+   * Cheapest authenticated call there is. Used by `init` to turn a key the user
+   * just typed into a real yes/no answer — the CLI has no login step, so an API
+   * response is the only proof credentials are good.
+   */
+  public async validateCredentials(): Promise<void> {
+    const probe = this.createClient(CREDENTIAL_PROBE_TIMEOUT_MS);
+    await this.reporting(probe.getLanguages());
+  }
+
+  /**
+   * Hands every real API answer to metrics and gets out of the way — what a
+   * given status means is decided there. Wraps the memory and glossary calls
+   * too, which authenticate but never translate.
+   */
+  private async reporting<T>(call: Promise<T>): Promise<T> {
+    try {
+      const result = await call;
+      metrics.recordApiAnswer();
+      return result;
+    } catch (error) {
+      metrics.recordApiAnswer(error);
+      throw error;
+    }
   }
 
   public static getInstance(): TranslationService {
@@ -89,22 +130,28 @@ export class TranslationService {
 
     while (attempt < maxRetries) {
       try {
-        const response = await this.client.translate(
-          textBlocks,
-          sourceLocale,
-          targetLocale,
-          options
+        // A real API answer is the only proof the credentials are good: the CLI
+        // has no login step, so reporting() turns the answer into an auth event.
+        const response = await this.reporting(
+          this.client.translate(textBlocks, sourceLocale, targetLocale, options)
         );
+        metrics.recordTranslated(textBlocks.reduce((total, block) => total + block.text.length, 0));
         return response.translation;
       } catch (error) {
+        // Only what escapes this loop is reported: an error the next attempt
+        // recovers from never reached the user, and recording it would pin the
+        // run's errorType on a failure that did not happen.
+
         // Retrying an auth/quota failure is pointless — surface it immediately.
         if (isFatalApiError(error)) {
+          metrics.recordError(error);
           throw error;
         }
 
         attempt++;
 
         if (attempt >= maxRetries) {
+          metrics.recordError(error);
           throw error;
         }
 
@@ -184,19 +231,19 @@ export class TranslationService {
   }
 
   public async getTranslationMemories(): Promise<Memory[]> {
-    return this.client.memories.list();
+    return this.reporting(this.client.memories.list());
   }
 
   public async createMemory(name: string): Promise<Memory> {
-    return this.client.memories.create(name);
+    return this.reporting(this.client.memories.create(name));
   }
 
   public async updateMemory(id: string, name: string): Promise<Memory> {
-    return this.client.memories.update(id, name);
+    return this.reporting(this.client.memories.update(id, name));
   }
 
   public async deleteMemory(id: string): Promise<Memory> {
-    return this.client.memories.delete(id);
+    return this.reporting(this.client.memories.delete(id));
   }
 
   public async addMemoryTranslation(
@@ -206,7 +253,9 @@ export class TranslationService {
     sentence: string,
     translation: string
   ): Promise<MemoryImport> {
-    return this.client.memories.addTranslation(id, source, target, sentence, translation);
+    return this.reporting(
+      this.client.memories.addTranslation(id, source, target, sentence, translation)
+    );
   }
 
   public async deleteMemoryTranslation(
@@ -216,7 +265,9 @@ export class TranslationService {
     sentence: string,
     translation?: string
   ): Promise<MemoryImport> {
-    return this.client.memories.deleteTranslation(id, source, target, sentence, translation);
+    return this.reporting(
+      this.client.memories.deleteTranslation(id, source, target, sentence, translation)
+    );
   }
 
   public async importMemoryTmx(
@@ -224,31 +275,31 @@ export class TranslationService {
     filePath: string,
     gzip?: boolean
   ): Promise<MemoryImport> {
-    return this.client.memories.importTmx(id, fs.createReadStream(filePath), gzip);
+    return this.reporting(this.client.memories.importTmx(id, fs.createReadStream(filePath), gzip));
   }
 
   public async getGlossaries(): Promise<Glossary[]> {
-    return this.client.glossaries.list();
+    return this.reporting(this.client.glossaries.list());
   }
 
   public async createGlossary(name: string): Promise<Glossary> {
-    return this.client.glossaries.create(name);
+    return this.reporting(this.client.glossaries.create(name));
   }
 
   public async updateGlossary(id: string, name: string): Promise<Glossary> {
-    return this.client.glossaries.update(id, name);
+    return this.reporting(this.client.glossaries.update(id, name));
   }
 
   public async deleteGlossary(id: string): Promise<Glossary> {
-    return this.client.glossaries.delete(id);
+    return this.reporting(this.client.glossaries.delete(id));
   }
 
   public async addGlossaryEntry(id: string, terms: GlossaryTerm[]): Promise<GlossaryImport> {
-    return this.client.glossaries.addOrReplaceEntry(id, terms);
+    return this.reporting(this.client.glossaries.addOrReplaceEntry(id, terms));
   }
 
   public async deleteGlossaryEntry(id: string, term: GlossaryTerm): Promise<GlossaryImport> {
-    return this.client.glossaries.deleteEntry(id, term);
+    return this.reporting(this.client.glossaries.deleteEntry(id, term));
   }
 
   public async importGlossaryCsv(
@@ -257,6 +308,8 @@ export class TranslationService {
     contentType: GlossaryFileFormat = 'csv/table-uni',
     gzip?: boolean
   ): Promise<GlossaryImport> {
-    return this.client.glossaries.importCsv(id, fs.createReadStream(filePath), contentType, gzip);
+    return this.reporting(
+      this.client.glossaries.importCsv(id, fs.createReadStream(filePath), contentType, gzip)
+    );
   }
 }
