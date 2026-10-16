@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { LaraApiError } from '@translated/lara';
 
 import {
+  CI_ENV_VARS,
   INSTALLATION_FILE,
   MAX_UINT32,
   QUEUE_FILE,
@@ -18,13 +19,14 @@ const ACCOUNT_ID = 'acc_4kQpXbW2mNvRt7yZjD3sLh';
 const CHANNEL_KEY = 'metrics-key';
 const INGEST_TOKEN = 'ingest-token-aaa';
 const ENV_KEYS = [
-  'LARA_TELEMETRY_DISABLED',
   'DO_NOT_TRACK',
   'METRICS_URL',
   'METRICS_API_KEY',
   'LARA_ACCESS_KEY_ID',
   'LARA_ACCESS_KEY_SECRET',
   'LARA_STATE_DIR',
+  // Cleared too: the suite runs on CI, and `ci` is reported from these.
+  ...CI_ENV_VARS,
 ] as const;
 
 let stateDir: string;
@@ -150,16 +152,27 @@ afterEach(() => {
 });
 
 describe('opt-out and configuration', () => {
-  it('writes nothing and calls no network when LARA_TELEMETRY_DISABLED is set', async () => {
-    process.env.LARA_TELEMETRY_DISABLED = '1';
+  it('writes nothing and calls no network once instrumented in no-trace mode', async () => {
     const { spy } = mockBackend();
     const metrics = await loadMetrics();
 
+    metrics.instrument('translate', true);
     metrics.queueEvent({ eventType: 'call_success' });
     await metrics.flushQueue();
 
     expect(spy).not.toHaveBeenCalled();
     expect(queuedEvents()).toEqual([]);
+  });
+
+  it('deletes what an earlier, traced run had queued', async () => {
+    const metrics = await loadMetrics();
+    const { spy } = mockBackend();
+    writeFileSync(queuePath(), `${JSON.stringify({ eventType: 'call_success' })}\n`);
+
+    metrics.instrument('translate', true);
+
+    expect(existsSync(queuePath())).toBe(false);
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it('writes nothing and calls no network when DO_NOT_TRACK is set', async () => {
@@ -177,7 +190,6 @@ describe('opt-out and configuration', () => {
   it.each(['0', 'false', ''])(
     'treats %o as "leave telemetry alone", not as an opt-out',
     async (value) => {
-      process.env.LARA_TELEMETRY_DISABLED = value;
       process.env.DO_NOT_TRACK = value;
       const { ingestCalls } = mockBackend();
       const metrics = await loadMetrics();
@@ -216,7 +228,7 @@ describe('opt-out and configuration', () => {
   it('does not even create the state directory when telemetry is off', async () => {
     const missing = join(stateDir, 'never-created');
     process.env.LARA_STATE_DIR = missing;
-    process.env.LARA_TELEMETRY_DISABLED = '1';
+    process.env.DO_NOT_TRACK = '1';
     const metrics = await loadMetrics();
 
     await metrics.flushQueue();
@@ -269,7 +281,8 @@ describe('installationId', () => {
 
     try {
       (await loadMetrics()).installationId();
-      expect(written.join('')).toContain('LARA_TELEMETRY_DISABLED=1');
+      expect(written.join('')).toContain('--no-trace');
+      expect(written.join('')).toContain('DO_NOT_TRACK=1');
 
       // Second run, same machine: the id is already on disk, so nothing is said.
       written.length = 0;
@@ -726,12 +739,42 @@ describe('errorTypeFor', () => {
     [401, 'auth_401'],
     [402, 'payment_402'],
     [403, 'auth_403'],
+    [413, 'payload_too_large'],
     [429, 'rate_limit_429'],
     [500, 'server_5xx'],
     [503, 'server_5xx'],
   ])('maps %i to the shared vocabulary', async (status, expected) => {
     const metrics = await loadMetrics();
     expect(metrics.errorTypeFor(new LaraApiError(status, 'Error', 'boom'))).toBe(expected);
+  });
+
+  it.each(['ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET'])(
+    'tells Lara being unreachable (%s) apart from Lara refusing',
+    async (code) => {
+      const metrics = await loadMetrics();
+      const failure = Object.assign(new Error('fetch failed'), { code });
+
+      expect(metrics.errorTypeFor(failure)).toBe('network_error');
+      // The SDK wraps it, so the cause is where it usually shows up.
+      expect(metrics.errorTypeFor(new Error('translation failed', { cause: failure }))).toBe(
+        'network_error'
+      );
+    }
+  );
+
+  it('reads an unanswered auth call as Lara unreachable, not as Lara failing', async () => {
+    const metrics = await loadMetrics();
+
+    // What the SDK raises when /v2/auth never answered.
+    expect(metrics.errorTypeFor(new LaraApiError(500, 'AuthenticationError', 'no answer'))).toBe(
+      'network_error'
+    );
+    // A 500 Lara did answer with stays a server error.
+    expect(metrics.errorTypeFor(new LaraApiError(500, 'Error', 'boom'))).toBe('server_5xx');
+    // A refused key is still a refused key.
+    expect(metrics.errorTypeFor(new LaraApiError(401, 'AuthenticationError', 'bad key'))).toBe(
+      'auth_401'
+    );
   });
 
   it('recognises the quota error, which has no dedicated status code', async () => {
@@ -758,9 +801,9 @@ describe('errorTypeFor', () => {
 
   it('keeps the parse error a later, vaguer failure would have buried', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
 
-    metrics.recordError(new SyntaxError('Expected \',\' or \'}\' after property value in JSON'));
+    metrics.recordError(new SyntaxError("Expected ',' or '}' after property value in JSON"));
     // What the command finally unwinds with once the other files are done.
     metrics.recordError(new Error('Some files could not be translated'));
     metrics.finishCommand(1);
@@ -808,12 +851,12 @@ describe('errorTypeFor', () => {
 describe('finishCommand', () => {
   it('emits call_success on the first run and on every run after it', async () => {
     const first = await loadMetrics();
-    first.instrument('translation');
+    first.instrument('translate');
     first.setContext({ mode: 'text' });
     first.finishCommand(0);
 
     const second = await loadMetrics();
-    second.instrument('translation');
+    second.instrument('translate');
     second.setContext({ mode: 'text' });
     second.finishCommand(0);
 
@@ -826,7 +869,7 @@ describe('finishCommand', () => {
 
   it('keeps the classified error when a vaguer one follows', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordError(new LaraApiError(429, 'Error', 'slow down'));
     // What the command finally unwinds with says nothing about why it failed.
     metrics.recordError(new Error('Some files could not be translated'));
@@ -837,7 +880,7 @@ describe('finishCommand', () => {
 
   it('emits call_error with errorType and latencyMs on a non-zero exit', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.setContext({ mode: 'config' });
     metrics.recordError(new LaraApiError(429, 'Error', 'slow down'));
     metrics.finishCommand(1);
@@ -857,7 +900,7 @@ describe('finishCommand', () => {
     ] as const) {
       rmSync(queuePath(), { force: true });
       const metrics = await loadMetrics();
-      metrics.instrument('translation');
+      metrics.instrument('translate');
       metrics.setContext({ mode });
       metrics.finishCommand(0);
 
@@ -867,7 +910,7 @@ describe('finishCommand', () => {
 
   it('reports the language pair only when a single one is known', async () => {
     const direct = await loadMetrics();
-    direct.instrument('translation');
+    direct.instrument('translate');
     direct.setContext({ mode: 'text', sourceLang: 'EN', targetLang: 'pt-BR' });
     direct.finishCommand(0);
 
@@ -879,7 +922,7 @@ describe('finishCommand', () => {
 
     rmSync(queuePath(), { force: true });
     const fanout = await loadMetrics();
-    fanout.instrument('translation');
+    fanout.instrument('translate');
     fanout.setContext({ mode: 'config', elements: 12, locales: 3 });
     fanout.finishCommand(0);
 
@@ -893,7 +936,7 @@ describe('finishCommand', () => {
 
   it('reports the file types as one sorted, de-duplicated value', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.setContext({ mode: 'config', fileTypes: ['po', 'json', 'po'] });
     metrics.finishCommand(0);
 
@@ -902,7 +945,7 @@ describe('finishCommand', () => {
 
   it('leaves fileTypes out entirely when nothing was read from a file', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.setContext({ mode: 'text' });
     metrics.finishCommand(0);
 
@@ -911,7 +954,7 @@ describe('finishCommand', () => {
 
   it('reports the characters recorded during the run', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordTranslated(120);
     metrics.recordTranslated(80);
     metrics.finishCommand(0);
@@ -921,7 +964,7 @@ describe('finishCommand', () => {
 
   it('clamps counters the backend would reject', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordTranslated(MAX_UINT32 + 5_000);
     metrics.finishCommand(0);
 
@@ -930,7 +973,7 @@ describe('finishCommand', () => {
 
   it('emits exactly one terminal event even if the exit hook fires twice', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.finishCommand(0);
     metrics.finishCommand(1);
 
@@ -952,7 +995,7 @@ describe('instrumentCommand', () => {
     const { spy } = mockBackend();
     writeFileSync(queuePath(), `${JSON.stringify({ eventType: 'call_success' })}\n`);
 
-    metrics.instrument('translation');
+    metrics.instrument('translate');
 
     // A flush here would put a token exchange in front of the user's command,
     // before it has even validated its arguments.
@@ -967,7 +1010,7 @@ describe('instrumentCommand', () => {
       `${JSON.stringify({ eventType: 'call_error', stale: true, timestamp: new Date().toISOString() })}\n`
     );
 
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.setContext({ mode: 'text' });
     await metrics.finishAndFlush(0);
 
@@ -980,7 +1023,7 @@ describe('instrumentCommand', () => {
     const metrics = await loadMetrics();
     mockBackend();
 
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.setContext({ mode: 'text' });
     fireExitHook(0);
 
@@ -991,7 +1034,7 @@ describe('instrumentCommand', () => {
     const metrics = await loadMetrics();
     mockBackend();
 
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordError(new LaraApiError(500, 'Error', 'down'));
     fireExitHook(1);
 
@@ -1002,15 +1045,22 @@ describe('instrumentCommand', () => {
     });
   });
 
-  it('never lets an auth-only command claim a translation', async () => {
+  it('closes a command that never translates with its own call event', async () => {
     const metrics = await loadMetrics();
     mockBackend();
 
-    metrics.instrument('auth-only');
+    metrics.instrument('memory list');
     metrics.recordApiAnswer();
     metrics.finishCommand(0);
 
-    expect(queuedEvents().map((event) => event.eventType)).toEqual(['auth_success']);
+    const events = queuedEvents();
+    expect(events.map((event) => event.eventType)).toEqual(['auth_success', 'call_success']);
+    // A `lara memory list` must not read as a translation in the funnel.
+    expect(events[1]!.metadata).toMatchObject({
+      command: 'memory list',
+      feature: 'resource_management',
+    });
+    expect(events[1]!.charsTranslated).toBe(0);
   });
 });
 
@@ -1019,7 +1069,7 @@ describe('finishAndFlush', () => {
     const metrics = await loadMetrics();
     const { ingestCalls } = mockBackend();
 
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.setContext({ mode: 'text' });
     await metrics.finishAndFlush(0);
 
@@ -1036,7 +1086,7 @@ describe('finishAndFlush', () => {
       },
     });
 
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     await expect(metrics.finishAndFlush(1)).resolves.toBeUndefined();
     expect(queuedEvents()).toHaveLength(1);
   });
@@ -1045,7 +1095,7 @@ describe('finishAndFlush', () => {
 describe('recordApiAnswer', () => {
   it('sends auth_success at most once per run', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordApiAnswer();
     metrics.recordApiAnswer();
 
@@ -1055,7 +1105,7 @@ describe('recordApiAnswer', () => {
 
   it('sends auth_fail with a mapped errorType', async () => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordApiAnswer(new LaraApiError(401, 'Error', 'bad key'));
 
     expect(queuedEvents()[0]).toMatchObject({
@@ -1070,7 +1120,7 @@ describe('recordApiAnswer', () => {
     [429, 'auth_success'],
   ])('reads a %i as the key having been accepted', async (status, expected) => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordApiAnswer(new LaraApiError(status, 'Error', 'boom'));
 
     expect(queuedEvents()[0]!.eventType).toBe(expected);
@@ -1081,9 +1131,81 @@ describe('recordApiAnswer', () => {
     ['a network failure', new Error('socket hang up')],
   ])('says nothing about the key on %s', async (_label, error) => {
     const metrics = await loadMetrics();
-    metrics.instrument('translation');
+    metrics.instrument('translate');
     metrics.recordApiAnswer(error);
 
     expect(queuedEvents()).toEqual([]);
+  });
+});
+
+describe('metadata every event carries', () => {
+  it('reports the platform, the runtime and whether a pipeline ran it', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    const metrics = await loadMetrics();
+
+    metrics.instrument('translate');
+    metrics.recordApiAnswer();
+    metrics.finishCommand(0);
+
+    for (const event of queuedEvents()) {
+      expect(event.metadata).toMatchObject({
+        os: process.platform,
+        nodeVersion: process.versions.node,
+        ci: true,
+      });
+    }
+  });
+
+  it('reads CI=0 as a person, the same way the opt-out switches are read', async () => {
+    process.env.CI = '0';
+    const metrics = await loadMetrics();
+
+    metrics.instrument('translate');
+    metrics.finishCommand(0);
+
+    expect(queuedEvents()[0]!.metadata).toMatchObject({ ci: false });
+  });
+
+  it('names the command on every event, auth included', async () => {
+    const metrics = await loadMetrics();
+
+    metrics.instrument('glossary import-csv');
+    metrics.recordApiAnswer();
+    metrics.finishCommand(0);
+
+    expect(
+      queuedEvents().map((event) => (event.metadata as Record<string, unknown>).command)
+    ).toEqual(['glossary import-csv', 'glossary import-csv']);
+  });
+
+  it('adds what Lara answered to a failure, as a status and a short token', async () => {
+    const metrics = await loadMetrics();
+
+    metrics.instrument('translate');
+    metrics.recordApiAnswer(new LaraApiError(401, 'AuthenticationError', 'bad key'));
+    metrics.recordError(new LaraApiError(402, 'PaymentRequired', 'out of credit'));
+    metrics.finishCommand(1);
+
+    const [authFail, callError] = queuedEvents();
+    expect(authFail!.metadata).toMatchObject({
+      httpStatus: 401,
+      laraErrorType: 'AuthenticationError',
+    });
+    expect(callError!.metadata).toMatchObject({
+      httpStatus: 402,
+      laraErrorType: 'PaymentRequired',
+    });
+  });
+
+  it('refuses a Lara error type that is really a message', async () => {
+    const metrics = await loadMetrics();
+
+    metrics.instrument('translate');
+    metrics.recordError(new LaraApiError(400, 'the file /home/me/secrets.json is invalid', 'bad'));
+    metrics.finishCommand(1);
+
+    const metadata = queuedEvents()[0]!.metadata as Record<string, unknown>;
+    expect(metadata.httpStatus).toBe(400);
+    expect(metadata).not.toHaveProperty('laraErrorType');
   });
 });

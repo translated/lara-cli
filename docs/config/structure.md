@@ -13,7 +13,7 @@ lara.yaml
 ├── locales         # Language settings
 ├── memories        # Translation memory settings
 ├── glossaries      # Terminology settings
-├── noTrace         # No-trace mode (prevents server-side storage)
+├── noTrace         # No-trace mode (no server-side storage, no usage metrics)
 ├── translation     # Translation tuning (batch size, orphan key handling)
 └── files           # File path and processing rules
 ```
@@ -48,7 +48,8 @@ glossaries:
   - gls_xyz789
   - gls_uvw012
 
-# No-trace mode — prevents server-side storage of translated content
+# No-trace mode — prevents server-side storage of translated content, and
+# leaves every command run in this project out of usage metrics
 noTrace: false
 
 # Translation tuning

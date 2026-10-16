@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  rmSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -19,6 +20,9 @@ import {
   ACCOUNT_FILE_PREFIX,
   BAKED_METRICS_API_KEY,
   BAKED_METRICS_URL,
+  CI_ENV_VARS,
+  COMMAND_FEATURES,
+  type CommandId,
   FLUSH_TIMEOUT_MS,
   INGEST_PATH,
   INSTALLATION_FILE,
@@ -57,6 +61,8 @@ export type MetricsErrorType =
   | 'quota_exceeded'
   | 'rate_limit_429'
   | 'timeout'
+  | 'network_error'
+  | 'payload_too_large'
   | 'parse_error'
   | 'server_5xx'
   | 'validation_error'
@@ -74,6 +80,10 @@ export type RunContext = {
   locales?: number;
   /** Config-level file types touched by the run, e.g. `['json', 'po']`. */
   fileTypes?: string[];
+  /** How many translation memories the run used. The count, never the ids. */
+  memories?: number;
+  /** How many glossaries the run used. The count, never the ids. */
+  glossaries?: number;
 };
 
 /** The SDK's internal client, reached defensively — see trackLaraClient. */
@@ -88,8 +98,10 @@ let charsTranslated = 0;
 let lastError: unknown = undefined;
 let authEventSent = false;
 let commandFinished = false;
-/** Only translation commands close with a call_success / call_error. */
-let terminalEvent = true;
+/** Which command is running, as `metadata.command` reports it. */
+let commandId: CommandId = 'translate';
+/** Set by instrument(): no-trace mode, resolved by the command before anything runs. */
+let disabled = false;
 let context: RunContext = {};
 
 /** Memory only. A token on disk is a credential on disk. */
@@ -98,6 +110,15 @@ let cachedToken: { value: string; expiresAt: number } | null = null;
 let channelKeyRejected = false;
 let cachedAccountId: string | null = null;
 let trackedClient: TokenBearingClient | null = null;
+
+/** Non-personal facts about every run: what it ran on, and whether a person ran it. */
+function baseMetadata(): Record<string, unknown> {
+  return {
+    os: process.platform,
+    nodeVersion: process.versions.node,
+    ci: CI_ENV_VARS.some((name) => isSet(process.env[name])),
+  };
+}
 
 /** A value the bake step never replaced is not a configured value. */
 function isConfigured(value: string | undefined): value is string {
@@ -115,9 +136,13 @@ function isSet(value: string | undefined): boolean {
   return normalized !== undefined && !['', '0', 'false'].includes(normalized);
 }
 
-/** DO_NOT_TRACK is the cross-tool standard; ours is the one the README names. */
+/**
+ * No-trace mode is the switch: a run the user asked Lara not to keep is a run we
+ * do not measure either. DO_NOT_TRACK is kept as the cross-tool standard, and it
+ * is the only way to opt out of a command that has no config and no --no-trace.
+ */
 function optedOut(): boolean {
-  return isSet(process.env.LARA_TELEMETRY_DISABLED) || isSet(process.env.DO_NOT_TRACK);
+  return disabled || isSet(process.env.DO_NOT_TRACK);
 }
 
 function transport(): Transport | null {
@@ -138,19 +163,34 @@ function transport(): Transport | null {
  * a fresh checkout.
  */
 function stateDir(): string | null {
-  const preferred = process.env.LARA_STATE_DIR ?? join(homedir(), '.lara');
-  try {
-    mkdirSync(preferred, { recursive: true });
-    return preferred;
-  } catch {
-    // Home not writable (some CI images, locked-down containers).
+  for (const dir of candidateStateDirs()) {
+    try {
+      mkdirSync(dir, { recursive: true });
+      return dir;
+    } catch {
+      // Not writable (some CI images, locked-down containers): try the next one.
+    }
   }
-  try {
-    const fallback = join(tmpdir(), 'lara-cli');
-    mkdirSync(fallback, { recursive: true });
-    return fallback;
-  } catch {
-    return null;
+  return null;
+}
+
+/** Where state can live, best first. The one list both writers and the purge read. */
+function candidateStateDirs(): string[] {
+  return [process.env.LARA_STATE_DIR ?? join(homedir(), '.lara'), join(tmpdir(), 'lara-cli')];
+}
+
+/**
+ * Deletes whatever an earlier, traced run left queued. Opting out has to mean
+ * the events that have not gone out never do, and it must not create the
+ * directory it is emptying — so this resolves the paths without mkdir.
+ */
+function purgeQueue(): void {
+  for (const dir of candidateStateDirs()) {
+    try {
+      rmSync(join(dir, QUEUE_FILE), { force: true });
+    } catch {
+      // Nowhere we are allowed to delete. Nothing left to do about it.
+    }
   }
 }
 
@@ -302,6 +342,12 @@ export function queueEvent(event: Record<string, unknown>): void {
     // channel it reports as, the account the event belongs to, or its clock.
     const line = JSON.stringify({
       ...event,
+      // Every event carries the base facts, and the caller's own metadata rides
+      // on top: one place to assemble it means an auth event cannot miss it.
+      metadata: {
+        ...baseMetadata(),
+        ...(event.metadata as Record<string, unknown> | undefined),
+      },
       eventId: randomUUID(),
       channel: METRICS_CHANNEL,
       // Omit means omit: an invented or empty id would be a fake account.
@@ -459,8 +505,7 @@ export async function flushQueue(): Promise<void> {
       events = kept
         .map((line) => JSON.parse(line) as { timestamp?: unknown })
         .filter((event) => {
-          const at =
-            typeof event.timestamp === 'string' ? Date.parse(event.timestamp) : Number.NaN;
+          const at = typeof event.timestamp === 'string' ? Date.parse(event.timestamp) : Number.NaN;
           // NaN fails both comparisons, which is the point.
           return at >= now - MAX_EVENT_AGE_MS && at <= now + MAX_EVENT_FUTURE_MS;
         });
@@ -546,10 +591,18 @@ function classify(error: unknown): MetricsErrorType {
         return 'payment_402';
       case 403:
         return 'auth_403';
+      case 413:
+        return 'payload_too_large';
       case 429:
         return 'rate_limit_429';
       default:
         break;
+    }
+    // The SDK turns an unanswered /v2/auth into a 500 AuthenticationError: it
+    // never heard back, which is Lara being unreachable and not Lara failing.
+    // Same reading as the mcp channel, so the two funnels can be compared.
+    if (error.type === 'AuthenticationError' && error.statusCode >= 500) {
+      return 'network_error';
     }
     if (error.statusCode >= 500) {
       return 'server_5xx';
@@ -559,6 +612,13 @@ function classify(error: unknown): MetricsErrorType {
   const name = error instanceof Error ? error.name : '';
   if (name === 'AbortError' || name === 'TimeoutError') {
     return 'timeout';
+  }
+  // Lara unreachable: a different product problem from Lara refusing, and the
+  // one the funnel used to report as a plain `unknown`.
+  const code =
+    typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
+  if (code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ECONNRESET') {
+    return 'network_error';
   }
   // The user's own file is malformed — a different product problem from our API
   // failing, and the one the funnel could not tell apart before. The name is
@@ -573,6 +633,28 @@ function classify(error: unknown): MetricsErrorType {
   return 'unknown';
 }
 
+/** A Lara error type is a short token. A message must never ride in as one. */
+const LARA_ERROR_TYPE = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+
+/**
+ * What Lara itself said about a failure, on top of our own token: the status it
+ * answered with and the error type it named. Looked for on the error and on its
+ * cause, the same two places errorTypeFor reads.
+ */
+function errorDetailsFor(error: unknown): Record<string, unknown> {
+  const cause = error instanceof Error ? error.cause : undefined;
+  const apiError = [error, cause].find(
+    (candidate): candidate is LaraApiError => candidate instanceof LaraApiError
+  );
+  if (!apiError) {
+    return {};
+  }
+  return {
+    httpStatus: apiError.statusCode,
+    ...(LARA_ERROR_TYPE.test(apiError.type) ? { laraErrorType: apiError.type } : {}),
+  };
+}
+
 /** The backend 400s on values past uint32 rather than wrapping them in storage. */
 function clampUint32(value: number): number {
   if (!Number.isFinite(value) || value < 0) {
@@ -581,12 +663,7 @@ function clampUint32(value: number): number {
   return Math.min(Math.trunc(value), MAX_UINT32);
 }
 
-/**
- * What a command reports. `auth-only` covers the commands that talk to Lara but
- * never translate — memory, glossary, init: a `lara memory list` counted as a
- * successful translation would move the funnel for work that never happened.
- */
-export type CommandKind = 'translation' | 'auth-only';
+export type { CommandId } from './metrics.const.js';
 
 /**
  * Opens the metrics window for a command. Pair it with finishAndFlush, which
@@ -602,9 +679,15 @@ export type CommandKind = 'translation' | 'auth-only';
  * arguments — to send events that the closing flush picks up anyway: it reads
  * the whole queue file, so leftovers from earlier runs ride along with it.
  */
-export function instrument(kind: CommandKind): void {
+export function instrument(command: CommandId, noTrace = false): void {
+  commandId = command;
+  disabled = noTrace;
   startedAt = Date.now();
-  terminalEvent = kind === 'translation';
+  // Opting out has to reach backwards too: whatever an earlier, traced run left
+  // queued is deleted here rather than waiting for a run that would send it.
+  if (optedOut()) {
+    purgeQueue();
+  }
   process.once('exit', (code: number) => finishCommand(code));
 }
 
@@ -666,30 +749,42 @@ export function recordApiAnswer(error?: unknown): void {
   authEventSent = true;
   queueEvent(
     accepted
-      ? { eventType: 'auth_success' }
-      : { eventType: 'auth_fail', errorType: errorTypeFor(error) }
+      ? { eventType: 'auth_success', metadata: { command: commandId } }
+      : {
+          eventType: 'auth_fail',
+          errorType: errorTypeFor(error),
+          metadata: { command: commandId, ...errorDetailsFor(error) },
+        }
   );
 }
 
 /**
  * Builds the metadata block. `feature` names the capability that was exercised
  * and is never omitted — a dashboard cannot tell an absent value apart from a
- * capability that does not exist. `surface` says which entry point the user
- * reached for, in this CLI's own vocabulary.
+ * capability that does not exist. `command` says which command ran, and
+ * `surface` which entry point the user reached for, in this CLI's own
+ * vocabulary.
  */
 function buildMetadata(exitCode: number): Record<string, unknown> {
   const { mode, sourceLang, targetLang, fileTypes, ...rest } = context;
 
   const metadata: Record<string, unknown> = {
     ...rest,
-    feature: mode === 'text' ? 'text' : 'document',
+    command: commandId,
+    feature: mode
+      ? mode === 'text'
+        ? 'text'
+        : 'document'
+      : COMMAND_FEATURES[commandId.split(' ')[0]!]!,
     exitCode,
   };
 
   // One sorted, de-duplicated scalar rather than an array: a config run touches
   // several formats at once, and `json,po` groups in a dashboard while a list
   // does not. Both call sites pass what the config already calls a file type,
-  // so the vocabulary stays closed — never a path, never a file name.
+  // so the vocabulary stays closed — never a path, never a file name. Every
+  // field here must stay bounded like this one: the backend caps serialized
+  // metadata at 4096 bytes and rejects the whole batch the event rides in.
   const formats = [...new Set(fileTypes ?? [])].sort();
   if (formats.length > 0) {
     metadata.fileTypes = formats.join(',');
@@ -714,7 +809,7 @@ function buildMetadata(exitCode: number): Record<string, unknown> {
  * `process.on('exit')` handler: it only ever writes synchronously.
  */
 export function finishCommand(exitCode: number): void {
-  if (commandFinished || !terminalEvent) {
+  if (commandFinished) {
     return;
   }
   commandFinished = true;
@@ -723,11 +818,18 @@ export function finishCommand(exitCode: number): void {
     const common = {
       latencyMs: clampUint32(Date.now() - startedAt),
       charsTranslated: clampUint32(charsTranslated),
-      metadata: buildMetadata(exitCode),
+      metadata: {
+        ...buildMetadata(exitCode),
+        ...(exitCode === 0 ? {} : errorDetailsFor(lastError)),
+      },
     };
 
     if (exitCode !== 0) {
-      queueEvent({ eventType: 'call_error', errorType: errorTypeFor(lastError), ...common });
+      queueEvent({
+        eventType: 'call_error',
+        errorType: errorTypeFor(lastError),
+        ...common,
+      });
       return;
     }
 

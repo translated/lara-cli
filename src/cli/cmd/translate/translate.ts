@@ -122,7 +122,7 @@ export default new Command()
   .action(async (options: TranslateOptions) => {
     // runSafely opens and closes the usage-metrics window and turns any failure
     // into a reported, non-zero exit — see src/cli/cmd/common/command.ts.
-    await runSafely(() => runTranslate(options), 'translation');
+    await runSafely(() => runTranslate(options), 'translate', !options.trace);
   });
 
 async function runTranslate(options: TranslateOptions): Promise<void> {
@@ -131,6 +131,10 @@ async function runTranslate(options: TranslateOptions): Promise<void> {
   // fans out to N targets, so the pair is left off those events.
   metrics.setContext({
     mode,
+    // How many resources were in play, never which ones. Config mode overwrites
+    // these below, once the config has been read.
+    memories: options.translationMemories?.length ?? 0,
+    glossaries: options.glossaries?.length ?? 0,
     ...(mode === 'config' ? {} : { sourceLang: options.source, targetLang: options.target[0] }),
   });
 
@@ -157,6 +161,9 @@ async function runTranslate(options: TranslateOptions): Promise<void> {
     locales: getTargetLocales(options, config).length,
     // The keys of `files` are the config's own file types, a closed enum.
     fileTypes: Object.keys(config.files),
+    // Config mode takes its resources from the config, not from the flags.
+    memories: config.memories.length,
+    glossaries: config.glossaries.length,
   });
 
   progressWithOra.start({ message: Messages.info.translatingFiles, total: totalElements });

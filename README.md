@@ -214,7 +214,8 @@ See the [full list of supported locales](docs/config/locales.md#supported-locale
 
 Lara CLI reports usage metrics so we can see where people get stuck between installing it and
 translating something. What it records is whether setup and translation succeeded, with timings,
-volumes, the CLI version and your Lara account id — the same one shown on your account.
+volumes, which command ran, the CLI version, your platform and Node version, whether it ran on CI,
+and your Lara account id — the same one shown on your account.
 
 **What is never sent**: your source or translated text, file names or paths, your configuration,
 or your credentials.
@@ -227,15 +228,24 @@ delivered simply waits for the next run.
 The first run that records anything prints a one-line notice on `stderr` saying so, once per
 machine.
 
-**To turn it off**, set either environment variable:
+**To turn it off**, use no-trace mode. The switch that keeps your content out of Lara's logs keeps
+the run out of these metrics too — one answer instead of two:
 
 ```bash
-LARA_TELEMETRY_DISABLED=1
-DO_NOT_TRACK=1
+lara-cli translate --no-trace          # this run only
 ```
 
-With either set, nothing is recorded and no file is written — not even the installation id. Only
-`0`, `false` and an empty value are read as "leave it on"; anything else turns it off.
+```yaml
+# lara.yaml — every command run in this project
+noTrace: true
+```
+
+`DO_NOT_TRACK=1` in the environment does the same, and is the way to opt out of a run that has
+neither a config file nor a flag.
+
+With any of them, nothing is recorded and no file is written — not even the installation id — and
+whatever an earlier run had left queued is deleted. Only `0`, `false` and an empty value are read as
+"leave it on"; anything else turns it off.
 
 ## Documentation
 

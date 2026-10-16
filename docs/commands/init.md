@@ -99,7 +99,7 @@ lara-cli init --reset-credentials
 lara-cli init --no-trace
 ```
 
-This sets `noTrace: true` in `lara.yaml`, which prevents the translation API from storing or logging your content server-side. All subsequent `lara-cli translate` runs will automatically use no-trace mode. You can also pass `--no-trace` directly to the translate command for one-off usage.
+This sets `noTrace: true` in `lara.yaml`, which prevents the translation API from storing or logging your content server-side. All subsequent `lara-cli translate` runs will automatically use no-trace mode, and no command run in the project reports [usage metrics](../../README.md#usage-metrics). You can also pass `--no-trace` directly to the translate command for one-off usage.
 
 ## Related
 

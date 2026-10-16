@@ -112,7 +112,7 @@ export default new Command()
       // trip to Lara, and the file this command exists to write must not wait on
       // a slow network for it.
       await checkCredentials();
-    });
+    }, 'init', !options.trace);
   });
 
 /**

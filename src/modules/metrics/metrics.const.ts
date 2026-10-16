@@ -4,11 +4,11 @@
  */
 export const METRICS_CHANNEL = 'cli';
 
-// TODO(before release): replace the placeholders below with the production
-// values, or (preferred) keep them as-is and let CI substitute them — see
-// scripts/bake-metrics-key.mjs and the "Bake metrics key" step in
-// .github/workflows/publish.yml. A value still in `__NAME__` form is treated as
-// absent at runtime, so a local build simply has telemetry switched off.
+// Substituted at publish time from the repository variable METRICS_URL and the
+// secret METRICS_API_KEY — see scripts/bake-metrics-key.mjs and the "Bake
+// metrics key" step in .github/workflows/publish.yml, which fails the release
+// rather than shipping these as they are. A value still in `__NAME__` form is
+// treated as absent at runtime, so a local build has telemetry switched off.
 export const BAKED_METRICS_URL: string = '__METRICS_URL__';
 export const BAKED_METRICS_API_KEY: string = '__METRICS_API_KEY__';
 
@@ -67,3 +67,61 @@ export const FLUSH_TIMEOUT_MS = 2_000;
 
 /** The backend rejects values past this rather than letting them wrap in storage. */
 export const MAX_UINT32 = 4_294_967_295;
+
+/**
+ * Environment variables that mean "this is a build, not a person". A pipeline
+ * that translates on every push would otherwise read as a very busy user, and
+ * the funnel we care about is the human one.
+ */
+export const CI_ENV_VARS = [
+  'CI',
+  'CONTINUOUS_INTEGRATION',
+  'GITHUB_ACTIONS',
+  'GITLAB_CI',
+  'CIRCLECI',
+  'BUILDKITE',
+  'JENKINS_URL',
+  'TEAMCITY_VERSION',
+  'TF_BUILD',
+  'BITBUCKET_BUILD_NUMBER',
+] as const;
+
+/**
+ * Every command the CLI can run, as the metrics vocabulary names it: the
+ * commander path and nothing the user typed after it. Reported as
+ * `metadata.command`, so a dashboard can tell `memory list` from `translate`
+ * without ever seeing an id, a name or a file.
+ */
+export type CommandId =
+  | 'translate'
+  | 'init'
+  | 'memory'
+  | 'memory list'
+  | 'memory create'
+  | 'memory update'
+  | 'memory delete'
+  | 'memory add-translation'
+  | 'memory delete-translation'
+  | 'memory import-tmx'
+  | 'glossary'
+  | 'glossary list'
+  | 'glossary create'
+  | 'glossary update'
+  | 'glossary delete'
+  | 'glossary add-entry'
+  | 'glossary delete-entry'
+  | 'glossary import-csv';
+
+/**
+ * Which capability each command family exercises, in the same words the MCP
+ * channel uses so the two can be read side by side. Keyed by the root command,
+ * so a new subcommand inherits it. `translate` is the one command that
+ * overrides this at runtime: it reports `text` or `document` depending on the
+ * mode the user reached for.
+ */
+export const COMMAND_FEATURES: Record<string, string> = {
+  translate: 'document',
+  init: 'setup',
+  memory: 'resource_management',
+  glossary: 'resource_management',
+};

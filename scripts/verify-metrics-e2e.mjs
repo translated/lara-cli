@@ -192,9 +192,9 @@ check('run 1 bought exactly one token', tokenRequests.length === 1, String(token
 check('run 1 left an empty queue behind', queueContent() === '');
 
 check(
-  'run 1 announced telemetry on stderr',
-  r1.stderr.includes('LARA_TELEMETRY_DISABLED=1'),
-  r1.stderr.slice(0, 120)
+  'run 1 announced telemetry on stderr, naming no-trace and DO_NOT_TRACK',
+  r1.stderr.includes('--no-trace') && r1.stderr.includes('DO_NOT_TRACK=1'),
+  r1.stderr.slice(0, 200)
 );
 
 // --- run 2: fails before any API call, still attributable --------------------
@@ -207,7 +207,7 @@ check('run 3 exits 0', r3.code === 0, `code=${r3.code}`);
 
 check(
   'run 3 said nothing: the notice is once per machine, not once per command',
-  !r3.stderr.includes('LARA_TELEMETRY_DISABLED=1'),
+  !r3.stderr.includes('DO_NOT_TRACK=1'),
   r3.stderr.slice(0, 120)
 );
 
@@ -318,6 +318,26 @@ check(
   'metadata leaks no file path',
   !JSON.stringify(events.map((e) => e.metadata)).includes('.json')
 );
+check(
+  'every event names the command it belongs to',
+  events.every((e) => e.metadata?.command === 'translate'),
+  JSON.stringify(events.map((e) => e.metadata?.command))
+);
+check(
+  'every event carries the platform, the runtime and the CI flag',
+  events.every(
+    (e) =>
+      typeof e.metadata?.os === 'string' &&
+      typeof e.metadata?.nodeVersion === 'string' &&
+      typeof e.metadata?.ci === 'boolean'
+  ),
+  JSON.stringify(events[0]?.metadata)
+);
+check(
+  'call_success reports how many memories and glossaries were in play',
+  success?.metadata?.memories === 0 && success?.metadata?.glossaries === 0,
+  JSON.stringify(success?.metadata)
+);
 
 // --- commands that authenticate but never translate --------------------------
 {
@@ -331,9 +351,17 @@ check(
 
   const fresh = received.flatMap((r) => r.body.events).slice(before);
   check(
-    'memory list reports auth and nothing else',
-    JSON.stringify(fresh.map((e) => e.eventType)) === JSON.stringify(['auth_success']),
+    'memory list reports auth and its own call event',
+    JSON.stringify(fresh.map((e) => e.eventType)) ===
+      JSON.stringify(['auth_success', 'call_success']),
     fresh.map((e) => e.eventType).join(',')
+  );
+  check(
+    'memory list is named as itself, as resource management, with nothing translated',
+    fresh.every((e) => e.metadata?.command === 'memory list') &&
+      fresh.at(-1)?.metadata?.feature === 'resource_management' &&
+      fresh.at(-1)?.charsTranslated === 0,
+    JSON.stringify(fresh.at(-1))
   );
 }
 
@@ -354,9 +382,16 @@ check(
 
   const fresh = received.flatMap((r) => r.body.events).slice(before);
   check(
-    'init verifies the key and reports auth_success, with no call event',
-    JSON.stringify(fresh.map((e) => e.eventType)) === JSON.stringify(['auth_success']),
+    'init verifies the key and closes with its own call event',
+    JSON.stringify(fresh.map((e) => e.eventType)) ===
+      JSON.stringify(['auth_success', 'call_success']),
     fresh.map((e) => e.eventType).join(',')
+  );
+  check(
+    'init reports itself as setup',
+    fresh.every((e) => e.metadata?.command === 'init') &&
+      fresh.at(-1)?.metadata?.feature === 'setup',
+    JSON.stringify(fresh.at(-1)?.metadata)
   );
   check('init still wrote its config', existsSync(join(project, 'lara.yaml')));
 }
@@ -379,6 +414,13 @@ check(
   check(
     'rejected key: still attributed to the account seen earlier',
     fresh.every((e) => e.accountId === ACCOUNT_ID)
+  );
+  check(
+    'rejected key: auth_fail carries what Lara answered',
+    fresh.find((e) => e.eventType === 'auth_fail')?.metadata?.httpStatus === 401 &&
+      fresh.find((e) => e.eventType === 'auth_fail')?.metadata?.laraErrorType ===
+        'AuthenticationError',
+    JSON.stringify(fresh.find((e) => e.eventType === 'auth_fail')?.metadata)
   );
 }
 
@@ -459,6 +501,13 @@ check(
     fresh.some((e) => e.eventType === 'call_error' && e.errorType === 'payment_402'),
     fresh.map((e) => `${e.eventType}/${e.errorType ?? ''}`).join(',')
   );
+  check(
+    'out of credit: call_error carries the status and type Lara answered with',
+    fresh.find((e) => e.eventType === 'call_error')?.metadata?.httpStatus === 402 &&
+      fresh.find((e) => e.eventType === 'call_error')?.metadata?.laraErrorType ===
+        'PaymentRequired',
+    JSON.stringify(fresh.find((e) => e.eventType === 'call_error')?.metadata)
+  );
 }
 
 // --- init keeps working when Lara cannot be reached at all -------------------
@@ -518,16 +567,97 @@ check('unreachable backend: nothing reached the listener', received.length === b
 
 // --- degradation: Lara itself unreachable ------------------------------------
 {
+  const laraDeadBefore = received.flatMap((r) => r.body.events).length;
   const laraDead = await run(OK, { LARA_SERVER_URL: 'http://127.0.0.1:1' });
   check('unreachable Lara: CLI exits non-zero', laraDead.code !== 0, `code=${laraDead.code}`);
+  const fresh = received.flatMap((r) => r.body.events).slice(laraDeadBefore);
+  // Its own terminal event is the last one; the rest are leftovers the previous
+  // scenario left queued when the metrics backend was unreachable.
+  check(
+    'unreachable Lara: classified as network_error, not unknown',
+    fresh.at(-1)?.eventType === 'call_error' && fresh.at(-1)?.errorType === 'network_error',
+    fresh.map((e) => `${e.eventType}/${e.errorType ?? ''}`).join(',')
+  );
 }
 
 // --- opt-out -----------------------------------------------------------------
 const optOutRoot = mkdtempSync(join(tmpdir(), 'lara-e2e-optout-'));
 const optOutDir = join(optOutRoot, 'should-not-exist');
-const off = await run(OK, { LARA_TELEMETRY_DISABLED: '1', LARA_STATE_DIR: optOutDir });
+const off = await run(OK, { DO_NOT_TRACK: '1', LARA_STATE_DIR: optOutDir });
 check('opt-out: CLI still exits 0', off.code === 0, `code=${off.code}`);
 check('opt-out: no state directory created', !existsSync(optOutDir));
+check(
+  'opt-out: LARA_TELEMETRY_DISABLED is gone, no-trace is the switch',
+  !readFileSync(join(REPO, 'README.md'), 'utf8').includes('LARA_TELEMETRY_DISABLED')
+);
+
+// --- no-trace: the flag --------------------------------------------------------
+{
+  const noTraceRoot = mkdtempSync(join(tmpdir(), 'lara-e2e-notrace-flag-'));
+  const noTraceDir = join(noTraceRoot, 'should-not-exist');
+  const before = received.length;
+  const quiet = await run([...OK, '--no-trace'], { LARA_STATE_DIR: noTraceDir });
+
+  check('no-trace flag: the translation still runs', quiet.code === 0, `code=${quiet.code}`);
+  check('no-trace flag: no state directory created', !existsSync(noTraceDir));
+  check('no-trace flag: nothing reached the backend', received.length === before);
+  rmSync(noTraceRoot, { recursive: true, force: true });
+}
+
+// --- no-trace: the project config, on a command that has no such flag ---------
+{
+  const noTraceProject = mkdtempSync(join(tmpdir(), 'lara-e2e-notrace-config-'));
+  const noTraceRoot = mkdtempSync(join(tmpdir(), 'lara-e2e-notrace-state-'));
+  const noTraceDir = join(noTraceRoot, 'should-not-exist');
+  writeFileSync(
+    join(noTraceProject, 'lara.yaml'),
+    [
+      "version: '1.0.0'",
+      'locales:',
+      '  source: en',
+      '  target:',
+      '    - it',
+      'noTrace: true',
+      'files:',
+      '  json:',
+      '    include:',
+      '      - src/i18n/[locale].json',
+      '',
+    ].join('\n')
+  );
+
+  const before = received.length;
+  const quiet = await run(['memory', 'list'], { LARA_STATE_DIR: noTraceDir }, noTraceProject);
+
+  check('no-trace config: the command still runs', quiet.code === 0, `code=${quiet.code}`);
+  check('no-trace config: no state directory created', !existsSync(noTraceDir));
+  check('no-trace config: nothing reached the backend', received.length === before);
+  rmSync(noTraceProject, { recursive: true, force: true });
+  rmSync(noTraceRoot, { recursive: true, force: true });
+}
+
+// --- no-trace deletes what a traced run had left queued ----------------------
+{
+  const purgeRoot = mkdtempSync(join(tmpdir(), 'lara-e2e-purge-'));
+  const purgeQueueFile = join(purgeRoot, QUEUE_FILE);
+  writeFileSync(
+    purgeQueueFile,
+    `${JSON.stringify({
+      eventType: 'call_success',
+      channel: 'cli',
+      accountId: ACCOUNT_ID,
+      timestamp: new Date().toISOString(),
+    })}\n`
+  );
+
+  const before = received.length;
+  const quiet = await run([...OK, '--no-trace'], { LARA_STATE_DIR: purgeRoot });
+
+  check('no-trace purge: the translation still runs', quiet.code === 0, `code=${quiet.code}`);
+  check('no-trace purge: the queued event is deleted, not sent', !existsSync(purgeQueueFile));
+  check('no-trace purge: nothing reached the backend', received.length === before);
+  rmSync(purgeRoot, { recursive: true, force: true });
+}
 
 // --- unconfigured (what a build with un-baked placeholders does) --------------
 const bareRoot = mkdtempSync(join(tmpdir(), 'lara-e2e-bare-'));
