@@ -223,7 +223,9 @@ or your credentials.
 Events are saved locally and sent in one batch when the command finishes; anything left
 over rides along with the next command's send. If the metrics backend is slow or unreachable the
 CLI behaves exactly as it does today: the send is bounded to two seconds and whatever could not be
-delivered simply waits for the next run.
+delivered simply waits for the next run. Only one process flushes a shared queue at a time.
+Delivery retries reuse the same `eventId`; the ingestion backend must deduplicate by that id
+because a server can accept a batch even if its response never reaches the CLI.
 
 The first run that records anything prints a one-line notice on `stderr` saying so, once per
 machine.

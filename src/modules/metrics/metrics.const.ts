@@ -22,6 +22,9 @@ export const INGEST_PATH = '/metrics/ingest-events';
 /** Legacy queue filename and prefix for immutable queue segments. */
 export const QUEUE_FILE = 'metrics-queue.jsonl';
 
+/** Shared by flushers; writers keep publishing while another process sends. */
+export const FLUSH_LOCK_FILE = 'metrics-flush.lock';
+
 /** One UUID per installation, persisted: a fresh one per run breaks rate limiting. */
 export const INSTALLATION_FILE = 'installation-id';
 

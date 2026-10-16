@@ -609,6 +609,7 @@ for (const hangPath of ['/v2/auth', '/v2/languages']) {
 
 // --- another process queues events while a flush is on the network -----------
 {
+  const beforeConcurrent = received.length;
   let releaseUpload;
   let uploadStarted;
   const blocked = new Promise((resolve) => {
@@ -624,7 +625,11 @@ for (const hangPath of ['/v2/auth', '/v2/languages']) {
   };
   const first = run(['memory', 'list']);
   await started;
-  const second = await run(['memory', 'list'], { METRICS_URL: 'http://127.0.0.1:1' });
+  const second = await run(['memory', 'list']);
+  check(
+    'concurrent flush sends no second batch while the first is pending',
+    received.length === beforeConcurrent + 1
+  );
   const pending = queueContent()
     .split('\n')
     .filter(Boolean)
@@ -650,6 +655,12 @@ for (const hangPath of ['/v2/auth', '/v2/languages']) {
     'next command delivers the events preserved across the concurrent flush',
     remaining.every((event) => delivered.some((item) => item.eventId === event.eventId)) &&
       queueContent() === ''
+  );
+  const concurrentEvents = received.slice(beforeConcurrent).flatMap((batch) => batch.body.events);
+  check(
+    'concurrent flush delivers all six events exactly once',
+    concurrentEvents.length === 6 &&
+      new Set(concurrentEvents.map((event) => event.eventId)).size === 6
   );
 }
 

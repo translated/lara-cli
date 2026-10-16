@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   existsSync,
   mkdtempSync,
+  mkdirSync,
+  utimesSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -14,6 +16,7 @@ import { LaraApiError } from '@translated/lara';
 
 import {
   CI_ENV_VARS,
+  FLUSH_LOCK_FILE,
   INSTALLATION_FILE,
   MAX_UINT32,
   QUEUE_FILE,
@@ -629,6 +632,119 @@ describe('flushQueue', () => {
     const events = bodyOf(ingestCalls[0]!).events as Record<string, unknown>[];
     expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({ eventType: 'call_success', channel: 'cli' });
+    expect(queuedEvents()).toEqual([]);
+  });
+
+  it.each(['same module', 'separate module'])(
+    'does not upload the same snapshot concurrently from the %s',
+    async (module) => {
+      const first = await loadMetrics();
+      const second = module === 'same module' ? first : await loadMetrics();
+      let releaseUpload!: (response: Response) => void;
+      let uploadStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        uploadStarted = resolve;
+      });
+      const upload = new Promise<Response>((resolve) => {
+        releaseUpload = resolve;
+      });
+      const batches: Record<string, unknown>[][] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: unknown, init: RequestInit) => {
+          if (String(input).endsWith('/auth/issue-token')) return tokenOk();
+          batches.push(
+            (JSON.parse(String(init.body)) as { events: Record<string, unknown>[] }).events
+          );
+          if (batches.length === 1) {
+            uploadStarted();
+            return upload;
+          }
+          return response(202);
+        })
+      );
+
+      first.queueEvent({ eventType: 'call_success', marker: 'first' });
+      const flushing = first.flushQueue();
+      await started;
+      second.queueEvent({ eventType: 'call_success', marker: 'later' });
+      await second.flushQueue();
+      releaseUpload(response(202));
+      await flushing;
+
+      expect(batches).toHaveLength(1);
+      expect(queuedEvents().map((event) => event.marker)).toEqual(['later']);
+      await second.flushQueue();
+      const delivered = batches.flat();
+      expect(delivered.map((event) => event.marker)).toEqual(['first', 'later']);
+      expect(new Set(delivered.map((event) => event.eventId)).size).toBe(delivered.length);
+      expect(queuedEvents()).toEqual([]);
+    }
+  );
+
+  it('leaves a busy sender and its queued events alone', async () => {
+    const metrics = await loadMetrics();
+    const { spy } = mockBackend();
+    const lock = join(stateDir, FLUSH_LOCK_FILE);
+    mkdirSync(lock);
+    metrics.queueEvent({ eventType: 'call_success' });
+
+    await metrics.flushQueue();
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(queuedEvents()).toHaveLength(1);
+    expect(existsSync(lock)).toBe(true);
+  });
+
+  it('recovers a stale lock left by a killed process', async () => {
+    const metrics = await loadMetrics();
+    const { ingestCalls } = mockBackend();
+    const lock = join(stateDir, FLUSH_LOCK_FILE);
+    mkdirSync(lock);
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lock, old, old);
+    metrics.queueEvent({ eventType: 'call_success' });
+
+    await metrics.flushQueue();
+
+    expect(ingestCalls).toHaveLength(1);
+    expect(queuedEvents()).toEqual([]);
+    expect(existsSync(lock)).toBe(false);
+  });
+
+  it.each([202, 400, 503, 'network error'])('releases its lock after %s', async (status) => {
+    const metrics = await loadMetrics();
+    mockBackend({
+      ingest: () => {
+        if (status === 'network error') throw new Error('connection reset');
+        return response(status as number);
+      },
+    });
+    metrics.queueEvent({ eventType: 'call_success' });
+    await metrics.flushQueue();
+
+    expect(existsSync(join(stateDir, FLUSH_LOCK_FILE))).toBe(false);
+    const { ingestCalls } = mockBackend();
+    metrics.queueEvent({ eventType: 'call_success' });
+    await metrics.flushQueue();
+    expect(ingestCalls).toHaveLength(1);
+    expect(queuedEvents()).toEqual([]);
+  });
+
+  it('keeps the same event ids on retry after the server accepted a batch but its response was lost', async () => {
+    const metrics = await loadMetrics();
+    const first = mockBackend({
+      ingest: () => {
+        throw new Error('response lost');
+      },
+    });
+    metrics.queueEvent({ eventType: 'call_success' });
+    await metrics.flushQueue();
+    const second = mockBackend();
+    await metrics.flushQueue();
+
+    // Delivery is at least once: the backend must store each eventId once.
+    expect(bodyOf(second.ingestCalls[0]!)).toEqual(bodyOf(first.ingestCalls[0]!));
     expect(queuedEvents()).toEqual([]);
   });
 

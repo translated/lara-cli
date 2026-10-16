@@ -12,6 +12,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { LaraApiError } from '@translated/lara';
+import { lockSync } from 'proper-lockfile';
 
 import { Messages } from '#messages/messages.js';
 import { getErrorMessage, isQuotaError } from '#utils/error.js';
@@ -23,6 +24,7 @@ import {
   CI_ENV_VARS,
   COMMAND_FEATURES,
   type CommandId,
+  FLUSH_LOCK_FILE,
   FLUSH_TIMEOUT_MS,
   INGEST_PATH,
   INSTALLATION_FILE,
@@ -486,6 +488,7 @@ function postEvents(
 
 /** Sends everything queued, in one batch. Bounded, silent, and never throws. */
 export async function flushQueue(): Promise<void> {
+  let release: (() => void) | undefined;
   try {
     // Check the transport before touching the disk: with telemetry off, this
     // must not so much as create the state directory.
@@ -497,6 +500,17 @@ export async function flushQueue(): Promise<void> {
     if (!dir) {
       return;
     }
+
+    // One sender per state directory, including across CLI processes. Do not
+    // wait for a busy sender: new events stay queued for the next command.
+    // The lock heartbeat lets a later run recover a lock left by a killed CLI.
+    const controller = new AbortController();
+    release = lockSync(dir, {
+      lockfilePath: join(dir, FLUSH_LOCK_FILE),
+      retries: 0,
+      stale: 10_000,
+      onCompromised: () => controller.abort(),
+    });
 
     // Migrate the append-only queue from older versions to a named snapshot.
     // New writers never append here, and competing flushers can claim it once.
@@ -561,7 +575,7 @@ export async function flushQueue(): Promise<void> {
     }
 
     // One budget for the whole exchange: the flush sits on the user's path.
-    const signal = AbortSignal.timeout(FLUSH_TIMEOUT_MS);
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(FLUSH_TIMEOUT_MS)]);
     const send = async (): Promise<Response | null> => {
       const token = await getToken(t, signal);
       return token ? postEvents(t, token, events, signal) : null;
@@ -593,7 +607,13 @@ export async function flushQueue(): Promise<void> {
       acknowledge();
     }
   } catch {
-    // Network down, timeout, unwritable file: keep the queue for next time.
+    // Busy lock, network down, timeout, unwritable file: keep the queue for next time.
+  } finally {
+    try {
+      release?.();
+    } catch {
+      // A compromised lock must never turn a successful command into a failure.
+    }
   }
 }
 
