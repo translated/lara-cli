@@ -17,7 +17,7 @@ const {
   glossariesDeleteMock,
   glossariesAddOrReplaceEntryMock,
   glossariesDeleteEntryMock,
-  glossariesImportCsvMock,
+  glossariesImportFileMock,
   setExtraHeaderMock,
 } = vi.hoisted(() => ({
   translateMock: vi.fn(),
@@ -35,7 +35,7 @@ const {
   glossariesDeleteMock: vi.fn(),
   glossariesAddOrReplaceEntryMock: vi.fn(),
   glossariesDeleteEntryMock: vi.fn(),
-  glossariesImportCsvMock: vi.fn(),
+  glossariesImportFileMock: vi.fn(),
 }));
 
 vi.mock('@translated/lara', () => {
@@ -60,7 +60,7 @@ vi.mock('@translated/lara', () => {
       delete: glossariesDeleteMock,
       addOrReplaceEntry: glossariesAddOrReplaceEntryMock,
       deleteEntry: glossariesDeleteEntryMock,
-      importCsv: glossariesImportCsvMock,
+      importFile: glossariesImportFileMock,
     };
   }
   class Credentials {}
@@ -264,7 +264,7 @@ describe('TranslationService memory & glossary management', () => {
     glossariesDeleteMock.mockReset();
     glossariesAddOrReplaceEntryMock.mockReset();
     glossariesDeleteEntryMock.mockReset();
-    glossariesImportCsvMock.mockReset();
+    glossariesImportFileMock.mockReset();
     service = TranslationService.getInstance();
   });
 
@@ -379,7 +379,7 @@ describe('TranslationService memory & glossary management', () => {
 
       expect(result).toBe(imp);
       expect(createReadStreamSpy).toHaveBeenCalledWith('/path/to/file.tmx');
-      expect(memoriesImportTmxMock).toHaveBeenCalledWith('mem_1', fakeStream, undefined);
+      expect(memoriesImportTmxMock).toHaveBeenCalledWith('mem_1', fakeStream, false);
     } finally {
       createReadStreamSpy.mockRestore();
     }
@@ -420,9 +420,9 @@ describe('TranslationService memory & glossary management', () => {
     expect(glossariesDeleteEntryMock).toHaveBeenCalledWith('gls_1', term);
   });
 
-  it('importGlossaryCsv delegates to glossaries.importCsv with the default content type', async () => {
+  it('importGlossaryCsv delegates to glossaries.importFile with the default content type', async () => {
     const imp = { id: 'imp_1' };
-    glossariesImportCsvMock.mockResolvedValueOnce(imp);
+    glossariesImportFileMock.mockResolvedValueOnce(imp);
     const fakeStream = { fake: 'stream' } as never;
     const createReadStreamSpy = vi.spyOn(fs, 'createReadStream').mockReturnValue(fakeStream);
 
@@ -431,12 +431,10 @@ describe('TranslationService memory & glossary management', () => {
 
       expect(result).toBe(imp);
       expect(createReadStreamSpy).toHaveBeenCalledWith('/path/to/file.csv');
-      expect(glossariesImportCsvMock).toHaveBeenCalledWith(
-        'gls_1',
-        fakeStream,
-        'csv/table-uni',
-        undefined
-      );
+      expect(glossariesImportFileMock).toHaveBeenCalledWith('gls_1', fakeStream, {
+        contentType: 'csv/table-uni',
+        gzip: undefined,
+      });
     } finally {
       createReadStreamSpy.mockRestore();
     }

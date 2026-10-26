@@ -275,7 +275,9 @@ export class TranslationService {
     filePath: string,
     gzip?: boolean
   ): Promise<MemoryImport> {
-    return this.reporting(this.client.memories.importTmx(id, fs.createReadStream(filePath), gzip));
+    return this.reporting(
+      this.client.memories.importTmx(id, fs.createReadStream(filePath), gzip ?? false)
+    );
   }
 
   public async getGlossaries(): Promise<Glossary[]> {
@@ -309,7 +311,7 @@ export class TranslationService {
     gzip?: boolean
   ): Promise<GlossaryImport> {
     return this.reporting(
-      this.client.glossaries.importCsv(id, fs.createReadStream(filePath), contentType, gzip)
+      this.client.glossaries.importFile(id, fs.createReadStream(filePath), { contentType, gzip })
     );
   }
 }
