@@ -312,12 +312,6 @@ export class TranslationEngine {
     targetLocale: string
   ): Promise<{ translations: Map<string, string>; failedTasks: TranslateTask[] }> {
     const translations = new Map<string, string>();
-    // Tasks whose first translation came back containing the U+FFFD
-    // replacement character. Symptomatic of a UTF-8 streaming bug in
-    // @translated/lara (chunk.toString() per chunk loses bytes when a
-    // multi-byte character straddles a TCP chunk boundary). Retried below
-    // as solo calls, which produce tiny responses unlikely to span chunks.
-    const corruptedTasks: TranslateTask[] = [];
 
     // Tasks that could not be translated at all (API failed for that item). Their
     // source text is kept and they are reported to the user, but they never abort
@@ -325,12 +319,7 @@ export class TranslationEngine {
     const failedTasks: TranslateTask[] = [];
 
     const recordResult = (task: TranslateTask, translatedText: string): void => {
-      const normalized = normalizeEntities(task.text, translatedText);
-      if (normalized.includes('�')) {
-        corruptedTasks.push(task);
-      } else {
-        translations.set(task.key, normalized);
-      }
+      translations.set(task.key, normalizeEntities(task.text, translatedText));
     };
 
     const soloPromises = classified.solo.map(async (task) => {
@@ -416,58 +405,7 @@ export class TranslationEngine {
 
     await Promise.all([...soloPromises, ...batchPromises]);
 
-    if (corruptedTasks.length > 0) {
-      await this.retryCorruptedTasks(corruptedTasks, targetLocale, translations);
-    }
-
     return { translations, failedTasks };
-  }
-
-  /**
-   * Re-translate each task as a solo call. Solo responses are small enough
-   * that they almost never span a TCP chunk boundary, so the U+FFFD bug
-   * does not fire on them. We retry up to MAX_RETRIES times silently; if
-   * every attempt still comes back with U+FFFD we surface a short, neutral
-   * error so the user knows to re-run without exposing SDK internals.
-   */
-  private async retryCorruptedTasks(
-    tasks: TranslateTask[],
-    targetLocale: string,
-    translations: Map<string, string>
-  ): Promise<void> {
-    const MAX_RETRIES = 3;
-    let anyStillCorrupted = false;
-
-    await Promise.all(
-      tasks.map(async (task) => {
-        const contentType = resolveContentType(task.text, this.defaultContentType);
-        const options = this.buildTranslateOptions(task.instruction, contentType);
-
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-          const result = await this.translatorService.translate(
-            [{ text: task.text, translatable: true }],
-            this.sourceLocale,
-            targetLocale,
-            options
-          );
-          const translated = result[0];
-          if (!translated) {
-            throw new Error(Messages.errors.emptyTranslationResult(task.text));
-          }
-          const normalized = normalizeEntities(task.text, translated.text);
-          if (!normalized.includes('�')) {
-            translations.set(task.key, normalized);
-            return;
-          }
-        }
-
-        anyStillCorrupted = true;
-      })
-    );
-
-    if (anyStillCorrupted) {
-      throw new Error(Messages.errors.translationRetryFailed);
-    }
   }
 
   private buildTranslateOptions(

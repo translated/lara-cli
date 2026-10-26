@@ -1,7 +1,7 @@
 {
   "name": "@translated/lara-cli",
   "type": "module",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "CLI tool for automated i18n file translation using Lara Translate",
   "repository": {
     "type": "git",
@@ -39,7 +39,7 @@
     "@babel/types": "^7.29.0",
     "@inquirer/core": "^10.3.2",
     "@inquirer/prompts": "^7.10.1",
-    "@translated/lara": "^1.8.4",
+    "@translated/lara": "^1.18.0",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
     "fast-xml-parser": "^5.5.9",
@@ -54,7 +54,7 @@
     "string-width": "^8.2.0",
     "unist-util-visit": "^5.1.0",
     "yaml": "^2.8.3",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "imports": {
     "#utils/*": "./build/utils/*",
@@ -81,22 +81,22 @@
     "@types/node": "^24.12.0",
     "@types/picomatch": "^4.0.2",
     "@types/proper-lockfile": "^4.1.4",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.2",
-    "vite": "^7.3.3",
-    "vitest": "^4.1.11"
+    "vite": "^7.3.7",
+    "vitest": "^4.1.12"
   },
   "pnpm": {
     "overrides": {
       "brace-expansion@<1.1.18": "^1.1.18",
       "brace-expansion@>=5.0.0 <5.0.9": "^5.0.9",
       "form-data@>=4.0.0 <4.0.6": ">=4.0.6",
-      "vite@<=7.3.4": ">=7.3.5 <8",
+      "vite@<=7.3.6": ">=7.3.7 <8",
       "esbuild@<0.28.1": ">=0.28.1 <0.29",
       "js-yaml@>=4.0.0 <4.3.2": ">=4.3.2 <5",
       "nanoid@<3.3.18": "^3.3.18",
