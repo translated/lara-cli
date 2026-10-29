@@ -6,7 +6,7 @@ Lara Cli automates translation of your i18n files with a single command, preserv
 
 Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18n single-file components, Markdown and MDX files, Android XML string resource files, Xcode localization files (.strings, .stringsdict, .xcstrings), and plain text (.txt) files. See [Supported Formats](docs/config/formats.md) for details.
 
-[![Version](https://img.shields.io/badge/version-1.7.1-blue.svg)](https://github.com/translated/lara-cli)
+[![Version](https://img.shields.io/badge/version-1.7.2-blue.svg)](https://github.com/translated/lara-cli)
 
 </div>
 
@@ -24,7 +24,7 @@ Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18
 
 ### Requirements
 
-- Node.js v18 or higher
+- Node.js 20 or higher
 
 ### Install via npm
 
@@ -115,7 +115,7 @@ If you want to contribute to Lara CLI or run it from source, follow these steps.
 
 ### Requirements
 
-- Node.js v18 or higher
+- Node.js 20 or higher
 - pnpm v8 or higher
 
 1. **Clone the repository**
