@@ -1,7 +1,7 @@
 {
   "name": "@translated/lara-cli",
   "type": "module",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "CLI tool for automated i18n file translation using Lara Translate",
   "repository": {
     "type": "git",
@@ -11,10 +11,15 @@
   "keywords": [
     "laratranslate",
     "lara",
-    "localization",
     "translation",
-    "ai",
     "translate",
+    "localization",
+    "i18n",
+    "l10n",
+    "internationalization",
+    "cli",
+    "command-line",
+    "ai",
     "translated"
   ],
   "author": {
