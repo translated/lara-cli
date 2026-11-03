@@ -6,7 +6,7 @@ Lara Cli automates translation of your i18n files with a single command, preserv
 
 Supports multiple file formats including JSON, PO (gettext), TypeScript, Vue I18n single-file components, Markdown and MDX files, Android XML string resource files, Xcode localization files (.strings, .stringsdict, .xcstrings), and plain text (.txt) files. See [Supported Formats](docs/config/formats.md) for details.
 
-[![Version](https://img.shields.io/badge/version-1.7.2-blue.svg)](https://github.com/translated/lara-cli)
+[![Version](https://img.shields.io/badge/version-1.7.3-blue.svg)](https://github.com/translated/lara-cli)
 
 </div>
 
@@ -231,7 +231,8 @@ because a server can accept a batch even if its response never reaches the CLI.
 The CLI keeps one pending milestone across commands and remembers it after ingestion acknowledges
 it. Repeating `init`, translating again or rotating an API key for the same account does not create
 another milestone. Each command still records its own `call_success` or `call_error`;
-`auth_fail` remains a diagnostic event for failed authentication attempts.
+`auth_fail` remains a diagnostic event for failed authentication attempts. A command stopped by an
+exhausted plan quota records `quota_exceeded` instead of `call_error`.
 
 `sessionId` groups commands from the same account on the same machine, including across projects.
 Each command renews the session; 30 minutes without activity starts a new one. Switching accounts
