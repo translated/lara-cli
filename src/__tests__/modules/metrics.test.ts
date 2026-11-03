@@ -954,6 +954,23 @@ describe('finishCommand', () => {
   });
 
   it.each([
+    ['directly', [new Error('Your plan quota is exhausted')]],
+    [
+      'before a generic unwind error',
+      [new Error('Your plan quota is exhausted'), new Error('Some files could not be translated')],
+    ],
+  ])('emits quota_exceeded instead of call_error when quota runs out %s', async (_, errors) => {
+    const metrics = await loadMetrics();
+    metrics.instrument('translate');
+    for (const error of errors) metrics.recordError(error);
+    metrics.finishCommand(1);
+
+    const event = queuedEvents()[0]!;
+    expect(event).toMatchObject({ eventType: 'quota_exceeded' });
+    expect(event).not.toHaveProperty('errorType');
+  });
+
+  it.each([
     ['text', 'text', { sourceLang: 'en', targetLang: 'pt-br' }],
     ['file', 'document', { sourceLang: 'en', targetLang: 'pt-br' }],
     ['config', 'document', { fileTypes: 'json,po', elements: 12, locales: 3 }],
