@@ -44,7 +44,7 @@
     "@babel/types": "^7.29.0",
     "@inquirer/core": "^10.3.2",
     "@inquirer/prompts": "^7.10.1",
-    "@translated/lara": "^1.18.0",
+    "@translated/lara": "^1.18.2",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
     "fast-xml-parser": "^5.5.9",

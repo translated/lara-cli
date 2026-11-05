@@ -21,6 +21,8 @@ export type TranslationEngineOptions = {
 
   inputPath: string;
 
+  reasoning?: boolean;
+  reasoningEffort?: TranslateOptions['reasoningEffort'];
   forceTranslation: boolean;
 
   lockedKeys: string[];
@@ -66,6 +68,8 @@ export class TranslationEngine {
 
   private readonly inputPath: string;
 
+  private readonly reasoning: Pick<TranslateOptions, 'reasoning' | 'reasoningEffort'>;
+
   private readonly forceTranslation: boolean;
 
   private readonly lockedPatterns: Matcher[];
@@ -102,6 +106,7 @@ export class TranslationEngine {
 
     this.inputPath = options.inputPath;
 
+    this.reasoning = { reasoning: options.reasoning, reasoningEffort: options.reasoningEffort };
     this.forceTranslation = options.forceTranslation;
 
     this.lockedPatterns = options.lockedKeys.map((pattern) => picomatch(pattern));
@@ -413,6 +418,7 @@ export class TranslationEngine {
     contentType: string
   ): TranslateOptions {
     return {
+      ...this.reasoning,
       instructions: instruction ? [instruction] : undefined,
       adaptTo: this.translationMemoryIds.length > 0 ? this.translationMemoryIds : [], // Always pass an array for adaptTo; an empty array prevents Lara from using translation memories when none are explicitly selected
       glossaries: this.glossaryIds.length > 0 ? this.glossaryIds : undefined,

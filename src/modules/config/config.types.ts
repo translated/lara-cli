@@ -95,6 +95,8 @@ const Config = z
 
     translation: z
       .object({
+        reasoning: z.boolean().optional(),
+        reasoningEffort: z.enum(['low', 'medium', 'high']).optional(),
         batchSize: z.number().int().positive().default(DEFAULT_BATCH_SIZE),
         orphanKeys: z.enum(ORPHAN_KEYS_MODES).default(DEFAULT_ORPHAN_KEYS),
       })

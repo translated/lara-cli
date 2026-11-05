@@ -30,6 +30,8 @@ import * as metrics from '#modules/metrics/metrics.js';
 import { ParserFactory } from '../../../parsers/parser.factory.js';
 
 type TranslateOptions = {
+  reasoning?: boolean;
+  reasoningEffort?: 'low' | 'medium' | 'high';
   target: string[];
   paths: string[];
   force: boolean;
@@ -112,6 +114,15 @@ export default new Command()
       'Glossary IDs to use (separated by a comma, a space or a combination of both). Only with --file or --text.'
     ).argParser((value) => value.split(COMMA_AND_SPACE_REGEX))
   )
+  .addOption(new Option('--reasoning', 'Use Lara Think (default effort: high)').default(undefined))
+  .addOption(new Option('--no-reasoning', 'Disable Lara Think, overriding project configuration'))
+  .addOption(
+    new Option('--reasoning-effort <level>', 'Lara Think reasoning level; requires Think').choices([
+      'low',
+      'medium',
+      'high',
+    ])
+  )
   .addOption(new Option('--no-trace', 'Prevent server-side storage of translated content'))
   .addOption(
     new Option(
@@ -148,6 +159,11 @@ async function runTranslate(options: TranslateOptions): Promise<void> {
 
   // Existing config-based flow
   const config = ConfigProvider.getInstance().getConfig();
+  const reasoning = options.reasoning ?? config.translation.reasoning;
+  const reasoningEffort =
+    options.reasoningEffort ??
+    (options.reasoning === false ? undefined : config.translation.reasoningEffort);
+  Object.assign(options, resolveReasoningOptions(reasoning, reasoningEffort));
 
   if (options.target.includes(config.locales.source)) {
     throw new Error(Messages.errors.sourceLocaleInTarget);
@@ -250,8 +266,19 @@ function validateAndDetectMode(options: TranslateOptions): TranslateMode {
   return options.text ? 'text' : 'file';
 }
 
+export function resolveReasoningOptions(
+  reasoning?: boolean,
+  reasoningEffort?: 'low' | 'medium' | 'high'
+): LaraTranslateOptions {
+  if (reasoningEffort !== undefined && reasoning !== true) {
+    throw new Error('reasoning effort requires reasoning: true (use --reasoning)');
+  }
+  return { reasoning, reasoningEffort: reasoning ? (reasoningEffort ?? 'high') : undefined };
+}
+
 function buildTranslateOptions(options: TranslateOptions): LaraTranslateOptions {
   return {
+    ...resolveReasoningOptions(options.reasoning, options.reasoningEffort),
     adaptTo: options.translationMemories ?? [],
     glossaries:
       options.glossaries && options.glossaries.length > 0 ? options.glossaries : undefined,
@@ -392,6 +419,8 @@ async function handleFileType(
     const fileInstructionConfig = fileConfig.fileInstructions.find((fc) => fc.path === inputPath);
 
     const translationEngine = new TranslationEngine({
+      reasoning: options.reasoning,
+      reasoningEffort: options.reasoningEffort,
       sourceLocale,
       targetLocales,
       inputPath,

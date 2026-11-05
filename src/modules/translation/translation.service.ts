@@ -57,6 +57,7 @@ export class TranslationService {
   private static instance: TranslationService;
 
   private readonly client: Translator;
+  private thinkClient?: Translator;
 
   private constructor() {
     this.client = this.createClient(REQUEST_TIMEOUT_MS);
@@ -125,6 +126,15 @@ export class TranslationService {
     targetLocale: string,
     options: TranslateOptions
   ): Promise<TextBlock[]> {
+    if (options.reasoningEffort !== undefined && options.reasoning !== true) {
+      throw new Error('reasoningEffort requires reasoning: true');
+    }
+    if (options.reasoning)
+      options = { ...options, reasoningEffort: options.reasoningEffort ?? 'high' };
+    metrics.setContext({
+      reasoning: options.reasoning,
+      reasoningEffort: options.reasoning ? (options.reasoningEffort ?? 'high') : undefined,
+    });
     const maxRetries = 5;
     let attempt = 0;
 
@@ -133,8 +143,22 @@ export class TranslationService {
         // A real API answer is the only proof the credentials are good: the CLI
         // has no login step, so reporting() turns the answer into an auth event.
         const response = await this.reporting(
-          this.client.translate(textBlocks, sourceLocale, targetLocale, options)
+          (options.reasoning
+            ? (this.thinkClient ??= this.createClient(300_000))
+            : this.client
+          ).translate(textBlocks, sourceLocale, targetLocale, options)
         );
+        if (response.warnings?.reasoning?.applied === false) {
+          console.error(
+            'Warning: Lara Think was not applied; the server returned a standard translation.'
+          );
+          metrics.setContext({ reasoningFallback: true });
+        }
+        if (response.warnings?.reasoning?.warnings?.length) {
+          console.error(
+            'Warning: Lara returned reasoning warnings; translation may have reduced context.'
+          );
+        }
         metrics.recordTranslated(textBlocks.reduce((total, block) => total + block.text.length, 0));
         return response.translation;
       } catch (error) {
