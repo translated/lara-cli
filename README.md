@@ -328,5 +328,6 @@ request; Base retains 30 seconds. Retries can extend total run time.
 
 If Lara reports that reasoning was not applied, the translation is retained
 and a warning is printed to stderr; stdout and translated files keep their
-existing format. Opted-in metrics record the effective requested level and
-reported fallback, without translation content.
+existing format. Usage metrics are enabled by default, subject to the opt-out
+settings described in Usage Metrics above. When enabled, they record the effective
+requested level and reported fallback, without translation content.
