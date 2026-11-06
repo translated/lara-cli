@@ -14,7 +14,7 @@ lara.yaml
 ├── memories        # Translation memory settings
 ├── glossaries      # Terminology settings
 ├── noTrace         # No-trace mode (no server-side storage, no usage metrics)
-├── translation     # Translation tuning (batch size, orphan key handling)
+├── translation     # Translation tuning (Think, batch size, orphan key handling)
 └── files           # File path and processing rules
 ```
 
@@ -54,6 +54,8 @@ noTrace: false
 
 # Translation tuning
 translation:
+  reasoning: true     # Enable Lara Think (default: false)
+  reasoningEffort: high # low | medium | high (default when Think is enabled: high)
   batchSize: 50       # Max keys sent per translation request (default: 50)
   orphanKeys: keep    # What to do with target-only keys: keep | delete (default: keep)
 
@@ -117,6 +119,34 @@ Configuration settings follow a specific inheritance pattern:
 3. **Key level** settings override file settings for specific keys
 
 This allows for progressive refinement of translation instructions and rules.
+
+## Lara Think
+
+The optional `translation.reasoning` setting selects Lara Think for project translations. It defaults to `false` (Lara Base). Existing configuration files continue to use Base without changes.
+
+```yaml
+translation:
+  reasoning: true
+  reasoningEffort: medium
+```
+
+`reasoningEffort` accepts lowercase `low`, `medium`, or `high`. Omit it to use `high` when Think is enabled. If `reasoningEffort` is set, Think must be enabled; to disable Think in YAML, set `reasoning: false` and remove `reasoningEffort`.
+
+Explicit flags on [`translate`](../commands/translate.md#lara-think) override YAML settings:
+
+```bash
+lara-cli translate --reasoning-effort low # Override effort when Think is enabled in YAML
+lara-cli translate --no-reasoning        # Disable Think and discard inherited effort
+lara-cli translate --reasoning --force  # Retranslate existing project entries with Think
+```
+
+An explicitly supplied effort cannot be combined with `--no-reasoning`. Direct `--text` and `--file` modes ignore project translation settings and require `--reasoning` to enable Think.
+
+Think settings are preserved across batches and retries. The timeout is 300 seconds per Think API request, compared with 30 seconds for Base. Each batch and retry has its own timeout; this is not a total timeout for a file or command, and it is not configurable in YAML.
+
+If Lara reports that Think was not applied, the returned translation is retained and a warning is printed to stderr. The fallback alone does not trigger a retry or fail the command. When [usage metrics](../../README.md#usage-metrics) are enabled, they record the requested reasoning settings and whether a fallback occurred, without translation content.
+
+Changing Think settings does not retranslate unchanged entries automatically: use `--force` when you want to apply the new model or effort to existing translations.
 
 ## Translation Batching
 

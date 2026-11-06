@@ -297,3 +297,38 @@ For detailed documentation on using Lara CLI:
 - [Xcode Stringsdict Files Guide](docs/config/files/xcode-stringsdict-files.md) - Complete guide for Xcode .stringsdict plural files
 - [Xcode String Catalogs Guide](docs/config/files/xcode-xcstrings-files.md) - Complete guide for Xcode .xcstrings String Catalogs
 - [TXT Files Guide](docs/config/files/txt-files.md) - Complete guide for plain text files
+
+## Lara Think
+
+Use `--reasoning` to select Think; `--reasoning-effort` accepts `low`, `medium`,
+or `high` (default **high**). Without Think, Lara Base is used.
+
+```sh
+lara-cli translate --text "Hello" --source en --target it --reasoning --reasoning-effort medium
+lara-cli translate --file messages.json --source en --target it --reasoning --reasoning-effort low
+lara-cli translate --reasoning --reasoning-effort high --force
+```
+
+For project translations, save the settings in `lara.yaml`:
+
+```yaml
+translation:
+  reasoning: true
+  reasoningEffort: high
+```
+
+Explicit flags override project settings. `--no-reasoning` disables Think and
+discards the inherited level. An explicitly supplied level requires Think to
+be enabled; `--no-reasoning --reasoning-effort low` is an error. Direct text/file
+modes ignore project configuration. Use lowercase level values.
+
+These options apply to all existing text, file and project translation paths,
+including batches and retries. Use `--force` to retranslate existing project
+entries after changing model or level. Think requests allow 300 seconds per
+request; Base retains 30 seconds. Retries can extend total run time.
+
+If Lara reports that reasoning was not applied, the translation is retained
+and a warning is printed to stderr; stdout and translated files keep their
+existing format. Usage metrics are enabled by default, subject to the opt-out
+settings described in Usage Metrics above. When enabled, they record the effective
+requested level and reported fallback, without translation content.

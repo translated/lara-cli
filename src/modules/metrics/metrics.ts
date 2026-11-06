@@ -101,6 +101,9 @@ function authSuccessFile(dir: string, accountId: string): string {
 
 /** What a command tells the metrics module about itself while it runs. */
 export type RunContext = {
+  reasoning?: boolean;
+  reasoningEffort?: 'low' | 'medium' | 'high';
+  reasoningFallback?: boolean;
   /** Which entry point the user reached for. Also decides `feature`. */
   mode?: 'text' | 'file' | 'config';
   sourceLang?: string;

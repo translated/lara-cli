@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { executeCommand, mockTranslate } from './test-helpers.js';
+import { executeCommand, mockTranslate, mockTranslateBatchWithFallback } from './test-helpers.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
 
@@ -60,7 +60,135 @@ describe('Direct Translation Integration Tests', () => {
     (ConfigProvider as any).instance = null;
   });
 
+  it('passes Think through direct file translation', async () => {
+    const file = path.join(testDir, 'hello.txt');
+    await writeFile(file, 'Hello');
+    await executeCommand(translateCommand, [
+      '--file',
+      file,
+      '--source',
+      'en',
+      '--target',
+      'it',
+      '--reasoning',
+      '--reasoning-effort',
+      'medium',
+    ]);
+    expect(mockTranslate.mock.lastCall?.[3]).toMatchObject({
+      reasoning: true,
+      reasoningEffort: 'medium',
+    });
+  });
+  it.each([
+    [[], true, 'low'],
+    [['--reasoning-effort', 'medium'], true, 'medium'],
+    [['--no-reasoning'], false, undefined],
+  ] as const)(
+    'resolves project Think flags %s for all targets',
+    async (flags, reasoning, reasoningEffort) => {
+      await mkdir(path.join(testDir, 'locales'));
+      await writeFile(
+        path.join(testDir, 'locales/en.json'),
+        JSON.stringify({ hello: 'Hello', world: 'World' })
+      );
+      await writeFile(
+        path.join(testDir, 'lara.yaml'),
+        `version: 1.0.0
+locales:
+  source: en
+  target: [it, fr]
+translation:
+  reasoning: true
+  reasoningEffort: low
+files:
+  json:
+    include: [locales/[locale].json]
+`.replace('include: [locales/[locale].json]', 'include: ["locales/[locale].json"]')
+      );
+      mockTranslate.mockClear();
+      mockTranslateBatchWithFallback.mockClear();
+      await executeCommand(translateCommand, [...flags]);
+      const calls = [...mockTranslate.mock.calls, ...mockTranslateBatchWithFallback.mock.calls];
+      expect(new Set(calls.map((call) => call[2]))).toEqual(new Set(['it', 'fr']));
+      expect(calls.length).toBeGreaterThan(0);
+      for (const call of calls) expect(call[3]).toMatchObject({ reasoning, reasoningEffort });
+    }
+  );
+
   describe('text mode', () => {
+    it.each(['low', 'medium', 'high'])('passes Think %s through text mode', async (level) => {
+      await executeCommand(translateCommand, [
+        '--text',
+        'Hello',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--reasoning',
+        '--reasoning-effort',
+        level,
+      ]);
+      expect(mockTranslate).toHaveBeenLastCalledWith(
+        expect.anything(),
+        'en',
+        'it',
+        expect.objectContaining({ reasoning: true, reasoningEffort: level })
+      );
+    });
+    it('defaults Think to high and allows explicit Base', async () => {
+      await executeCommand(translateCommand, [
+        '--text',
+        'Hello',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--reasoning',
+      ]);
+      expect(mockTranslate.mock.lastCall?.[3]).toMatchObject({
+        reasoning: true,
+        reasoningEffort: 'high',
+      });
+      await executeCommand(translateCommand, [
+        '--text',
+        'Hello',
+        '--source',
+        'en',
+        '--target',
+        'it',
+        '--no-reasoning',
+      ]);
+      expect(mockTranslate.mock.lastCall?.[3]?.reasoning).toBe(false);
+    });
+    it('rejects an explicit level with --no-reasoning', async () => {
+      await expect(
+        executeCommand(translateCommand, [
+          '--text',
+          'Hello',
+          '--source',
+          'en',
+          '--target',
+          'it',
+          '--no-reasoning',
+          '--reasoning-effort',
+          'low',
+        ])
+      ).rejects.toThrow();
+    });
+    it('rejects a level without Think', async () => {
+      await expect(
+        executeCommand(translateCommand, [
+          '--text',
+          'Hello',
+          '--source',
+          'en',
+          '--target',
+          'it',
+          '--reasoning-effort',
+          'low',
+        ])
+      ).rejects.toThrow();
+    });
     it('should translate text and output to stdout', async () => {
       await executeCommand(translateCommand, [
         '--text',

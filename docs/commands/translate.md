@@ -15,6 +15,9 @@ lara-cli translate [options]
 | `-t, --target <locales>` | Comma-separated list of target locales to translate to |
 | `-p, --paths <paths>` | Comma-separated list of specific file paths to translate (overrides config) |
 | `-f, --force` | Force retranslation of all content, even if unchanged |
+| `--reasoning` | Use Lara Think; defaults to high effort |
+| `--no-reasoning` | Disable Think, overriding project configuration |
+| `--reasoning-effort <level>` | Think effort: `low`, `medium`, or `high`; requires Think to be enabled |
 | `--no-trace` | Prevent server-side storage of translated content |
 | `--orphan-keys <mode>` | `keep` or `delete`. What to do with keys that exist only in target files. Overrides `translation.orphanKeys` in `lara.yaml` for this run. Cannot be combined with `--file` or `--text` |
 | `-h, --help` | Display help information |
@@ -162,6 +165,34 @@ Use `--force` when you need to:
 - Fix translation errors by regenerating all translations
 - Reset translations after configuration changes
 
+## Lara Think
+
+By default, translations use Lara Base. Enable Lara Think for project, text, or file translations:
+
+```bash
+lara-cli translate --reasoning --reasoning-effort medium
+lara-cli translate --text "Hello" --source en --target it --reasoning
+lara-cli translate --file messages.json --source en --target it --reasoning --reasoning-effort low
+```
+
+For project translations, save the settings in the existing `translation` section of `lara.yaml`:
+
+```yaml
+translation:
+  reasoning: true
+  reasoningEffort: high
+```
+
+- Effort accepts lowercase `low`, `medium`, or `high`. Think defaults to `high` when no effort is specified.
+- Explicit CLI flags override project settings. `--no-reasoning` disables Think and discards the inherited effort. An explicitly supplied effort requires Think to be enabled, either with `--reasoning` or in project configuration; `--no-reasoning --reasoning-effort low` is an error.
+- Direct `--text` and `--file` modes ignore project translation settings: enable Think with CLI flags.
+- Model or effort changes do not invalidate existing translations. Use `--force` to retranslate existing project entries.
+- Each Think API request has a 300-second timeout; Base requests retain 30 seconds. Files and target locales use separate requests, and a file may need multiple batches. Each retry has its own timeout, so total run time can be longer. The timeout is automatic and cannot be configured in YAML.
+- If the server reports that Think was not applied, the CLI retains the returned translation and prints a warning to stderr without changing stdout or file formats. This alone does not trigger a retry or fail the command.
+- When [usage metrics](../../README.md#usage-metrics) are enabled, command metadata records `reasoning`, the requested `reasoningEffort`, and `reasoningFallback: true` if a fallback was reported, without translation content.
+
+See [Lara Think configuration](../config/structure.md#lara-think) for configuration defaults and overrides.
+
 ## No-Trace Mode
 
 Use `--no-trace` to prevent the translation API from storing or logging your content server-side. This is useful when translating sensitive or confidential content. A no-trace run is also left out of the CLI's [usage metrics](../../README.md#usage-metrics) entirely.
@@ -240,6 +271,9 @@ Only [supported file formats](../config/formats.md) are accepted (JSON, PO, XML,
 | `-o, --output <path>` | Output file path (only with `--file`) |
 | `-m, --translation-memories <ids>` | Translation Memory IDs (comma-separated) |
 | `-g, --glossaries <ids>` | Glossary IDs (comma-separated) |
+| `--reasoning` | Use Lara Think; defaults to high effort |
+| `--no-reasoning` | Disable Lara Think |
+| `--reasoning-effort <level>` | `low`, `medium`, or `high`; requires `--reasoning` in direct mode |
 | `--no-trace` | Prevent server-side storage of translated content |
 
 ### Using Translation Memories & Glossaries
@@ -263,6 +297,7 @@ Use `lara-cli memory` and `lara-cli glossary` to list available IDs.
 | Translation instructions | Yes | No |
 | Multiple target locales per invocation | Yes | No (one at a time) |
 | Translation Memories & Glossaries | Yes | Yes |
+| Lara Think | CLI flags or `translation` settings in YAML | CLI flags only |
 
 ### Prerequisites
 

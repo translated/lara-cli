@@ -195,7 +195,11 @@ function handleNonInteractiveMode(options: InitOptions): ConfigType {
     memories: options.translationMemories,
     glossaries: options.glossaries,
     noTrace: !options.trace,
-    translation: { batchSize: DEFAULT_BATCH_SIZE, orphanKeys: DEFAULT_ORPHAN_KEYS },
+    translation: {
+      reasoning: false,
+      batchSize: DEFAULT_BATCH_SIZE,
+      orphanKeys: DEFAULT_ORPHAN_KEYS,
+    },
     files: groupPathsByExtension(options.paths),
   };
 }
@@ -258,7 +262,11 @@ async function handleInteractiveMode(options: InitOptions): Promise<ConfigType> 
     memories: [],
     glossaries: [],
     noTrace: !options.trace,
-    translation: { batchSize: DEFAULT_BATCH_SIZE, orphanKeys: DEFAULT_ORPHAN_KEYS },
+    translation: {
+      reasoning: false,
+      batchSize: DEFAULT_BATCH_SIZE,
+      orphanKeys: DEFAULT_ORPHAN_KEYS,
+    },
     files: groupPathsByExtension(inputPaths),
   };
 }
