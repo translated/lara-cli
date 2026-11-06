@@ -976,11 +976,14 @@ export function finishCommand(exitCode: number): void {
     };
 
     if (exitCode !== 0) {
-      queueEvent({
-        eventType: 'call_error',
-        errorType: errorTypeFor(lastError),
-        ...common,
-      });
+      // A plan running out of characters is not the CLI failing: it gets its own
+      // event so the error funnel only counts real failures.
+      const errorType = errorTypeFor(lastError);
+      queueEvent(
+        errorType === 'quota_exceeded'
+          ? { eventType: 'quota_exceeded', ...common }
+          : { eventType: 'call_error', errorType, ...common }
+      );
       return;
     }
 
