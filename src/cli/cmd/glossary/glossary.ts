@@ -37,7 +37,10 @@ glossaryCommand
   .helpOption('-h, --help', 'Show help')
   .action(async (name: string | undefined, _options: unknown, command: Command) => {
     ensureCredentials();
-    await runSafely(() => createGlossary(name, isRunningInInteractiveMode(command)), 'glossary create');
+    await runSafely(
+      () => createGlossary(name, isRunningInInteractiveMode(command)),
+      'glossary create'
+    );
   });
 
 glossaryCommand
@@ -52,7 +55,10 @@ glossaryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() => updateGlossary(id, name, isRunningInInteractiveMode(command)), 'glossary update');
+      await runSafely(
+        () => updateGlossary(id, name, isRunningInInteractiveMode(command)),
+        'glossary update'
+      );
     }
   );
 
@@ -62,7 +68,10 @@ glossaryCommand
   .helpOption('-h, --help', 'Show help')
   .action(async (id: string | undefined, _options: unknown, command: Command) => {
     ensureCredentials();
-    await runSafely(() => deleteGlossary(id, isRunningInInteractiveMode(command)), 'glossary delete');
+    await runSafely(
+      () => deleteGlossary(id, isRunningInInteractiveMode(command)),
+      'glossary delete'
+    );
   });
 
 glossaryCommand
@@ -80,15 +89,16 @@ glossaryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() =>
-        addEntry(
-          id,
-          sourceLang,
-          sourceTerm,
-          targetLang,
-          targetTerm,
-          isRunningInInteractiveMode(command)
-        ),
+      await runSafely(
+        () =>
+          addEntry(
+            id,
+            sourceLang,
+            sourceTerm,
+            targetLang,
+            targetTerm,
+            isRunningInInteractiveMode(command)
+          ),
         'glossary add-entry'
       );
     }
@@ -107,7 +117,10 @@ glossaryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() => deleteEntry(id, language, value, isRunningInInteractiveMode(command)), 'glossary delete-entry');
+      await runSafely(
+        () => deleteEntry(id, language, value, isRunningInInteractiveMode(command)),
+        'glossary delete-entry'
+      );
     }
   );
 
@@ -123,7 +136,10 @@ glossaryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() => importCsv(id, file, isRunningInInteractiveMode(command)), 'glossary import-csv');
+      await runSafely(
+        () => importCsv(id, file, isRunningInInteractiveMode(command)),
+        'glossary import-csv'
+      );
     }
   );
 

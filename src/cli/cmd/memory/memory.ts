@@ -52,7 +52,10 @@ memoryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() => updateMemory(id, name, isRunningInInteractiveMode(command)), 'memory update');
+      await runSafely(
+        () => updateMemory(id, name, isRunningInInteractiveMode(command)),
+        'memory update'
+      );
     }
   );
 
@@ -80,15 +83,16 @@ memoryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() =>
-        addTranslation(
-          id,
-          source,
-          target,
-          sentence,
-          translation,
-          isRunningInInteractiveMode(command)
-        ),
+      await runSafely(
+        () =>
+          addTranslation(
+            id,
+            source,
+            target,
+            sentence,
+            translation,
+            isRunningInInteractiveMode(command)
+          ),
         'memory add-translation'
       );
     }
@@ -109,15 +113,16 @@ memoryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() =>
-        deleteTranslation(
-          id,
-          source,
-          target,
-          sentence,
-          translation,
-          isRunningInInteractiveMode(command)
-        ),
+      await runSafely(
+        () =>
+          deleteTranslation(
+            id,
+            source,
+            target,
+            sentence,
+            translation,
+            isRunningInInteractiveMode(command)
+          ),
         'memory delete-translation'
       );
     }
@@ -135,7 +140,10 @@ memoryCommand
       command: Command
     ) => {
       ensureCredentials();
-      await runSafely(() => importTmx(id, file, isRunningInInteractiveMode(command)), 'memory import-tmx');
+      await runSafely(
+        () => importTmx(id, file, isRunningInInteractiveMode(command)),
+        'memory import-tmx'
+      );
     }
   );
 
