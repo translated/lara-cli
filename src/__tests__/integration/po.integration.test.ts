@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
 import { executeCommand } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -757,5 +758,24 @@ msgstr "World"
     expect(contentAfter).toContain('[it] Hello updated');
     // Non-included key should be preserved
     expect(contentAfter).toContain('[it] World');
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'po',
+      paths: 'locales/[locale]/messages.po',
+      ignoredKey: '*secret_msg*',
+      file: (locale) => `locales/${locale}/messages.po`,
+      source: `msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "secret_msg"
+msgstr "Secret old"
+
+msgid "plain_msg"
+msgstr "Plain old"
+`,
+    });
   });
 });

@@ -13,7 +13,7 @@ import { TextBlock } from './translation.service.js';
 import { Memory, TranslateOptions } from '@translated/lara';
 import { Messages } from '#messages/messages.js';
 import { ParserFactory } from '../../parsers/parser.factory.js';
-import { OrphanKeysMode } from '#modules/config/config.types.js';
+import { IgnoredKeyType, OrphanKeysMode } from '#modules/config/config.types.js';
 
 export type TranslationEngineOptions = {
   sourceLocale: string;
@@ -26,7 +26,7 @@ export type TranslationEngineOptions = {
   forceTranslation: boolean;
 
   lockedKeys: string[];
-  ignoredKeys: string[];
+  ignoredKeys: IgnoredKeyType[];
   includeKeys: string[];
 
   projectInstruction: string | undefined;
@@ -73,7 +73,8 @@ export class TranslationEngine {
   private readonly forceTranslation: boolean;
 
   private readonly lockedPatterns: Matcher[];
-  private readonly ignoredPatterns: Matcher[];
+  // `locales` undefined = ignored for every target locale.
+  private readonly ignoredPatterns: Array<{ matcher: Matcher; locales?: Set<string> }>;
   private readonly includePatterns: Matcher[];
 
   private readonly projectInstruction: string | undefined;
@@ -110,7 +111,11 @@ export class TranslationEngine {
     this.forceTranslation = options.forceTranslation;
 
     this.lockedPatterns = options.lockedKeys.map((pattern) => picomatch(pattern));
-    this.ignoredPatterns = options.ignoredKeys.map((pattern) => picomatch(pattern));
+    this.ignoredPatterns = options.ignoredKeys.map((entry) =>
+      typeof entry === 'string'
+        ? { matcher: picomatch(entry) }
+        : { matcher: picomatch(entry.path), locales: new Set<string>(entry.locales) }
+    );
     this.includePatterns = options.includeKeys.map((pattern) => picomatch(pattern));
 
     this.projectInstruction = options.projectInstruction;
@@ -176,7 +181,7 @@ export class TranslationEngine {
 
       const target = this.parser.parse(targetContent, { targetLocale });
 
-      const classified = this.classifyEntries(changelog, target);
+      const classified = this.classifyEntries(changelog, target, targetLocale);
       const { translations, failedTasks } = await this.executeTasks(classified, targetLocale);
 
       for (const task of failedTasks) {
@@ -237,7 +242,8 @@ export class TranslationEngine {
 
   private classifyEntries(
     changelog: ReturnType<typeof calculateChecksum>['changelog'],
-    target: Record<string, unknown>
+    target: Record<string, unknown>,
+    targetLocale: string
   ): ClassifiedEntries {
     const ordered: Array<[string, OutputSlot]> = [];
     const solo: TranslateTask[] = [];
@@ -249,7 +255,7 @@ export class TranslationEngine {
       const sourceValue = entry.value;
       const targetValue = target[key];
 
-      if (!this.isIncluded(userKey) || this.isIgnored(userKey)) {
+      if (!this.isIncluded(userKey) || this.isIgnored(userKey, targetLocale)) {
         ordered.push([
           key,
           targetValue !== undefined ? { kind: 'keep', value: targetValue } : { kind: 'omit' },
@@ -438,8 +444,10 @@ export class TranslationEngine {
     return key.replaceAll('\0', '/');
   }
 
-  private isIgnored(userKey: string): boolean {
-    return this.ignoredPatterns.some((pattern) => pattern(userKey));
+  private isIgnored(userKey: string, targetLocale: string): boolean {
+    return this.ignoredPatterns.some(
+      ({ matcher, locales }) => (!locales || locales.has(targetLocale)) && matcher(userKey)
+    );
   }
 
   private isLocked(userKey: string): boolean {

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
 import { executeCommand, mockTranslateBatchWithFallback } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -775,5 +776,20 @@ describe('Android XML Repository Integration Tests', () => {
     expect(mockTranslateBatchWithFallback).toHaveBeenCalled();
     const [, , , batchOptions] = mockTranslateBatchWithFallback.mock.calls[0]!;
     expect((batchOptions as any).contentType).toBe('text/html');
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'xml',
+      paths: 'res/[locale]/strings.xml',
+      ignoredKey: 'secret',
+      file: (locale) => `res/${locale}/strings.xml`,
+      source: `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="secret">Secret old</string>
+    <string name="plain">Plain old</string>
+</resources>
+`,
+    });
   });
 });

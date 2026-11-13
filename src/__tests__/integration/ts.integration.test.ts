@@ -11,6 +11,7 @@ import type { NodePath } from '@babel/traverse';
 import yaml from 'yaml';
 
 import { executeCommand } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -806,5 +807,23 @@ export default messages;`
     // Non-included keys should be preserved
     expect(contentAfter).toContain('[it] My App');
     expect(contentAfter).toContain('[it] 1.0.0');
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'ts',
+      paths: 'src/i18n.ts',
+      ignoredKey: 'secret',
+      file: () => 'src/i18n.ts',
+      source: `const messages = {
+  en: {
+    secret: 'Secret old',
+    plain: 'Plain old',
+  },
+};
+
+export default messages;
+`,
+    });
   });
 });

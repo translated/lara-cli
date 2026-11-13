@@ -6,7 +6,12 @@ import { fileURLToPath } from 'url';
 
 import yaml from 'yaml';
 
-import { executeCommand } from './test-helpers.js';
+import { executeCommand, mockTranslateBatchWithFallback } from './test-helpers.js';
+import {
+  initProject,
+  patchConfig,
+  runPerLocaleIgnoreScenario,
+} from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -858,5 +863,134 @@ describe('JSON Repository Integration Tests', () => {
     expect(itContent.app?.version).toBeUndefined();
     // Not included → not added to new target
     expect(itContent.app?.name).toBeUndefined();
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'json',
+      paths: 'i18n/locales/[locale].json',
+      ignoredKey: 'secret',
+      file: (locale) => `i18n/locales/${locale}.json`,
+      source: `{
+  "secret": "Secret old",
+  "plain": "Plain old"
+}
+`,
+    });
+  });
+
+  describe('per-locale ignoredKeys', () => {
+    const localesDir = () => path.join(testDir, 'i18n', 'locales');
+    const writeJson = async (locale: string, data: unknown) => {
+      await mkdir(localesDir(), { recursive: true });
+      await writeFile(path.join(localesDir(), `${locale}.json`), JSON.stringify(data, null, 2));
+    };
+    const readJson = async (locale: string) =>
+      JSON.parse(await readFile(path.join(localesDir(), `${locale}.json`), 'utf-8'));
+    const init = (targets: string) => initProject(targets, 'i18n/locales/[locale].json');
+    const setFileConfig = (fields: Record<string, unknown>) =>
+      patchConfig(testDir, (config) => Object.assign(config.files.json, fields));
+
+    it('combines global and per-locale rules', async () => {
+      await writeJson('en', {
+        internal: { debug: 'Debug' },
+        legal: { terms: 'Terms', privacy: 'Privacy' },
+        promo: { banner: 'Sale' },
+        title: 'Title',
+      });
+      await init('it,fr,de');
+      await setFileConfig({
+        ignoredKeys: [
+          'internal/**',
+          { path: 'legal/**', locales: ['fr', 'de'] },
+          { path: 'promo/*', locales: ['it'] },
+        ],
+      });
+
+      await executeCommand(translateCommand, []);
+
+      const it = await readJson('it');
+      expect(it).toEqual({
+        legal: { terms: '[it] Terms', privacy: '[it] Privacy' },
+        title: '[it] Title',
+      });
+      for (const locale of ['fr', 'de']) {
+        expect(await readJson(locale)).toEqual({
+          promo: { banner: `[${locale}] Sale` },
+          title: `[${locale}] Title`,
+        });
+      }
+    });
+
+    it('does not call the API for locales where the key is ignored', async () => {
+      mockTranslateBatchWithFallback.mockClear();
+      await writeJson('en', { secret: 'Secret', plain: 'Plain' });
+      await init('it,fr');
+      await setFileConfig({ ignoredKeys: [{ path: 'secret', locales: ['fr'] }] });
+
+      await executeCommand(translateCommand, []);
+
+      const sentTo = (locale: string) =>
+        mockTranslateBatchWithFallback.mock.calls
+          .filter((call) => call[2] === locale)
+          .flatMap((call) => call[0].map((block) => block.text));
+      expect(sentTo('it').sort()).toEqual(['Plain', 'Secret']);
+      expect(sentTo('fr')).toEqual(['Plain']);
+    });
+
+    it('removes a source-deleted key only where it is not ignored', async () => {
+      await writeJson('en', { secret: 'Secret', plain: 'Plain' });
+      await init('it,fr');
+      await executeCommand(translateCommand, []);
+      expect((await readJson('fr')).secret).toBe('[fr] Secret');
+
+      await setFileConfig({ ignoredKeys: [{ path: 'secret', locales: ['fr'] }] });
+      await writeJson('en', { plain: 'Plain' });
+      await executeCommand(translateCommand, []);
+
+      expect(await readJson('it')).toEqual({ plain: '[it] Plain' });
+      expect(await readJson('fr')).toEqual({ secret: '[fr] Secret', plain: '[fr] Plain' });
+    });
+
+    it('applies on top of includeKeys', async () => {
+      await writeJson('en', { ui: { title: 'Title', legal: 'Legal' }, other: 'Other' });
+      await init('it,fr');
+      await setFileConfig({
+        includeKeys: ['ui/**'],
+        ignoredKeys: [{ path: 'ui/legal', locales: ['fr'] }],
+      });
+
+      await executeCommand(translateCommand, []);
+
+      expect(await readJson('it')).toEqual({ ui: { title: '[it] Title', legal: '[it] Legal' } });
+      expect(await readJson('fr')).toEqual({ ui: { title: '[fr] Title' } });
+    });
+
+    it('honours the rule when the targets are narrowed with --target', async () => {
+      await writeJson('en', { secret: 'Secret', plain: 'Plain' });
+      await init('it,fr');
+      await setFileConfig({ ignoredKeys: [{ path: 'secret', locales: ['fr'] }] });
+
+      await executeCommand(translateCommand, ['--target', 'it']);
+      expect(await readJson('it')).toEqual({ secret: '[it] Secret', plain: '[it] Plain' });
+      expect(existsSync(path.join(localesDir(), 'fr.json'))).toBe(false);
+
+      await executeCommand(translateCommand, ['--target', 'fr', '--force']);
+      expect(await readJson('fr')).toEqual({ plain: '[fr] Plain' });
+    });
+
+    it('rejects a rule naming a locale that is not a target', async () => {
+      await writeJson('en', { secret: 'Secret' });
+      await init('it,fr');
+      await setFileConfig({ ignoredKeys: ['internal/**', { path: 'secret', locales: ['es'] }] });
+
+      await expect(executeCommand(translateCommand, [])).rejects.toThrow();
+      expect(existsSync(path.join(localesDir(), 'it.json'))).toBe(false);
+
+      (ConfigProvider as any).instance = null;
+      expect(() => ConfigProvider.getInstance().getConfig()).toThrow(
+        /files\.json\.ignoredKeys\.1\.locales: Locale "es" is not a target locale/
+      );
+    });
   });
 });

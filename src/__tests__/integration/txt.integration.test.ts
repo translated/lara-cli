@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
 import { executeCommand } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -491,5 +492,17 @@ describe('TXT Repository Integration Tests', () => {
     expect(contentAfter).toContain('[it] Updated Title');
     // Non-included line should be preserved
     expect(contentAfter).toContain('[it] Keep this');
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'txt',
+      paths: 'texts/[locale]/messages.txt',
+      ignoredKey: 'line_1',
+      file: (locale) => `texts/${locale}/messages.txt`,
+      source: `Plain old
+Secret old
+`,
+    });
   });
 });

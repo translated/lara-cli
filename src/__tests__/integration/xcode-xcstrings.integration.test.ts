@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
 import { executeCommand } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -1003,5 +1004,41 @@ describe('Xcode .xcstrings Repository Integration Tests', () => {
     expect(await readFile(filePath, 'utf-8')).toBe(original);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'xcode-xcstrings',
+      paths: 'Localizable.xcstrings',
+      ignoredKey: 'secret_key',
+      file: () => 'Localizable.xcstrings',
+      source: `{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "secret_key": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Secret old" } }
+      }
+    },
+    "plain_key": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Plain old" } }
+      }
+    }
+  }
+}
+`,
+    });
+
+    const content = JSON.parse(
+      await readFile(path.join(testDir, 'Localizable.xcstrings'), 'utf-8')
+    );
+    const secret = content.strings.secret_key.localizations;
+    expect(secret.en.stringUnit.value).toBe('Secret new');
+    expect(secret.it.stringUnit.value).toBe('[it] Secret new');
+    expect(secret.fr.stringUnit.value).toBe('[fr] Secret old');
+    expect(secret.de).toBeUndefined();
+    expect(content.strings.plain_key.localizations.de.stringUnit.value).toBe('[de] Plain new');
   });
 });
