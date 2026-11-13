@@ -71,7 +71,9 @@ files:
       - "**/id"
       - "config/*/url"
     ignoredKeys:
-      - "internal/**"
+      - "internal/**"              # Ignored for every target locale
+      - path: "legal/**"           # Ignored only for the listed target locales
+        locales: ["de-DE"]
     fileInstructions:
       - path: "src/i18n/[locale]/common.json"
         instruction: "Common UI elements"

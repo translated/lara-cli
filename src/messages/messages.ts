@@ -10,6 +10,8 @@ export const Messages = {
       'No target locales specified. Please add target locales in config or use -t option.',
     configNotFound: 'Config file not found. Please run `lara-cli init` to create a config file.',
     invalidConfig: (issues: string) => `Invalid configuration file. Issues found:\n${issues}`,
+    ignoredKeyLocaleNotTarget: (locale: string) =>
+      `Locale "${locale}" is not a target locale (add it to locales.target or remove it from this rule)`,
     noApiCredentials:
       'No API credentials found. Please run `lara-cli init` to set the API credentials.',
     apiAuthFailed: (context: string) =>

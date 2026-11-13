@@ -24,6 +24,8 @@ files:
       - "config/*/url"
     ignoredKeys:
       - "internal/**"
+      - path: "legal/**"
+        locales: ["de-DE", "fr-FR"]
     includeKeys:
       - "ui/**"
       - "messages/**"
@@ -54,9 +56,9 @@ files:
 
 ### ignoredKeys
 
-- **Type**: Array of strings (key patterns)
+- **Type**: Array of key patterns, or of `{ path, locales }` objects
 - **Required**: No (defaults to empty array)
-- **Description**: Identifies keys that should be left untouched in target files (not translated, not added, not removed)
+- **Description**: Identifies keys that should be left untouched in target files (not translated, not added, not removed). A plain pattern applies to every target locale; the object form applies only to the listed target locales (see [Per-Language Ignored Keys](#per-language-ignored-keys))
 - **Format**: Uses glob patterns for matching keys (e.g., `internal/**`, `**/debug`)
 
 ### includeKeys
@@ -165,6 +167,64 @@ Target file (`es.json`) - if `debug` already existed:
 ```
 
 Note: The `debug` key is never translated or modified by Lara. If it already exists in the target, it is preserved as-is. If it does not exist, it is not added.
+
+### Per-Language Ignored Keys
+
+To ignore a key only for some target locales, write the entry as an object with the key pattern in `path` and the target locales in `locales`. Plain string entries keep applying to every target locale, and both forms can be mixed in the same list.
+
+**Example:**
+
+Configuration (targets `it-IT`, `de-DE` and `fr-FR`):
+
+```yaml
+locales:
+  source: en-US
+  target: [it-IT, de-DE, fr-FR]
+
+files:
+  json:
+    include:
+      - "src/i18n/[locale].json"
+    ignoredKeys:
+      - "**/debug"                  # every target locale
+      - path: "legal/**"            # only de-DE and fr-FR
+        locales: [de-DE, fr-FR]
+```
+
+Source file (`en-US.json`):
+
+```json
+{
+  "title": "My Application",
+  "legal": {
+    "terms": "Terms of service"
+  }
+}
+```
+
+Target file (`it-IT.json`): `legal/**` is translated as usual.
+
+```json
+{
+  "title": "La mia applicazione",
+  "legal": {
+    "terms": "Termini di servizio"
+  }
+}
+```
+
+Target file (`de-DE.json`): `legal/**` behaves exactly like an ignored key. Here the key did not exist yet, so it is not added; an existing value (for example a legally reviewed text) would be preserved as-is, even when the source changes.
+
+```json
+{
+  "title": "Meine Anwendung"
+}
+```
+
+Rules:
+
+- `locales` must be a non-empty list, and every locale in it must be listed in `locales.target`; otherwise the configuration is rejected (for example `files.json.ignoredKeys.1.locales: Locale "de" is not a target locale`). This catches typos such as `de` instead of `de-DE`, which would otherwise silently translate the key.
+- When you narrow the run with `--target`, each rule still applies only to the locales it lists.
 
 ### Include Keys
 

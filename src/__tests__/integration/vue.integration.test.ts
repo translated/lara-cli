@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
 import { executeCommand } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -808,5 +809,23 @@ describe('Vue Repository Integration Tests', () => {
     expect(contentAfter).toContain('[it] Hello Updated World');
     // Non-included key should be preserved
     expect(contentAfter).toContain('[it] Goodbye');
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'vue',
+      paths: 'src/components/*.vue',
+      ignoredKey: 'secret',
+      file: () => 'src/components/Hello.vue',
+      source: `<i18n>
+{
+  "en": {
+    "secret": "Secret old",
+    "plain": "Plain old"
+  }
+}
+</i18n>
+`,
+    });
   });
 });

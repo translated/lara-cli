@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
 import { executeCommand } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -1147,5 +1148,53 @@ describe('Xcode .stringsdict Repository Integration Tests', () => {
     // Non-included keys should be preserved
     expect(contentAfter).toContain('[it] %d item');
     expect(contentAfter).toContain('[it] %d items');
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'xcode-stringsdict',
+      paths: '[locale].lproj/Localizable.stringsdict',
+      ignoredKey: 'secret_count/*',
+      file: (locale) => `${locale}.lproj/Localizable.stringsdict`,
+      source: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>secret_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Secret old one: %d</string>
+            <key>other</key>
+            <string>Secret old other: %d</string>
+        </dict>
+    </dict>
+    <key>plain_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Plain old one: %d</string>
+            <key>other</key>
+            <string>Plain old other: %d</string>
+        </dict>
+    </dict>
+</dict>
+</plist>
+`,
+    });
   });
 });

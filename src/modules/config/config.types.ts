@@ -9,6 +9,7 @@ import {
 } from '../common/common.types.js';
 import { SEARCHABLE_EXTENSIONS, SUPPORTED_FILE_TYPES } from '../common/common.const.js';
 import { getFileType, isRelative } from '#utils/path.js';
+import { Messages } from '#messages/messages.js';
 
 export const DEFAULT_BATCH_SIZE = 50;
 
@@ -72,6 +73,18 @@ const KeyPath = z
     message: 'Key path must contain at least one non-wildcard segment',
   });
 
+/**
+ * An `ignoredKeys` entry: a bare key pattern ignores the key for every target
+ * locale; the object form ignores it only for the listed target locales.
+ */
+const IgnoredKey = z.union([
+  KeyPath,
+  z.object({
+    path: KeyPath,
+    locales: z.array(LocalesEnum).min(1),
+  }),
+]);
+
 const Config = z
   .object({
     version: z.string(),
@@ -134,7 +147,7 @@ const Config = z
           )
           .default([]),
         lockedKeys: z.array(KeyPath).default([]),
-        ignoredKeys: z.array(KeyPath).default([]),
+        ignoredKeys: z.array(IgnoredKey).default([]),
         includeKeys: z.array(KeyPath).default([]),
       })
     ),
@@ -163,10 +176,40 @@ const Config = z
     {
       message: 'File type must match the file extension',
     }
-  );
+  )
+  .superRefine((data, ctx) => {
+    // A per-locale rule naming a non-target locale would silently never apply
+    // (typically a typo such as `de` vs `de-DE`), so reject it up front.
+    const targets = new Set<string>(data.locales.target);
+    for (const [fileType, fileConfig] of Object.entries(data.files)) {
+      fileConfig?.ignoredKeys.forEach((entry, index) => {
+        if (typeof entry === 'string') {
+          return;
+        }
+        for (const locale of entry.locales) {
+          if (!targets.has(locale)) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['files', fileType, 'ignoredKeys', index, 'locales'],
+              message: Messages.errors.ignoredKeyLocaleNotTarget(locale),
+            });
+          }
+        }
+      });
+    }
+  });
 
 type ConfigType = z.infer<typeof Config>;
 
 type OrphanKeysMode = (typeof ORPHAN_KEYS_MODES)[number];
 
-export { IncludeFilePath as FilePath, KeyPath, Config, type ConfigType, type OrphanKeysMode };
+type IgnoredKeyType = z.infer<typeof IgnoredKey>;
+
+export {
+  IncludeFilePath as FilePath,
+  KeyPath,
+  Config,
+  type ConfigType,
+  type OrphanKeysMode,
+  type IgnoredKeyType,
+};

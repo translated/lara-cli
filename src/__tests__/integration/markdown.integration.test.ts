@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import yaml from 'yaml';
 
 import { executeCommand } from './test-helpers.js';
+import { runPerLocaleIgnoreScenario } from './per-locale-ignore.helper.js';
 import initCommand from '../../cli/cmd/init/init.js';
 import translateCommand from '../../cli/cmd/translate/translate.js';
 import { ConfigProvider } from '#modules/config/config.provider.js';
@@ -899,5 +900,18 @@ Welcome to our documentation.
     expect(contentAfter).toContain('[it] Getting Started Updated');
     // Non-included segment should be preserved
     expect(contentAfter).toContain('[it] Welcome to our documentation');
+  });
+
+  it('should ignore a key only for the target locales listed in its ignoredKeys rule', async () => {
+    await runPerLocaleIgnoreScenario(testDir, {
+      fileType: 'md',
+      paths: 'docs/[locale]/guide.md',
+      ignoredKey: 'segment_1',
+      file: (locale) => `docs/${locale}/guide.md`,
+      source: `# Plain old
+
+Secret old paragraph.
+`,
+    });
   });
 });

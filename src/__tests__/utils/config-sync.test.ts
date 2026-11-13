@@ -108,6 +108,19 @@ describe('addIdToConfig', () => {
     expect(config.locales.target).toEqual(['it']);
     expect(config.files.json.include).toEqual(['src/i18n/[locale].json']);
   });
+
+  it('preserves per-locale ignoredKeys entries as written when rewriting the config', async () => {
+    const ignoredKeys = ['internal/**', { path: 'legal/**', locales: ['it'] }];
+    await writeConfig({
+      ...baseConfig,
+      files: { json: { ...baseConfig.files.json, ignoredKeys } },
+    });
+
+    expect(addIdToConfig('memories', 'mem_1')).toBe(true);
+
+    const config = await readConfig();
+    expect(config.files.json.ignoredKeys).toEqual(ignoredKeys);
+  });
 });
 
 describe('removeIdFromConfig', () => {

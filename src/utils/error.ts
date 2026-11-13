@@ -95,4 +95,3 @@ function displayError(message: string, spinner: OraSpinner): string {
   spinner.fail(message);
   return message;
 }
-
